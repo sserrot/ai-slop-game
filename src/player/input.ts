@@ -1,17 +1,27 @@
 /**
- * Keyboard + mouse capture for the zero-G controller (DESIGN.md §4).
+ * Keyboard + mouse capture for the player controller (DESIGN.md §4).
  *
- * Pointer lock is owned by three's `PointerLockControls`, but ONLY for the lock
- * lifecycle — `enabled` is forced to false so its yaw/pitch Euler never touches
- * the camera. That Euler assumes a world up vector, and this game has none: the
- * body carries a free quaternion (see `look.ts`). We read raw `movementX/Y`
- * ourselves and hand the deltas to the look rig.
+ * Pointer lock is handled with the NATIVE API, not three's
+ * `PointerLockControls`. That class was only ever used here for its lock
+ * lifecycle — `enabled` was forced false so its yaw/pitch Euler never touched
+ * the camera, because that Euler assumes a world up vector and this game has
+ * none (the body carries a free quaternion; see `look.ts`). We already read raw
+ * `movementX/Y` ourselves.
+ *
+ * It was also the thing breaking pointer lock outright. In the browser it threw
+ * `THREE.PointerLockControls: Unable to use Pointer Lock API` followed by
+ * `WrongDocumentError: The root document of this element is not valid for
+ * pointer lock`, so the lock never engaged — which is why Escape appeared to do
+ * nothing: there was no lock to exit, and the game retried fast enough to earn a
+ * `SecurityError` on top. Keeping a class for one lifecycle event, at the cost
+ * of the feature that lifecycle exists to serve, was a bad trade.
+ *
+ * The native path locks `document.body` — always connected, always in the active
+ * document — and listens to `pointerlockchange` / `pointerlockerror` directly.
  *
  * Every binding comes from `KEYMAP` (keymap.ts). Nothing here hard-codes a key.
  */
 
-import * as THREE from 'three';
-import { PointerLockControls } from 'three/addons/controls/PointerLockControls.js';
 import {
   KEYMAP,
   MOUSE_BINDINGS,
@@ -30,8 +40,12 @@ export interface LookDelta {
 export interface PlayerInputOptions {
   /** Element that receives pointer lock. Defaults to `document.body`. */
   domElement?: HTMLElement | null;
-  /** Camera handed to PointerLockControls. Its rotation is never used. */
-  camera?: THREE.Camera | null;
+  /**
+   * Accepted and ignored. It existed only to satisfy `PointerLockControls`,
+   * whose rotation this game never used; the native lock path needs no camera.
+   * Kept so existing call sites do not have to change.
+   */
+  camera?: unknown;
   /** Bindings. Defaults to the shared, mutable `KEYMAP`. */
   keymap?: Keymap;
   /** Attach DOM listeners immediately. Default true (false is headless-safe). */
@@ -90,8 +104,18 @@ export class PlayerInput {
    */
   private relockBlockedUntil = 0;
 
-  /** Pointer-lock plumbing. Null when constructed headless. */
-  readonly controls: PointerLockControls | null;
+  /**
+   * The element the pointer is locked to. `document.body` rather than the
+   * canvas: it is guaranteed connected to the active document, which is exactly
+   * the condition `WrongDocumentError` reports as missing. Null when headless.
+   */
+  private readonly lockTarget: HTMLElement | null;
+
+  /** Subscribers to lock/unlock, driven by the native `pointerlockchange`. */
+  private readonly lockListeners = new Set<(locked: boolean) => void>();
+
+  /** Last state we broadcast, so one event never fires a duplicate callback. */
+  private lastLockedState = false;
 
   private readonly onKeyDown = (e: KeyboardEvent): void => {
     if (e.repeat) return;
@@ -147,14 +171,7 @@ export class PlayerInput {
     this.lockOnClick = opts.lockOnClick ?? true;
     this.element = opts.domElement ?? (hasDom ? document.body : null);
 
-    if (hasDom && this.element) {
-      const camera = opts.camera ?? new THREE.PerspectiveCamera();
-      this.controls = new PointerLockControls(camera, this.element);
-      // The whole point: keep the lock lifecycle, drop the up-vector rotation.
-      this.controls.enabled = false;
-    } else {
-      this.controls = null;
-    }
+    this.lockTarget = hasDom ? document.body : null;
 
     if (opts.attach ?? true) this.attach();
   }
@@ -170,7 +187,8 @@ export class PlayerInput {
     document.addEventListener('mousemove', this.onMouseMove);
     document.addEventListener('mousedown', this.onMouseDown);
     document.addEventListener('mouseup', this.onMouseUp);
-    document.addEventListener('pointerlockchange', this.onBlurIfUnlocked);
+    document.addEventListener('pointerlockchange', this.onPointerLockChange);
+    document.addEventListener('pointerlockerror', this.onPointerLockError);
     this.element.addEventListener('contextmenu', this.onContextMenu);
     this.element.addEventListener('click', this.onClick);
   }
@@ -184,7 +202,8 @@ export class PlayerInput {
     document.removeEventListener('mousemove', this.onMouseMove);
     document.removeEventListener('mousedown', this.onMouseDown);
     document.removeEventListener('mouseup', this.onMouseUp);
-    document.removeEventListener('pointerlockchange', this.onBlurIfUnlocked);
+    document.removeEventListener('pointerlockchange', this.onPointerLockChange);
+    document.removeEventListener('pointerlockerror', this.onPointerLockError);
     this.element.removeEventListener('contextmenu', this.onContextMenu);
     this.element.removeEventListener('click', this.onClick);
     this.releaseAll();
@@ -192,32 +211,50 @@ export class PlayerInput {
 
   dispose(): void {
     this.detach();
-    this.controls?.dispose();
   }
 
-  /** Losing the pointer (Esc, alt-tab) must also drop every held key. */
-  private readonly onBlurIfUnlocked = (): void => {
-    if (this.locked) return;
-    this.releaseAll();
+  /**
+   * The single source of truth for lock state. Losing the pointer (Escape,
+   * alt-tab) must also drop every held key, arm the re-lock cooldown, and tell
+   * every subscriber — the menu hangs off this.
+   */
+  private readonly onPointerLockChange = (): void => {
+    const locked = this.locked;
+    if (!locked) {
+      this.releaseAll();
+      this.relockBlockedUntil = now() + RELOCK_COOLDOWN_MS;
+    }
+    if (locked === this.lastLockedState) return;
+    this.lastLockedState = locked;
+    for (const fn of this.lockListeners) fn(locked);
+  };
+
+  /**
+   * A refused lock is normal (no gesture, or inside the browser's post-Escape
+   * cooldown). Swallow it, but arm the cooldown so we do not immediately retry
+   * and escalate Chrome's overlay to "hold Esc".
+   */
+  private readonly onPointerLockError = (): void => {
     this.relockBlockedUntil = now() + RELOCK_COOLDOWN_MS;
   };
 
   // -- pointer lock ---------------------------------------------------------
 
   get locked(): boolean {
-    return this.controls?.isLocked ?? false;
+    return hasDom && this.lockTarget !== null && document.pointerLockElement === this.lockTarget;
   }
 
   lock(): void {
-    // `PointerLockControls.lock()` returns a promise in recent three, and the
-    // browser rejects it whenever there is no user gesture or the page is in a
-    // frame that may not capture the pointer. That is a normal outcome — the
-    // menu simply stays up — so it must not surface as an unhandled rejection.
+    const target = this.lockTarget;
+    if (!target || this.locked) return;
+    // Requires a user gesture, and the browser refuses within its own cooldown
+    // after the user pressed Escape. Both are normal outcomes — the menu simply
+    // stays up — so neither may surface as an unhandled rejection.
     try {
-      const pending = this.controls?.lock() as unknown as Promise<void> | undefined;
+      const pending = target.requestPointerLock() as unknown as Promise<void> | undefined;
       if (pending && typeof pending.catch === 'function') {
         pending.catch(() => {
-          /* no lock; onLockChange never fires and the menu stays up */
+          /* no lock; `pointerlockchange` never fires and the menu stays up */
         });
       }
     } catch {
@@ -226,21 +263,15 @@ export class PlayerInput {
   }
 
   unlock(): void {
-    this.controls?.unlock();
+    if (hasDom && this.locked) document.exitPointerLock();
   }
 
   /** `fn` fires whenever the pointer is captured or released — the menu overlay
    *  in index.html hangs off this. */
   onLockChange(fn: (locked: boolean) => void): () => void {
-    const controls = this.controls;
-    if (!controls) return () => {};
-    const onLock = (): void => fn(true);
-    const onUnlock = (): void => fn(false);
-    controls.addEventListener('lock', onLock);
-    controls.addEventListener('unlock', onUnlock);
+    this.lockListeners.add(fn);
     return () => {
-      controls.removeEventListener('lock', onLock);
-      controls.removeEventListener('unlock', onUnlock);
+      this.lockListeners.delete(fn);
     };
   }
 
