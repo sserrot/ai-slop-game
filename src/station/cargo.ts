@@ -25,7 +25,7 @@
 
 import * as THREE from 'three';
 import type { ModuleId, PropRef, StationLayout } from '@shared/types';
-import { buildPropGeometry } from './geometry';
+import { cargoBagGeometry, cargoSlotGeometry } from './props';
 import type { StationMaterials } from './materials';
 import { moduleMatrix, propMatrix } from './threeUtil';
 
@@ -61,8 +61,6 @@ export class StationCargo {
 
   constructor(layout: StationLayout, materials: StationMaterials) {
     this.group.name = 'station-cargo';
-    const bagGeometry = buildPropGeometry('cargo-bag');
-    const slotGeometry = buildPropGeometry('slot');
 
     for (const module of layout.modules) {
       const mMatrix = moduleMatrix(module);
@@ -70,8 +68,15 @@ export class StationCargo {
         if (prop.kind !== 'cargo-bag' && prop.kind !== 'slot') continue;
         const number = numberOf(prop.id);
         const material = materials.createCargoMaterial(Math.max(0, number - 1));
-        const geometry = prop.kind === 'cargo-bag' ? bagGeometry : slotGeometry;
-        const mesh = new THREE.Mesh(geometry.clone(), material);
+        // Geometry per NUMBER, not one shape for all five: the bible numbers
+        // these by band count rather than by text, so the count of ribs on a
+        // bag and of stencil bars on its slot is the label. Colour still agrees
+        // with it, but colour is no longer the only cue — which is rule 7, and
+        // the reason both halves are built from the same index. Each call
+        // returns a fresh geometry, so no `clone()` and no sharing.
+        const geometry =
+          prop.kind === 'cargo-bag' ? cargoBagGeometry(number) : cargoSlotGeometry(number);
+        const mesh = new THREE.Mesh(geometry, material);
         mesh.name = prop.id;
         mesh.applyMatrix4(worldMatrix(mMatrix, prop));
         // §9 budgets one shadow map; neither of these is worth a slot in it.
@@ -104,8 +109,6 @@ export class StationCargo {
         }
       }
     }
-    bagGeometry.dispose();
-    slotGeometry.dispose();
   }
 
   get size(): number {

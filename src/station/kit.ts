@@ -96,6 +96,109 @@ export interface StripDef {
   size: Vec3;
 }
 
+// ---------------------------------------------------------------------------
+// The interior kit (asset bible ISS-STR-01, ISS-STR-07, ISS-GRV-11)
+// ---------------------------------------------------------------------------
+
+/**
+ * Shielded lighting cove: channel width, cheek depth, and the reach of the lip
+ * that hides the bar (ISS-STR-07 — "you see the wash, never the source").
+ *
+ * These live in this file rather than in `geometry.ts` because the CHANNEL and
+ * the BAR INSIDE IT are authored in two different places — the channel is trim
+ * geometry, the bar is one of the module's emissive strips — and a cove whose
+ * lamp has drifted out of it is a lamp in a torch beam. `geometry.ts` imports
+ * these to build the channel; `coveStrips` below uses the same numbers to place
+ * the bar, so there is one source of truth for both halves.
+ */
+export const COVE_W = 0.13;
+export const COVE_D = 0.062;
+export const COVE_LIP = 0.085;
+/** Square section of the emissive bar, so it needs no rotation to sit straight
+ *  in a channel at any wall angle. */
+export const COVE_STRIP = 0.04;
+/** Where the bar sits in the channel: pushed against the shallow cheek, and
+ *  deep enough that the lip covers it from below. */
+export const COVE_STRIP_U = 0.026;
+export const COVE_STRIP_V = 0.036;
+
+/**
+ * Which tangential side of a cove the shielding lip goes on: always the side
+ * facing the DECK, so the lip is between the bar and the player.
+ *
+ * The wall frame's +X is the counter-clockwise tangent, whose vertical component
+ * is `cos(angle)` — so on the +X half of a tube (`cos > 0`) counter-clockwise is
+ * up and the lip belongs on −X, and on the −X half it is the other way round.
+ * Get this wrong on one side of a corridor and half the coves are floodlights
+ * pointed at the floor.
+ */
+export function coveSign(angle: number): 1 | -1 {
+  return Math.cos(angle) >= 0 ? 1 : -1;
+}
+
+/**
+ * A point in a wall frame, in module space: `u` tangential (counter-clockwise),
+ * `v` inward from the hull, `z` along the module axis. The pure twin of
+ * `geometry.ts`'s `wallPlace`.
+ */
+export function wallFrameVec(
+  radius: number,
+  angle: number,
+  u: number,
+  v: number,
+  z: number,
+): Vec3 {
+  const c = Math.cos(angle);
+  const s = Math.sin(angle);
+  return v3(radius * c - u * s - v * c, radius * s + u * c - v * s, z);
+}
+
+/** What a piece's interior is made of. Read at RUNTIME by `geometry.ts`, so it
+ *  is not baked into `levels/station.json` and can change with the art pass
+ *  without a level rebuild. */
+export interface InteriorDef {
+  /** Ring-frame stations along +Z. Cylindrical pieces only. */
+  ribs?: readonly number[];
+  /** Wall angles (radians about +Z, 0 on +X) carrying a shielded cove. */
+  coves?: readonly number[];
+  /** Wall angles carrying a cable raceway tray. */
+  trays?: readonly number[];
+  /** Build the overhead service run (ISS-GRV-11). */
+  overhead?: boolean;
+  /** Node only: corner chases and a coffered ceiling. */
+  posts?: boolean;
+}
+
+/**
+ * Ring-frame stations for a run of `length`: `count` evenly spaced, half a
+ * spacing in from each bulkhead. Four in a 5 m tube is a station every 1.25 m —
+ * a rhythm a walking player reads as distance covered, which is the whole point
+ * of ISS-STR-01, and it is close enough to `STRIDE_WALK_M × 1.67` that footfalls
+ * and frames do not beat against each other.
+ */
+export function ribStations(length: number, count: number): number[] {
+  const step = length / count;
+  const out: number[] = [];
+  for (let i = 0; i < count; i++) out.push(-length / 2 + step / 2 + i * step);
+  return out;
+}
+
+/** The emissive bars that live inside `angles`' coves, on a run of `length`
+ *  centred at `z`. */
+export function coveStrips(
+  radius: number,
+  angles: readonly number[],
+  length: number,
+  z = 0,
+): StripDef[] {
+  return angles.map((angle) => ({
+    pos: roundVec(
+      wallFrameVec(radius, angle, coveSign(angle) * COVE_STRIP_U, COVE_STRIP_V, z),
+    ),
+    size: v3(COVE_STRIP, COVE_STRIP, length),
+  }));
+}
+
 export interface KitPiece {
   id: KitPieceId;
   kind: ModuleKind;
@@ -127,6 +230,18 @@ export interface KitPiece {
    */
   rails(gravity: GravityMode): RailSegment[];
   strips: StripDef[];
+  /**
+   * What the inside of this piece is built from (ISS-STR-01/07, ISS-GRV-11).
+   * Optional so a new piece is a bare shell until somebody dresses it.
+   */
+  interior?: InteriorDef;
+  /**
+   * Ports that open on VACUUM (ISS-STR-04). The level never links one, so it is
+   * always capped — but it is capped with an armoured plate and `hatches.ts`
+   * builds the heavy outer door on it, because "the outer door must read as a
+   * threat" and a threat that looks like every other blank is not one.
+   */
+  outerPorts?: readonly PortId[];
   /** The walkable deck (§4), or null for a piece that never has one. */
   deck: DeckDef | null;
   /** Deterministic decor for one instance of this piece. */
@@ -388,14 +503,74 @@ function tubeRails(
   ];
 }
 
-/** Two strips in the upper corners, running the length of the tube. */
+/**
+ * The cross-section every cylindrical piece is dressed on, by wall angle.
+ *
+ * Nothing shares an angle and the two side walls stay empty, which is not
+ * tidiness — it is the only way all of this coexists in a 1.0 m bore:
+ *
+ *   0° / 180°  racks (`tubeRacks`), and the handrails 8 cm off their faces
+ *   45° / 135° cable raceway trays, which is exactly where `tubeCables` already
+ *              puts its bundles — the tray is the thing they lie in
+ *   60° / 120° shielded lighting coves, with the module's emissive bars inside
+ *   90°        the overhead run, offset off the crown so it clears the 5 cm of
+ *              headroom §14 leaves a standing player on the axis
+ */
+const TUBE_COVE_ANGLES: readonly number[] = [Math.PI / 3, (2 * Math.PI) / 3];
+const TUBE_TRAY_ANGLES: readonly number[] = [Math.PI / 4, (3 * Math.PI) / 4];
+
+/** The interior of a cylindrical piece: ring frames on the stride rhythm, two
+ *  coves, two raceways and an overhead run. */
+function tubeInterior(length: number, ribs = 4): InteriorDef {
+  return {
+    ribs: ribStations(length, ribs),
+    coves: TUBE_COVE_ANGLES,
+    trays: TUBE_TRAY_ANGLES,
+    overhead: true,
+  };
+}
+
+/** The emissive bars for a cylindrical piece — one inside each cove. */
 function tubeStrips(radius: number, length: number): StripDef[] {
-  const r = (radius - 0.06) * Math.SQRT1_2;
-  const d = Math.max(0.4, length - 0.9);
-  return [
-    { pos: v3(r, r, 0), size: v3(0.05, 0.05, d) },
-    { pos: v3(-r, r, 0), size: v3(0.05, 0.05, d) },
-  ];
+  return coveStrips(radius, TUBE_COVE_ANGLES, Math.max(0.4, length - 0.6));
+}
+
+/**
+ * How far into a node's corner notch its service chase sits, as a multiple of
+ * the node half-extent. Deep enough that the chase's back plate clears both
+ * faces, shallow enough that it is a corner and not a pillar.
+ */
+export const NODE_CHASE_R = 1.345;
+/** The four vertical corners of a node, as wall angles. */
+export const NODE_CORNER_ANGLES: readonly number[] = [
+  Math.PI / 4,
+  (3 * Math.PI) / 4,
+  (-3 * Math.PI) / 4,
+  -Math.PI / 4,
+];
+
+/**
+ * The four bars inside a node's corner chases.
+ *
+ * A node's chase is the tube cove stood on end: `geometry.ts` builds it in the
+ * XY plane running along +Z, then rotates −90° about X so the run is vertical,
+ * which maps a module-space point (x, y, z) to (x, z, −y). These bars go through
+ * the same map, which is why they land inside the channel rather than beside it.
+ */
+function nodeChaseStrips(half: number, height: number): StripDef[] {
+  return NODE_CORNER_ANGLES.map((angle) => {
+    const p = wallFrameVec(
+      NODE_CHASE_R * half,
+      angle,
+      coveSign(angle) * COVE_STRIP_U,
+      COVE_STRIP_V,
+      0,
+    );
+    return {
+      pos: roundVec(v3(p.x, 0, -p.y)),
+      size: v3(COVE_STRIP, height, COVE_STRIP),
+    };
+  });
 }
 
 // ---------------------------------------------------------------------------
@@ -426,6 +601,7 @@ const STRAIGHT: KitPiece = {
       gravity,
     ),
   strips: tubeStrips(STRAIGHT_R, STRAIGHT_L),
+  interior: tubeInterior(STRAIGHT_L),
   deck: tubeDeck(STRAIGHT_R, STRAIGHT_L),
   defaultLighting: 'emergency',
   decor(moduleId, rng, gravity) {
@@ -530,12 +706,11 @@ const NODE: KitPiece = {
   // height, which is 0.75 m over the deck, so under gravity they read as the
   // grab rails they are rather than as anything underfoot.
   rails: () => nodeRails(),
-  strips: [
-    { pos: v3(1.34, 0, 1.34), size: v3(0.05, 2.3, 0.05) },
-    { pos: v3(-1.34, 0, 1.34), size: v3(0.05, 2.3, 0.05) },
-    { pos: v3(1.34, 0, -1.34), size: v3(0.05, 2.3, 0.05) },
-    { pos: v3(-1.34, 0, -1.34), size: v3(0.05, 2.3, 0.05) },
-  ],
+  // Four vertical bars, one in each corner chase. A node reads as four glowing
+  // corners around a dark middle, which is what makes it a place rather than a
+  // wide bit of corridor.
+  strips: nodeChaseStrips(NODE_H, NODE_H * 2 - 0.4),
+  interior: { posts: true },
   deck: nodeDeck(NODE_H),
   defaultLighting: 'emergency',
   decor(moduleId, rng, gravity) {
@@ -720,12 +895,12 @@ const CUPOLA: KitPiece = {
       ['cr2', 'cs'],
     ),
   ],
-  strips: [
-    { pos: v3(0.62, 0.62, CUPOLA_RING_Z - 0.06), size: v3(0.05, 0.05, 0.05) },
-    { pos: v3(-0.62, 0.62, CUPOLA_RING_Z - 0.06), size: v3(0.05, 0.05, 0.05) },
-    { pos: v3(0.62, -0.62, CUPOLA_RING_Z - 0.06), size: v3(0.05, 0.05, 0.05) },
-    { pos: v3(-0.62, -0.62, CUPOLA_RING_Z - 0.06), size: v3(0.05, 0.05, 0.05) },
-  ],
+  // The light in the cupola lives in the VESTIBULE, not in the dome: §2 makes
+  // this the one room you can see out of, `defaultLighting` is 'dark', and a
+  // lamp inside a glass bubble is a lamp reflected in seven panes. Two coves in
+  // the collar wash the way in and leave the dome to the torch and the windows.
+  strips: coveStrips(CUPOLA_COLLAR_R, TUBE_COVE_ANGLES, 0.58, CUPOLA_PORT_Z + 0.375),
+  interior: { coves: TUBE_COVE_ANGLES },
   deck: cupolaDeck(CUPOLA_COLLAR_R, CUPOLA_R, CUPOLA_PORT_Z, CUPOLA_DOME_Z),
   defaultLighting: 'dark',
   decor(moduleId, rng, gravity) {
@@ -814,6 +989,11 @@ const AIRLOCK: KitPiece = {
       gravity,
     ),
   strips: tubeStrips(AIRLOCK_R, AIRLOCK_L),
+  interior: tubeInterior(AIRLOCK_L),
+  // The one port in the station that opens on vacuum, and the level never links
+  // it (§2). `geometry.ts` caps it with an armoured plate; `hatches.ts` puts the
+  // heavy door on it.
+  outerPorts: ['outer'],
   deck: tubeDeck(AIRLOCK_R, AIRLOCK_L),
   defaultLighting: 'dark',
   decor(moduleId, rng, gravity) {
@@ -876,6 +1056,7 @@ const LAB: KitPiece = {
   rails: (gravity) =>
     tubeRails(LAB_L / 2, LAB_R - RACK_DEPTH - RAIL_CLEARANCE, 'aft', 'fwd', 1.55, gravity),
   strips: tubeStrips(LAB_R, LAB_L),
+  interior: tubeInterior(LAB_L),
   deck: tubeDeck(LAB_R, LAB_L),
   defaultLighting: 'emergency',
   decor(moduleId, rng, gravity) {
