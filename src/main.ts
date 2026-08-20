@@ -74,8 +74,10 @@ import { parseHideSpotKey } from '@shared/graph/hideSpots';
 
 import { Ticker, bus } from './core';
 import { Renderer } from './render';
-import { Station, defaultStationLayout, kitPiece } from './station';
-import { KEYMAP, Player, type NoiseInfo } from './player';
+import { ITEM_KINDS, Station, defaultStationLayout, itemKindOf, kitPiece } from './station';
+import type { ItemKind } from './station';
+import { FirstPersonHands, KEYMAP, Player, RemoteCrewViews, type NoiseInfo } from './player';
+import type { CrewBodyInput } from './player';
 import { createUI, type Panel } from './ui';
 import { NoiseEmitter, NoiseRuntime } from './noise';
 import { createAudioSystem, type VoiceSignalling } from './audio';
@@ -125,6 +127,14 @@ const SERVER_OWNED_NOISE: ReadonlySet<NoiseKind> = new Set<NoiseKind>([
   'breathing',
   'hide-enter',
   'hide-exit',
+]);
+
+/** Noise kinds that are also an IMPACT — the hands flinch on these (§4). */
+const BRACING_NOISE: ReadonlySet<NoiseKind> = new Set<NoiseKind>([
+  'catch',
+  'impact',
+  'body-collision',
+  'landing',
 ]);
 
 // ===========================================================================
@@ -305,11 +315,16 @@ async function boot(): Promise<void> {
 
   buildStation(layout);
   buildPlayer();
+  // After the player, because the hands are a camera child and the camera is the
+  // controller's; before the pre-warm, because both the arms and all six held
+  // items have to be in the scene graph when `compileAsync` walks it.
+  buildHands();
   buildAudio(welcome);
   buildPuzzles(layout);
   // Rapier's wasm loads here, behind the menu, and before the pre-warm below.
   await buildCargo(layout);
   buildAlien();
+  buildCrew();
   wireNetwork();
   wireLoop();
 
@@ -319,6 +334,7 @@ async function boot(): Promise<void> {
   // pass over the same route ran 0.61 ms mean. See `Renderer.prewarm()`.
   ui.menu.setStatus('warming up — compiling shaders and uploading geometry…');
   ui.menu.setStartLabel('warming up…', false);
+  beginPrewarm();
   try {
     const warm = await renderer.prewarm();
     console.log(
@@ -331,6 +347,7 @@ async function boot(): Promise<void> {
     // A failed pre-warm costs smoothness, never the session.
     console.warn(`[main] prewarm skipped (${describe(err)})`);
   }
+  endPrewarm();
   ui.menu.setStartLabel('begin');
 
   if (welcome) {
@@ -347,6 +364,66 @@ async function boot(): Promise<void> {
 
   ticker.start();
 }
+
+/**
+ * Everything that is EMPTY at boot, filled for the duration of the pre-warm.
+ *
+ * `Renderer.prewarm()` makes every object visible and turns frustum culling off,
+ * which is the whole answer for a plain mesh and only half of it for an
+ * `InstancedMesh`: a set with `count === 0` is skipped by the draw, so its vertex
+ * buffers never upload and the first frame that has something to put in it pays
+ * for them instead. Two classes of that exist in this client:
+ *
+ *   • six sets inside the station — `Station.setPrewarm` names them;
+ *   • the crew's eight parts, which `PartInstances` hides outright at zero
+ *     instances (exactly right in a solo round, exactly wrong here).
+ *
+ * The hands are always in the scene and their six held forms are built by
+ * `buildHands`; the items, fixtures and plants are packed with real instances at
+ * load; the alien is `visible = false` until its first snapshot but writes its
+ * instance matrices in its constructor. So this is the whole of the gap.
+ */
+const PREWARM_CREW_ID = '__prewarm__';
+
+const prewarmCrew: CrewBodyInput[] = [];
+
+function beginPrewarm(): void {
+  // Six sets of instances that are empty at boot and would otherwise upload
+  // their buffers mid-round — the first seal, the first gravity warning, the
+  // first locker. See `Station.setPrewarm`.
+  station?.setPrewarm(true);
+  if (!crew || !station) return;
+  const module = station.modules[0];
+  const centre = module ? station.graph.centre(module.id) : null;
+  if (!module || !centre) return;
+  // A FULL crew, not one body: `CrewIdentities` hands out a different stripe
+  // count per seat and `RemoteCrewViews` caches the stripe transforms per count,
+  // so posing all six fills the widest instance buffer the round can produce and
+  // primes every identity at once.
+  prewarmCrew.length = 0;
+  for (let i = 0; i < MAX_PLAYERS; i++) {
+    prewarmCrew.push({
+      id: `${PREWARM_CREW_ID}${i}`,
+      pos: { x: centre.x + i * 0.4, y: centre.y + DECK_Y_M + EYE_SPAWN_M, z: centre.z },
+      quat: { x: 0, y: 0, z: 0, w: 1 },
+      module: module.id,
+      state: 'GROUNDED',
+      alive: true,
+      gait: 'walk',
+    });
+  }
+  crew.sync(prewarmCrew, 1 / 60);
+}
+
+function endPrewarm(): void {
+  station?.setPrewarm(false);
+  if (!crew) return;
+  for (const body of prewarmCrew) crew.forget(body.id);
+  prewarmCrew.length = 0;
+  crew.sync(EMPTY_CREW, 0);
+}
+
+const EMPTY_CREW: readonly [] = Object.freeze([]);
 
 /** Colyseus rejects with plain objects as often as with Errors. */
 function describe(err: unknown): string {
@@ -514,6 +591,29 @@ const NO_MODULES: readonly ModuleId[] = Object.freeze([]);
 // 4b · player (§4)
 // ---------------------------------------------------------------------------
 
+/**
+ * The gloved hands, in the camera (§4, ISS-CHR-02).
+ *
+ * They are a CAMERA child rather than a scene child, which is what makes them
+ * render at the eye without a per-frame transform, and it is also what keeps
+ * them out of both the §9 shadow map and the station BVH: the blanket
+ * `castShadow` traverse in `buildStation` walks `station.group`, the collider is
+ * built from station geometry alone, and every mesh in here is flagged
+ * `noShadow` / `noCollide` besides.
+ */
+let hands: FirstPersonHands | null = null;
+
+function buildHands(): void {
+  hands = new FirstPersonHands({ materials: station?.materials ?? null });
+  camera.add(hands.object3D);
+  // BEFORE `renderer.prewarm()`, and that is the whole reason this is a separate
+  // call: the held form of all six carryables is built now, while the menu is
+  // up, rather than two meshes and a geometry the first time somebody picks
+  // something up. That hitch is the one this project has killed twice.
+  const preloaded = hands.preloadHeld(ITEM_KINDS);
+  console.log(`[main] hands: ${preloaded} held items preloaded, ${hands.triangles} arm triangles`);
+}
+
 function buildPlayer(): void {
   player = new Player({
     camera,
@@ -538,7 +638,16 @@ function buildPlayer(): void {
     // The player's own noise: heard instantly and locally (§8 "they have to
     // feel the mistake as they make it"), and reported to the server, which
     // re-derives the loudness from §14 (§7).
-    onNoise: (event, info) => sendNoise(event, info),
+    onNoise: (event, info) => {
+      // The hands flinch off the same event the alien hears. §4 prices a catch
+      // at 26 and a crash at 51 and the player has to be able to tell which
+      // happened without reading a number, so the brace is scaled by the speed
+      // the event was MADE at — the same field `sendNoise` refuses to re-derive.
+      if (BRACING_NOISE.has(event.kind)) {
+        hands?.brace(clamp((info?.speed ?? player?.speed ?? 0) / PUSH_MAX, 0, 1));
+      }
+      sendNoise(event, info);
+    },
     onFlashlight: (on) => renderer.setFlashlight(on),
 
     // §4's four transitions. `LocomotionAudio` decides for itself which of them
@@ -798,6 +907,14 @@ let alien: AlienProxy | null = null;
 
 function buildAlien(): void {
   alien = new AlienProxy({
+    // ONE owner per material (§9): the creature rides the station's `organic`
+    // rather than minting a second copy of the same program.
+    materials: station?.materials ?? null,
+    // §4/§5: walk on a deck, rail-pull in vacuum. This is the gait readout the
+    // player's life depends on and it is the ONLY readout, because ISS-CHR-01
+    // carries no emissive at all — so it is resolved from the live module
+    // gravity, which a §5 director floor drop mutates in place.
+    gravityOf: (module) => station?.moduleGravity(module) ?? 'nominal',
     listener: () => camera.position,
     cullByModule: true,
     // `NetClient` already publishes `alien:proximity`; two publishers would
@@ -805,6 +922,82 @@ function buildAlien(): void {
     emitProximity: false,
   });
   scene.add(alien.object3D);
+  console.log(`[main] alien: ${alien.drawCalls} draw calls, ${alien.triangles} triangles`);
+}
+
+// ---------------------------------------------------------------------------
+// 4f · the rest of the crew (§7 interpolated bodies, ISS-CHR-03)
+// ---------------------------------------------------------------------------
+
+/**
+ * Every other player, in eight instanced draw calls and none at all when you are
+ * alone (`PartInstances.end()` hides a part at zero instances).
+ *
+ * This REPLACES the grey capsules: a capsule could not say which way somebody
+ * was facing, what gait they were holding — which is your risk too, §4 — or
+ * whether they were the person you have been following for ten minutes. The band
+ * count and hue do the last one and `RemoteCrewViews` owns the seat allocation.
+ */
+let crew: RemoteCrewViews | null = null;
+
+function buildCrew(): void {
+  if (!station) return;
+  crew = new RemoteCrewViews(station.materials, {
+    // §9's one shadow map, spent deliberately: another player's shadow sliding
+    // across a bulkhead is the cheapest "you are not alone" signal in the game.
+    castShadow: true,
+  });
+  scene.add(crew.object3D);
+}
+
+// ---------------------------------------------------------------------------
+// 4g · what is in your hand (§5 decoy, §10 medkit, §11 card and fuses)
+// ---------------------------------------------------------------------------
+
+/**
+ * The carryable the hands are holding, or null.
+ *
+ * THE INVENTORY IS THE SERVER'S and it is a SET, not a selection: §7 sends
+ * `inventory { items }` and nothing anywhere picks one of them. So the rule here
+ * is "the thing you picked up most recently is the thing in your hand", which is
+ * what a person does and needs no new key, no new message and no new state on
+ * the wire. Using an item (throwing the decoy, spending the medkit) drops it out
+ * of the list and the hand falls back to whatever is left.
+ *
+ * A cargo bag is not an `ItemKind` — it is a loose rigid body in §11 puzzle 3 —
+ * and while you are carrying one your hands are on it, so the held item is
+ * suppressed rather than fought over.
+ */
+let heldItem: ItemKind | null = null;
+let inventory: readonly ItemKind[] = [];
+/** The locker we last swung open, so an arriving item can leave its shelf. */
+let lastOpenedLocker: string | null = null;
+
+function onInventory(items: readonly ItemKind[]): void {
+  // Newest first: anything in `items` that was not in the last list.
+  let next: ItemKind | null = null;
+  for (const item of items) {
+    if (!inventory.includes(item)) next = item;
+  }
+  // Whatever just arrived came out of the locker we just opened, and that is the
+  // only signal the server gives us: §7 sends the inventory, never the shelf.
+  // The fuses and the card are re-asserted from the room's own records a tick
+  // later (`pumpWorldItems`), so this only has to be right for the decoys.
+  if (next && lastOpenedLocker) station?.takeFromLocker(lastOpenedLocker, next);
+  if (!next) {
+    // Nothing new. Keep what is in hand if we still have one, else fall back to
+    // the last thing in the list so an empty hand only ever means an empty bag.
+    next = heldItem && items.includes(heldItem) ? heldItem : (items[items.length - 1] ?? null);
+  }
+  inventory = [...items];
+  heldItem = next;
+}
+
+/** Offline, and for the local pickup path: put something in the hand directly. */
+function takeItem(kind: ItemKind): void {
+  if (!inventory.includes(kind)) inventory = [...inventory, kind];
+  heldItem = kind;
+  ui.toast(`picked up: ${kind.replace('-', ' ')}`, 2000);
 }
 
 // ===========================================================================
@@ -886,12 +1079,34 @@ function wireNetwork(): void {
   station?.applyGravitySnapshots(net.gravity());
   audio.gravity.applySnapshot(net.gravity());
 
+  // §7's `inventory` is the whole carried-item contract — see `onInventory`.
+  teardown.push(net.on('inventory', (msg) => onInventory(msg.items)));
+  onInventory(net.inventory);
+
+  // A genuine departure, which is the one signal that may free an identity seat
+  // and a voice peer. Falling out of one `remoteBodies()` snapshot is not that.
+  teardown.push(
+    net.on('peerLeave', ({ id }) => {
+      crew?.forget(id);
+      voicePeers.delete(id);
+    }),
+  );
+
   // Round lifecycle.
   teardown.push(
     net.on('roundStart', (msg) => {
       puzzleStore.reset();
       cargo?.reset();
       station?.setAllLighting('emergency');
+      // §11's hardware back to rest, and this round's items back in the lockers
+      // the round's own seed puts them in. No geometry is built: every slot a
+      // locker could ever fill was created at load (see `stationItems.ts`).
+      station?.fixtures.reset();
+      station?.stockLockers(msg.seed);
+      fuseRevision = -1;
+      cardRevision = -1;
+      heldItem = null;
+      inventory = [];
       // §5: "the round begins precisely as authored" — stage 0's gravity budget
       // is exactly zero, so every floor the director dropped comes back.
       station?.resetGravity();
@@ -1075,6 +1290,16 @@ function wireLoop(): void {
     interactor?.update(dt);
     audio.update(dt);
 
+    // §11's hardware, from §11's state. Fixed rate, because that is the rate the
+    // state arrives at; the joints themselves are eased per frame inside
+    // `station.tick`, so a lever throw is smooth at any frame rate.
+    pumpFixtures();
+    // Where the loose carryables are, from the room's own puzzle records.
+    pumpWorldItems();
+    // §4: a hide spot's lamp goes out while somebody is in it, and "is that box
+    // free?" is a question a teammate has to be able to answer across a module.
+    pumpHideSpots();
+
     // §9's LightingRig pins its first light to the module you are looking at,
     // and §6's panels only draw for the module you are standing in. Both fall
     // back to something plausible when nobody tells them, which is why nothing
@@ -1127,7 +1352,19 @@ function wireLoop(): void {
 
     // Remote bodies and the alien ARE interpolated (§7).
     drawAlien(frameDt);
-    syncRemoteBodies();
+    syncRemoteBodies(frameDt);
+
+    // The hands ride the camera, so they update AFTER `player.update` wrote it:
+    // the rail reach is resolved against this frame's camera matrix, not last
+    // frame's. `Player` satisfies `HandsInput` structurally — no adapter, and
+    // nothing that can drift out of step with the controller.
+    if (hands && player) {
+      // A module camera has no hands, and neither does a corpse (§10).
+      hands.setVisible(!spectating && player.alive);
+      // A cargo bag is already in both of them (§11 puzzle 3).
+      hands.setHeld(cargo?.carrying ? null : heldItem);
+      hands.update(frameDt, player, camera);
+    }
 
     ui.update(frameDt);
 
@@ -1139,6 +1376,142 @@ function wireLoop(): void {
       motion: spectating ? 0 : clamp((player?.speed ?? 0) / PUSH_MAX, 0, 1),
     });
   });
+}
+
+// ---------------------------------------------------------------------------
+// 6a · puzzle state → the hardware on the wall (§11)
+// ---------------------------------------------------------------------------
+
+/** Reused: this runs at 20 Hz and an array a tick is an array a tick. */
+const undockEngaged: boolean[] = [];
+
+/**
+ * Push §11's state into §11's ironmongery.
+ *
+ * `PuzzleFixture` diffs every joint target internally, so calling this every
+ * fixed tick with unchanged state costs a handful of comparisons and writes
+ * nothing. The clock matters though: `BreakerState.faultUntilMs` is a SERVER
+ * epoch stamp — `src/puzzles/panels.ts` reads it against `Date.now()` too — and
+ * it is what makes the whole lever gang shiver while the panel is buzzing.
+ */
+function pumpFixtures(): void {
+  const fixtures = station?.fixtures;
+  if (!fixtures) return;
+
+  const breaker = puzzleStore.state('breaker-sequence');
+  if (breaker) fixtures.setBreaker(breaker, Date.now());
+
+  // One puzzle, two fixtures, two modules — §11's thesis puzzle. The wheel takes
+  // the synced float, the gauge takes its damped follower and the green band.
+  const coolant = puzzleStore.state('coolant-valve');
+  if (coolant) {
+    fixtures.setValve(coolant);
+    fixtures.setGauge(coolant);
+  }
+
+  const keys = puzzleStore.state('airlock-keyswitch');
+  if (keys) {
+    for (let i = 0; i < keys.switches.length; i++) {
+      fixtures.setKeyswitch(i, keys.switches[i]?.turnedAtMs != null);
+    }
+  }
+
+  const undock = puzzleStore.state('undock-sequence');
+  if (undock) {
+    undockEngaged.length = 0;
+    for (const lever of undock.levers) undockEngaged.push(lever.engaged);
+    // `armed` unlatches all three red covers at once — the station announcing
+    // four systems online, and the only global state that changes a shape.
+    fixtures.setUndock(undock.armed, undockEngaged);
+  }
+}
+
+// ---------------------------------------------------------------------------
+// 6b · where the carryables are (§11 puzzles 1 and 4)
+// ---------------------------------------------------------------------------
+
+/** Last applied puzzle revision, so a 20 Hz pump does not rebuild a Set a tick. */
+let fuseRevision = -1;
+let cardRevision = -1;
+const fuseLockers: string[] = [];
+
+/**
+ * The world form of the fuses and the sequence card, from the ROOM's records.
+ *
+ * `Station.stockLockers` seeds these from the client's own deterministic plan,
+ * which is right offline and right for the first frame; once the server's puzzle
+ * state arrives it is the truth, and it is the only thing that knows a fuse has
+ * been picked up or fitted. An item still lying in a locker somebody emptied is
+ * a lie a player would cross the station for.
+ */
+function pumpWorldItems(): void {
+  const items = station?.items;
+  if (!items) return;
+
+  const fuse = puzzleStore.state('fuse-hunt');
+  if (fuse && fuse.revision !== fuseRevision) {
+    fuseRevision = fuse.revision;
+    fuseLockers.length = 0;
+    for (const record of fuse.fuses) {
+      if (record.carriedBy || record.installed) continue;
+      fuseLockers.push(record.locker);
+    }
+    items.setKindLocations('fuse', fuseLockers);
+  }
+
+  const breaker = puzzleStore.state('breaker-sequence');
+  if (breaker && breaker.revision !== cardRevision) {
+    cardRevision = breaker.revision;
+    const locker = breaker.card.locker;
+    items.setKindLocations('sequence-card', locker ? [locker] : []);
+  }
+}
+
+// ---------------------------------------------------------------------------
+// 6c · hide-spot lamps (§4)
+// ---------------------------------------------------------------------------
+
+/** Spot ids whose lamp is currently out, and this tick's set. Two Sets for the
+ *  life of the process rather than two a tick. */
+const lampsOut = new Set<string>();
+const occupiedNow = new Set<string>();
+
+/**
+ * A taken hide spot goes dark.
+ *
+ * The alien is blind, so there is no sight logic to hang an occupancy cue on and
+ * `props.ts` spends the one channel it has: a lit dot means you can get in, a
+ * dark one means somebody already did. The local player is read off the
+ * controller (which is authoritative for our own hide) and everybody else off
+ * the raw schema — `net.players()` would materialise a `PlayerView` per player
+ * at 20 Hz to read one string.
+ */
+function pumpHideSpots(): void {
+  if (!station) return;
+  occupiedNow.clear();
+
+  const mine = player?.hideSpot ?? null;
+  if (mine) occupiedNow.add(spotIdOf(mine));
+  net.state?.players.forEach((p) => {
+    if (p.id === localId || !p.hideSpot) return;
+    occupiedNow.add(spotIdOf(p.hideSpot));
+  });
+
+  for (const spot of occupiedNow) {
+    if (!lampsOut.has(spot)) station.setHideSpotOccupied(spot, true);
+  }
+  for (const spot of lampsOut) {
+    if (!occupiedNow.has(spot)) station.setHideSpotOccupied(spot, false);
+  }
+  lampsOut.clear();
+  for (const spot of occupiedNow) lampsOut.add(spot);
+}
+
+/** `${module}:${spot}` → `spot`, which is how `props.ts` keys its lamps.
+ *  Tolerant, because a malformed key must not take the frame down. */
+function spotIdOf(key: string): string {
+  const i = key.indexOf(':');
+  return i < 0 ? key : parseHideSpotKey(key).spot;
 }
 
 /**
@@ -1203,63 +1576,56 @@ function drawAlien(frameDt: number): void {
     alienSnap.state = snap.state as AlienState;
     alienSnap.module = snap.module;
     alien.applySnapshot(alienSnap);
+    // `applySnapshot` resolves the gait through `gravityOf` on every module
+    // CHANGE, which misses the case §4 cares most about: the director cutting the
+    // floor under an alien that is standing still. Re-read it every frame — it is
+    // one map lookup and one field write, and `AlienView` blends the two
+    // locomotions over 2.5 s rather than snapping between them.
+    alien.setGravity(station?.moduleGravity(snap.module) ?? 'nominal');
   }
   alien.update(1, frameDt);
 }
 
 // ---------------------------------------------------------------------------
-// remote bodies — grey-box capsules until M8 (§9)
+// remote bodies (§7 interpolation) and the voice placement that rides them
 // ---------------------------------------------------------------------------
 
-const bodies = new Map<string, THREE.Mesh>();
-const bodyGeometry = new THREE.CapsuleGeometry(0.35, 0.9, 4, 8);
-const bodyMaterial = new THREE.MeshStandardMaterial({
-  color: 0x9aa7a2,
-  roughness: 0.75,
-  metalness: 0.05,
-});
-const deadMaterial = new THREE.MeshStandardMaterial({
-  color: 0x5a3a3a,
-  roughness: 0.9,
-  metalness: 0,
-});
+/** Peers we have already handed to the voice mesh, so a reunion never
+ *  renegotiates (§7: "keep all peers connected permanently"). */
+const voicePeers = new Set<string>();
 
-/** Reused by `syncRemoteBodies` — it ran EVERY RENDERED FRAME, 60 Sets a second. */
-const seenBodies = new Set<string>();
+/**
+ * One pass over the interpolated bodies: draw them, place their voices.
+ *
+ * `net.remoteBodies()` is called ONCE and the array is shared with
+ * `RemoteCrewViews.sync`, which reads it synchronously and retains nothing —
+ * that array and the views in it belong to the net layer and are reused between
+ * calls, so nothing here may hold one across a frame.
+ *
+ * Culling is passed in rather than applied to the object: the crew is one set of
+ * instanced parts for the whole station, so a body in a module outside the
+ * two-hop set is simply not written into the buffer.
+ */
+function syncRemoteBodies(frameDt: number): void {
+  const bodies = net.remoteBodies();
 
-function syncRemoteBodies(): void {
-  seenBodies.clear();
-  for (const body of net.remoteBodies()) {
+  for (const body of bodies) {
     if (body.escaped) continue;
-    seenBodies.add(body.id);
-    let mesh = bodies.get(body.id);
-    if (!mesh) {
-      mesh = new THREE.Mesh(bodyGeometry, bodyMaterial);
-      mesh.castShadow = true;
-      mesh.receiveShadow = true;
-      scene.add(mesh);
-      bodies.set(body.id, mesh);
+    if (!voicePeers.has(body.id)) {
+      voicePeers.add(body.id);
       // A peer is a voice as much as a body (§7).
       audio.voice?.addPeer(body.id);
     }
-    mesh.position.set(body.pos.x, body.pos.y, body.pos.z);
-    mesh.quaternion.set(body.quat.x, body.quat.y, body.quat.z, body.quat.w);
-    mesh.material = body.alive ? bodyMaterial : deadMaterial;
-    mesh.visible = station ? station.isVisible(body.module) : true;
-
     audio.voice?.setPeerPlacement(body.id, body.pos, body.module);
     audio.voice?.setPeerChannel(body.id, body.alive ? 'proximity' : 'headset');
   }
-  for (const [id, mesh] of bodies) {
-    if (seenBodies.has(id)) continue;
-    scene.remove(mesh);
-    bodies.delete(id);
-    // §7: "Keep all peers connected permanently and gate gain by proximity …
-    // renegotiation takes a second or two and would clip the first moment of
-    // every reunion." Falling out of this loop means escaped, or simply absent
-    // from one snapshot — NOT gone from the room. A genuine departure already
-    // reaches VoiceMesh through signalling.onPeerLeave → removePeer.
-  }
+
+  crew?.sync(bodies, frameDt, {
+    isVisible: (module) => (station ? station.isVisible(module) : true),
+    // §4: a body in a `zero` module takes the whole orientation quaternion, roll
+    // included; one on a deck takes yaw only and plants its feet.
+    gravityOf: (module) => station?.moduleGravity(module) ?? 'nominal',
+  });
 }
 
 // ===========================================================================
@@ -1379,9 +1745,29 @@ function onInteractPress(): void {
       // input (the §11 sequence card, a fuse). Ask for all three; the two that
       // do not apply are no-ops on the server.
       const key = `${target.module}:${target.id}`;
-      net.sendInteract(key, 'loot');
-      net.sendInteract(key, 'take');
-      net.sendInteract(key, 'read-card');
+      // The door is COSMETIC and client-side — §7 has no message for it — so it
+      // swings on the press, either way. It is also what reveals whatever is
+      // inside: `StationItems` gates the world item on the door, because a shut
+      // steel box showing its contents (and its amber lamp) through 3 cm of
+      // plate is worse than no world item at all.
+      station.openLocker(target.id);
+      lastOpenedLocker = target.id;
+      if (net.connected) {
+        net.sendInteract(key, 'loot');
+        net.sendInteract(key, 'take');
+        net.sendInteract(key, 'read-card');
+        // Re-assert the room's own item records over the local reveal on the
+        // next tick, whatever the server decides about this locker.
+        fuseRevision = -1;
+        cardRevision = -1;
+      } else {
+        // OFFLINE. The server owns looting, so with no server there is nobody to
+        // ask — and "free flight only" still has to be able to open a box and see
+        // what an item looks like in your hand, which is the whole of §5's decoy
+        // and §11's card as a player meets them. The station's own locker plan is
+        // the same deterministic roll the online path mirrors.
+        lootOffline(target.id);
+      }
       return;
     }
   }
@@ -1411,6 +1797,25 @@ function onInteractPress(): void {
       return;
     }
   }
+}
+
+/**
+ * The offline sandbox's locker: take the first thing in it.
+ *
+ * Deliberately not a shadow inventory system. It reads what the station says is
+ * in that locker — the same deterministic `planLockerContents` roll the online
+ * path mirrors — takes one, and hands it to the same `heldItem` the server drives
+ * online. The door has already swung by the time this runs.
+ */
+function lootOffline(lockerId: string): void {
+  if (!station) return;
+  const kind = station.items.contentsOf(lockerId)[0] ?? null;
+  if (!kind) {
+    ui.toast('empty', 1500);
+    return;
+  }
+  station.takeFromLocker(lockerId, kind);
+  takeItem(kind);
 }
 
 function onInteractRelease(): void {
@@ -1489,6 +1894,13 @@ function throwDecoy(): void {
   };
   // 70 on impact, the loudest thing in the game, and one of two per round.
   emitter.decoy(origin, player.module);
+  // Online, the server's next `inventory` takes it out of your hand. Offline
+  // there is no inventory message, so the hand has to empty itself or the decoy
+  // you just threw is still in it.
+  if (!net.connected && heldItem === 'decoy') {
+    inventory = inventory.filter((item) => item !== 'decoy');
+    heldItem = inventory[inventory.length - 1] ?? null;
+  }
 }
 
 // ===========================================================================
@@ -1731,6 +2143,9 @@ window.addEventListener('beforeunload', () => {
   for (const off of teardown) off();
   ticker.stop();
   player?.dispose();
+  hands?.dispose();
+  crew?.dispose();
+  alien?.dispose();
   cargo?.dispose();
   audio?.dispose();
   void net.disconnect();
@@ -1761,6 +2176,17 @@ Object.assign(globalThis as Record<string, unknown>, {
     ticker,
     get alien() {
       return alien;
+    },
+    get hands() {
+      return hands;
+    },
+    get crew() {
+      return crew;
+    },
+    /** Put something in your hand without a server — playtesting the held forms. */
+    hold: (kind: ItemKind | null) => {
+      heldItem = kind;
+      return kind;
     },
     get interactor() {
       return interactor;

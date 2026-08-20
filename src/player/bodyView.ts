@@ -944,9 +944,12 @@ export class RemoteCrewViews {
     const gait = body.gait ?? 'walk';
     let motion = this.motions.get(body.id);
     if (!motion) {
-      // A random starting phase so six crewmates never march in lockstep.
+      // Staggered so six crewmates never march in lockstep — but derived from
+      // the player id rather than Math.random(), so every client agrees on where
+      // in its stride a given teammate is. Random offsets were per-client, which
+      // meant the same crewmate walked differently on each screen.
       motion = {
-        phase: Math.random() * Math.PI * 2,
+        phase: (hashId(body.id) / 0x100000000) * Math.PI * 2,
         speed: 0,
         lastX: body.pos.x,
         lastZ: body.pos.z,

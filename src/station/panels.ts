@@ -35,20 +35,39 @@ export interface StationPanel {
   setTexture(texture: THREE.Texture | null): void;
 }
 
+export interface StationPanelsOptions {
+  /**
+   * Draw the panel carcass here. Default true.
+   *
+   * `src/station/fixtures.ts` supersedes it: `panelShellGeometry` is the same
+   * plate with a bezel recessed around this screen, and it merges every panel in
+   * a module into ONE vertex-coloured mesh along with the §11 hardware bolted
+   * round it. Thirteen plain bodies become eight merged ones, which is how the
+   * fixtures pay for themselves. Pass `false` whenever `StationFixtures` is
+   * built, or the two carcasses sit inside each other.
+   */
+  body?: boolean;
+}
+
 export class StationPanels {
   readonly group = new THREE.Group();
   readonly panels = new Map<string, StationPanel>();
   readonly interactables: THREE.Object3D[] = [];
 
-  constructor(layout: StationLayout, materials: StationMaterials) {
+  constructor(
+    layout: StationLayout,
+    materials: StationMaterials,
+    opts: StationPanelsOptions = {},
+  ) {
     this.group.name = 'station-panels';
     const parts = buildPanelParts();
+    const withBody = opts.body !== false;
 
     for (const module of layout.modules) {
       const mMatrix = moduleMatrix(module);
       for (const prop of module.props) {
         if (prop.kind !== 'panel') continue;
-        const panel = this.buildPanel(module.id, prop, parts, materials, mMatrix);
+        const panel = this.buildPanel(module.id, prop, parts, materials, mMatrix, withBody);
         this.panels.set(panel.id, panel);
         this.interactables.push(panel.group);
         this.group.add(panel.group);
@@ -103,21 +122,24 @@ export class StationPanels {
     parts: { body: THREE.BufferGeometry; screen: THREE.BufferGeometry },
     materials: StationMaterials,
     mMatrix: THREE.Matrix4,
+    withBody: boolean,
   ): StationPanel {
     const group = new THREE.Group();
     group.name = `panel-${prop.id}`;
     group.applyMatrix4(mMatrix.clone().multiply(propMatrix(prop)));
 
-    const body = new THREE.Mesh(parts.body.clone(), materials.panel);
-    group.add(body);
+    const tag: StationInteractable = { type: 'panel', id: prop.id, module };
+    if (withBody) {
+      const body = new THREE.Mesh(parts.body.clone(), materials.panel);
+      group.add(body);
+      body.userData.station = tag;
+    }
 
     const material = materials.panelScreen.clone();
     const screen = new THREE.Mesh(parts.screen.clone(), material);
     group.add(screen);
 
-    const tag: StationInteractable = { type: 'panel', id: prop.id, module };
     group.userData.station = tag;
-    body.userData.station = tag;
     screen.userData.station = tag;
 
     const panel: StationPanel = {

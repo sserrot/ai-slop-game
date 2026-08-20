@@ -805,7 +805,16 @@ export class AlienView {
   private busUnsubs: Unsubscribe[] = [];
 
   private readonly posture: PostureAccum = copyPosture(POSTURES.DORMANT);
-  private phase = Math.random() * Math.PI * 2;
+  /**
+   * Starts at zero, deliberately, and NOT at a random offset.
+   *
+   * There is exactly one alien, so a random phase buys no visual variety — it
+   * only desynchronises clients. Gait is how a player reads patrol from search
+   * from hunt (§5), and they call that out to each other over proximity voice,
+   * so two people looking at the same creature must see the same stride. A
+   * random seed put them up to a full cycle apart.
+   */
+  private phase = 0;
   private sweepPhase = 0;
   /** Gravity blend, 0 = rail-pull, 1 = walk. Smoothed so a director floor drop
    *  is a transition rather than a snap. */

@@ -91,7 +91,23 @@ export type { HatchView, HatchVisualState } from './hatches';
 export { StationLockers } from './lockers';
 export type { Locker, StationInteractable } from './lockers';
 export { StationPanels } from './panels';
-export type { StationPanel } from './panels';
+export type { StationPanel, StationPanelsOptions } from './panels';
+export { StationFixtures } from './fixtures';
+export type { FixtureInstall } from './fixtures';
+export { StationItems, LOCKER_ITEM_KINDS, itemKindOf } from './stationItems';
+export {
+  ITEM_KINDS,
+  ITEM_SPECS,
+  StationItemInstances,
+  buildFirstPersonItem,
+  buildHeldItem,
+  buildItemMesh,
+  itemGeometry,
+  itemModel,
+} from './items';
+export type { ItemKind, ItemModel, ItemPlacement, ItemSpec } from './items';
+export { StationGravityPlants, GRAVITY_PLANTS } from './gravityProps';
+export type { PlantPlacement, PlantState } from './gravityProps';
 export {
   planLockerContents,
   lockerRefs,

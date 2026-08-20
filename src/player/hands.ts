@@ -311,6 +311,17 @@ export class FirstPersonHands {
 
   private held: ItemKind | null = null;
   private heldNode: THREE.Object3D | null = null;
+  /**
+   * One built-and-parented held form per kind, all but one of them invisible.
+   *
+   * The reason this is a cache and not a build-on-demand: `buildHeldItem` mints
+   * two meshes and, the first time a kind is ever asked for, the geometry behind
+   * them — and `Renderer.prewarm()` has already been and gone by the time
+   * somebody picks a medkit up. A program linked mid-round is the first-visit
+   * hitch this project has spent two passes killing. `preloadHeld` fills this at
+   * load; `setHeld` then only ever toggles `visible`.
+   */
+  private readonly heldCache = new Map<ItemKind, THREE.Object3D>();
   private braceAmount = 0;
   private breath = Math.random() * Math.PI * 2;
   private lastSpeed = 0;
@@ -428,30 +439,62 @@ export class FirstPersonHands {
     if (kind === this.held) return;
     this.held = kind;
     if (this.heldNode) {
-      // Remove only. `itemModel` caches and SHARES item geometry across every
-      // world instance and every held mesh of that kind, so disposing it here
-      // would blank every medkit in the station.
-      this.heldNode.removeFromParent();
+      // Hidden, never disposed and never even unparented. `itemModel` caches and
+      // SHARES item geometry across every world instance and every held mesh of
+      // that kind, so disposing it here would blank every medkit in the station
+      // — and re-parenting is how a mid-round allocation sneaks back in.
+      this.heldNode.visible = false;
       this.heldNode = null;
     }
     if (!kind) return;
+    const node = this.heldCache.get(kind) ?? this.buildHeld(kind);
+    if (!node) return;
+    node.visible = true;
+    this.heldNode = node;
+  }
+
+  /**
+   * Build the held form of every kind NOW, before `Renderer.prewarm()`.
+   *
+   * Call it once, at load, with `ITEM_KINDS`. Returns how many were built, which
+   * is 0 when no `StationMaterials` was supplied — worth logging, because the
+   * failure mode is otherwise an empty hand on first pickup.
+   */
+  preloadHeld(kinds: Iterable<ItemKind>): number {
+    let built = 0;
+    for (const kind of kinds) {
+      if (this.heldCache.has(kind)) continue;
+      if (this.buildHeld(kind)) built++;
+    }
+    return built;
+  }
+
+  /** Draw one kind's held form and park it, invisible, on the right hand. */
+  private buildHeld(kind: ItemKind): THREE.Object3D | null {
     const materials = this.materials;
     if (!materials) {
       // `buildHeldItem` needs the station's material set for the item body and
       // its accent; refusing quietly beats inventing a second copy of both.
-      return;
+      return null;
     }
     const node = buildHeldItem(kind, materials, { name: `held-${kind}` });
+    node.visible = false;
     node.traverse((o) => {
       const mesh = o as THREE.Mesh;
       if (mesh.isMesh) {
+        // A view model in the one shadow map is a black bar across the screen,
+        // and camera-space geometry defeats three's sphere test at the frame
+        // edges — the same two decisions `harden()` makes for the arms.
         mesh.castShadow = false;
         mesh.receiveShadow = false;
         mesh.frustumCulled = false;
+        mesh.userData.noShadow = true;
+        mesh.userData.noCollide = true;
       }
     });
     (this.sides[1] as Side).grip.add(node);
-    this.heldNode = node;
+    this.heldCache.set(kind, node);
+    return node;
   }
 
   /**
@@ -545,8 +588,11 @@ export class FirstPersonHands {
 
   dispose(): void {
     this.object3D.removeFromParent();
-    this.heldNode?.removeFromParent();
+    for (const node of this.heldCache.values()) node.removeFromParent();
+    this.heldCache.clear();
     this.heldNode = null;
+    // Only the arms' own buffers: the held items point at `itemModel`'s shared
+    // geometry, which outlives any one pair of hands.
     for (const m of this.meshes) m.geometry.dispose();
     for (const m of this.owned) m.dispose();
   }

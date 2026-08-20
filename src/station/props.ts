@@ -358,11 +358,11 @@ const BUDGETS = Object.freeze({
   /** ISS-PRP-02. */
   cable: { label: 'cable bundle (ISS-PRP-02)', min: 120, max: 220 } as PolyBudget,
   /** ISS-PRP-03 — the housing only; `puzzleProps` adds the hardware. */
-  panel: { label: 'wall panel (ISS-PRP-03)', min: 80, max: 160 } as PolyBudget,
+  panel: { label: 'wall panel (ISS-PRP-03)', min: 80, max: 140 } as PolyBudget,
   /** ISS-PRP-04. */
   stowage: { label: 'stowage bag (ISS-PRP-04)', min: 180, max: 300 } as PolyBudget,
   /** ISS-PRP-05 — body plus door, since the two are one object to a player. */
-  locker: { label: 'stowage locker (ISS-PRP-05)', min: 300, max: 460 } as PolyBudget,
+  locker: { label: 'stowage locker (ISS-PRP-05)', min: 300, max: 450 } as PolyBudget,
   /** ISS-PRP-06. */
   laptop: { label: 'crew laptop (ISS-PRP-06)', min: 200, max: 320 } as PolyBudget,
   /** ISS-PRP-07. */

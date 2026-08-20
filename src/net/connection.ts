@@ -35,6 +35,7 @@ import type {
   GravityMode,
   HatchSnapshot,
   HideSpotId,
+  HideSpotKey,
   ModuleGravitySnapshot,
   ModuleId,
   NoiseEvent,
@@ -202,6 +203,18 @@ export interface RemoteBodyView {
   escaped: boolean;
   heartRate: number;
   name: string;
+  /**
+   * §4's risk dial, straight off the authoritative snapshot.
+   *
+   * Carried here because the BODY needs it: `RemoteCrewViews` takes eye height,
+   * stride length and cadence from the gait, so a sprinting crewmate visibly
+   * out-cadences a crouching one and you can read somebody's noise budget off
+   * their legs from down a corridor. Without it every crewmate walks.
+   */
+  gait: Gait;
+  /** `${module}:${spot}` while this player is inside a hide spot, else null.
+   *  The spot's lamp goes out while it is taken (§4, `props.ts`). */
+  hideSpot: HideSpotKey | null;
   /** True when we have run out of buffered samples and are holding the last. */
   stale: boolean;
 }
@@ -991,6 +1004,8 @@ export class NetClient {
           escaped: false,
           heartRate: 0,
           name: '',
+          gait: 'walk',
+          hideSpot: null,
           stale: false,
         };
         this.bodyViews.set(id, view);
@@ -1002,6 +1017,9 @@ export class NetClient {
       view.escaped = meta.escaped;
       view.heartRate = meta.heartRate;
       view.name = meta.name;
+      view.gait = isGait(meta.gait) ? meta.gait : 'walk';
+      // The schema cannot carry a null, so '' is "not in one" (§7).
+      view.hideSpot = meta.hideSpot === '' ? null : (meta.hideSpot as HideSpotKey);
       view.stale = sample.extrapolated;
       out.push(view);
     }

@@ -64,6 +64,10 @@ export {
 export type { GroundInfo } from './walk';
 export { HideController, hasteForGait } from './hiding';
 export type { HideEvent, HidePhase } from './hiding';
+export { FirstPersonHands, HANDS_REST_REACH_M } from './hands';
+export type { HandsInput, HandsOptions } from './hands';
+export { RemoteCrewViews, CrewIdentities, CREW_TINTS, crewIdentityAt } from './bodyView';
+export type { CrewBodyInput, CrewIdentity, CrewSyncOptions, RemoteCrewOptions } from './bodyView';
 export { HeartRate } from './heartRate';
 export { Extinguisher } from './extinguisher';
 export type {

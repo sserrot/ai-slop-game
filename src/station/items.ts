@@ -503,12 +503,33 @@ export interface ItemInstanceOptions {
  * `main.ts` already documents for the cargo bag meshes, and drive `setVisible`
  * from wherever `StationProps.setVisible` is driven.
  */
+/**
+ * Where one placement's instances ended up, so a single world item can be shown
+ * or hidden without a second draw call and without building anything.
+ *
+ * The case this exists for: a locker's contents are rolled from the round seed
+ * and re-rolled at `roundStart`, so an item mesh built when a locker turns out to
+ * hold one would allocate geometry and link a program on first sight of that
+ * locker — the first-visit hitch `Renderer.prewarm()` exists to pay off. Build
+ * every slot the level could ever use, hide them all, and let the plan reveal
+ * them (see `src/station/stationItems.ts`).
+ */
+interface PlacementSlot {
+  readonly body: InstancedSet;
+  readonly bodyEntry: number;
+  readonly accent: InstancedSet | null;
+  readonly accentEntry: number;
+}
+
 export class StationItemInstances {
   readonly group = new THREE.Group();
   readonly bodies = new Map<ItemKind, InstancedSet>();
   readonly accents: InstancedSet[] = [];
   /** Upper bound on draw calls: one per kind present, one per accent shape. */
   readonly drawCalls: number;
+
+  /** Indexed by the caller's `placements` array. */
+  private readonly slots: PlacementSlot[] = [];
 
   constructor(
     materials: StationMaterials,
@@ -519,6 +540,13 @@ export class StationItemInstances {
 
     const byKind = new Map<ItemKind, InstanceEntry[]>();
     const byShape = new Map<AccentShape, AccentPlacement[]>();
+    /** placement index → (kind, entry-within-kind, shape, entry-within-shape). */
+    const routing: Array<{
+      kind: ItemKind;
+      bodyEntry: number;
+      shape: AccentShape | null;
+      accentEntry: number;
+    }> = [];
 
     for (const p of placements) {
       const model = itemModel(p.kind);
@@ -527,15 +555,20 @@ export class StationItemInstances {
         list = [];
         byKind.set(p.kind, list);
       }
+      const bodyEntry = list.length;
       list.push({ module: p.module, matrix: p.matrix });
 
-      if (opts.accents === false) continue;
+      if (opts.accents === false) {
+        routing.push({ kind: p.kind, bodyEntry, shape: null, accentEntry: -1 });
+        continue;
+      }
       const shape = opts.accentShape ?? model.accent.shape;
       let spots = byShape.get(shape);
       if (!spots) {
         spots = [];
         byShape.set(shape, spots);
       }
+      routing.push({ kind: p.kind, bodyEntry, shape, accentEntry: spots.length });
       spots.push({
         module: p.module,
         interact: 'carryable',
@@ -557,6 +590,7 @@ export class StationItemInstances {
       this.group.add(set.mesh);
     }
 
+    const accentByShape = new Map<AccentShape, InstancedSet>();
     for (const [shape, spots] of byShape) {
       const set = new InstancedSet(
         accentGeometry(shape).clone(),
@@ -565,10 +599,41 @@ export class StationItemInstances {
         `item-accents-${shape}`,
       );
       this.accents.push(set);
+      accentByShape.set(shape, set);
       this.group.add(set.mesh);
     }
 
+    for (const route of routing) {
+      const body = this.bodies.get(route.kind);
+      if (!body) continue; // unreachable: every kind in `routing` built a set
+      this.slots.push({
+        body,
+        bodyEntry: route.bodyEntry,
+        accent: route.shape ? (accentByShape.get(route.shape) ?? null) : null,
+        accentEntry: route.accentEntry,
+      });
+    }
+
     this.drawCalls = this.bodies.size + this.accents.length;
+  }
+
+  /**
+   * Show or hide ONE world item — body and lamp together — addressed by its
+   * index in the `placements` array this was built from.
+   *
+   * A hidden instance is packed out of the buffer by `InstancedSet`, so it costs
+   * nothing to draw and nothing to bring back. Nothing is created or destroyed.
+   */
+  setPlacementHidden(placement: number, hidden: boolean): void {
+    const slot = this.slots[placement];
+    if (!slot) return;
+    slot.body.setInstanceHidden(slot.bodyEntry, hidden);
+    slot.accent?.setInstanceHidden(slot.accentEntry, hidden);
+  }
+
+  isPlacementHidden(placement: number): boolean {
+    const slot = this.slots[placement];
+    return slot ? slot.body.isInstanceHidden(slot.bodyEntry) : false;
   }
 
   setVisible(visible: ReadonlySet<ModuleId>): void {
@@ -581,6 +646,7 @@ export class StationItemInstances {
     for (const set of this.accents) set.dispose();
     this.bodies.clear();
     this.accents.length = 0;
+    this.slots.length = 0;
     this.group.clear();
   }
 }

@@ -46,10 +46,14 @@ import { StationCargo } from './cargo';
 import { HatchBlockers } from './collision';
 import type { PortDisc } from './collision';
 import { PortalCuller } from './culling';
+import { StationFixtures } from './fixtures';
 import { StationGravity } from './gravity';
 import type { GravityShift } from './gravity';
+import { StationGravityPlants } from './gravityProps';
 import { StationHandrails } from './handrails';
 import { StationHatches } from './hatches';
+import { StationItems } from './stationItems';
+import type { ItemKind } from './items';
 import { KIT } from './kit';
 import { defaultStationLayout, fetchStationLayout } from './layout';
 import { StationLockers } from './lockers';
@@ -110,6 +114,13 @@ export class Station {
   readonly hatches: StationHatches;
   readonly lockers: StationLockers;
   readonly panels: StationPanels;
+  /** §11's hardware — the levers, the handwheel, the needle, the red covers.
+   *  Drive it from the puzzle store; `tick` animates the joints. */
+  readonly fixtures: StationFixtures;
+  /** ISS-GRV-11, one per node. Its rotor IS §4's 2.5 s warning clock. */
+  readonly plants: StationGravityPlants;
+  /** The six carryables, in the world (§5, §10, §11). */
+  readonly items: StationItems;
   readonly culler: PortalCuller;
   readonly blockers: HatchBlockers;
   /** The static station BVH (§1 `three-mesh-bvh`). Sweep the §4 player sphere
@@ -160,7 +171,13 @@ export class Station {
     this.handrails = new StationHandrails(this.rails, this.materials);
     this.hatches = new StationHatches(layout, this.materials);
     this.lockers = new StationLockers(layout, this.materials);
-    this.panels = new StationPanels(layout, this.materials);
+    // `body: false` — `StationFixtures` draws the panel shell as part of its own
+    // per-module merged mesh, with the bezel recess round this screen. Two
+    // carcasses in one place is the only way to get this wrong.
+    this.panels = new StationPanels(layout, this.materials, { body: false });
+    this.fixtures = new StationFixtures(layout, this.materials);
+    this.plants = new StationGravityPlants(layout, this.materials);
+    this.items = new StationItems(layout, this.materials);
     this.cargo = new StationCargo(layout, this.materials);
     this.blockers = new HatchBlockers(layout);
     this.culler = new PortalCuller(this.graph, opts.cullHops ?? CULL_HOPS);
@@ -177,6 +194,9 @@ export class Station {
       this.hatches.group,
       this.lockers.group,
       this.panels.group,
+      this.fixtures.group,
+      this.plants.group,
+      this.items.group,
       this.cargo.group,
     );
     this.interactables.push(...this.lockers.interactables, ...this.panels.interactables);
@@ -252,9 +272,38 @@ export class Station {
   tick(dt: number, serverTick = 0): void {
     this.hatches.tick(dt);
     this.lockers.tick(dt);
+    this.fixtures.tick(dt);
     // §4: both sides run the timer, so the floor lets go on the frame the audio
     // said it would rather than a round trip later.
     this.gravity.tick(dt, serverTick);
+    // AFTER the gravity timer, never before. §4's fairness guarantee is that the
+    // rotor IS the announced countdown — sampled off `StationGravity.pending`
+    // rather than eased — so it has to read the countdown this frame advanced,
+    // not last frame's. Ticked the other way round it lags by a frame, which is
+    // invisible at 60 fps and a fifth of the whole warning at 5.
+    this.plants.tick(dt, this.gravity);
+  }
+
+  /**
+   * Fill every instanced set in the station for the pre-warm's one frame.
+   *
+   * `Renderer.prewarm()` makes every object visible and turns frustum culling
+   * off, which is the whole answer for a plain mesh and only half of it for an
+   * `InstancedMesh`: a set with `count === 0` is skipped by the draw call, so its
+   * vertex buffers never upload and the first frame that DOES have something to
+   * put in it pays for them. Measured at boot on `levels/station.json`, six sets
+   * were empty — `hatch-seals` and `hatch-lamp-sealed` (nothing starts sealed),
+   * `plant-lamp-winding` (every plant starts running) and the card / fuse / decoy
+   * world items (every locker starts shut). So the first seal, the first
+   * announced gravity failure and the first locker each paid for an upload, at
+   * three of the tensest moments the game has.
+   *
+   * Call it `true` immediately before `prewarm()` and `false` immediately after.
+   */
+  setPrewarm(on: boolean): void {
+    this.hatches.setPrewarm(on);
+    this.plants.setPrewarm(on);
+    this.items.setPrewarm(on);
   }
 
   get visibleModules(): readonly ModuleId[] {
@@ -433,11 +482,36 @@ export class Station {
   stockLockers(seed: number): Map<string, StationItem[]> {
     const plan = planLockerContents(this.layout, seed);
     this.lockers.setContents(plan);
+    // The world form of every one of them, revealed from the same plan. No
+    // geometry is built here — the slots all exist from load.
+    this.items.setLockerContents(plan);
     return plan;
   }
 
+  /**
+   * Swing a locker open and reveal what is in it. Returns the contents.
+   *
+   * Cosmetic and client-side: the SERVER owns who gets what out of a locker
+   * (§7), and there is no message for the door — so this is the local feedback
+   * for having pressed E on one, and the reason the item inside becomes visible
+   * at all. `StationItems` gates on the door precisely so a shut steel box does
+   * not show its contents, or its amber lamp, through 3 cm of plate.
+   */
   openLocker(id: string): StationItem[] {
-    return this.lockers.open(id);
+    const items = this.lockers.open(id);
+    this.items.setLockerOpen(id, true);
+    return items;
+  }
+
+  /** Somebody took `kind` out of that locker — or everything, if omitted. */
+  takeFromLocker(id: string, kind?: ItemKind): void {
+    this.items.takeFrom(id, kind);
+  }
+
+  /** Put a hide spot's lamp out while somebody is inside it (§4). Returns false
+   *  if `spotId` has no lamp, so a typo reads differently from a no-op. */
+  setHideSpotOccupied(spotId: string, occupied: boolean): boolean {
+    return this.props.setHideSpotOccupied(spotId, occupied);
   }
 
   locker(id: string): Locker | undefined {
@@ -499,6 +573,9 @@ export class Station {
     this.hatches.dispose();
     this.lockers.dispose();
     this.panels.dispose();
+    this.fixtures.dispose();
+    this.plants.dispose();
+    this.items.dispose();
     for (const view of this.scene.modules.values()) {
       view.group.traverse((o) => {
         if (o instanceof THREE.Mesh) o.geometry.dispose();
@@ -518,6 +595,9 @@ export class Station {
     this.hatches.setVisible(visible);
     this.lockers.setVisible(visible);
     this.panels.setVisible(visible);
+    this.fixtures.setVisible(visible);
+    this.plants.setVisible(visible);
+    this.items.setVisible(visible);
     this.cargo.setVisible(visible);
   }
 }

@@ -862,6 +862,8 @@ export class StationGravityPlants {
   private readonly lampRunning: PlantSlots;
   private readonly lampWinding: PlantSlots;
   private dirty = true;
+  /** See `setPrewarm`. Only ever true for the duration of the warm frame. */
+  private prewarmAll = false;
 
   constructor(
     layout: StationLayout,
@@ -992,6 +994,23 @@ export class StationGravityPlants {
     }
   }
 
+  /**
+   * Put an instance in EVERY set for the pre-warm's one full-pipeline frame.
+   *
+   * The amber `winding` lamp is the one that matters. Every plant starts running,
+   * so that set is empty at boot with `count === 0`, and `Renderer.prewarm()`
+   * forcing `visible = true` does not help an instanced mesh with nothing in it:
+   * its vertex buffers would upload the first time a gravity failure was
+   * announced. §4 calls that announcement the fairness guarantee — a hitch on
+   * exactly that frame is the worst one this file could produce.
+   */
+  setPrewarm(on: boolean): void {
+    if (this.prewarmAll === on) return;
+    this.prewarmAll = on;
+    this.dirty = true;
+    this.flush();
+  }
+
   dispose(): void {
     for (const set of this.sets()) {
       this.group.remove(set.mesh);
@@ -1008,7 +1027,7 @@ export class StationGravityPlants {
     this.dirty = false;
     for (const set of this.sets()) set.reset();
     for (const plant of this.plants) {
-      if (!plant.visible) continue;
+      if (!plant.visible && !this.prewarmAll) continue;
       this.housing.push(plant.world);
       this.hazard.push(plant.world);
       _spin.makeRotationY(plant.angle);
@@ -1016,8 +1035,14 @@ export class StationGravityPlants {
       // Dark is the absence of a lamp, not a dimmed one: a stopped plant has
       // nothing lit on it, which is what §4's "green → amber → dark" means and
       // also what keeps the accent budget honest — one self-lit thing per state.
-      if (plant.state === 'running') this.lampRunning.push(plant.world);
-      else if (plant.state === 'winding') this.lampWinding.push(plant.world);
+      if (this.prewarmAll) {
+        this.lampRunning.push(plant.world);
+        this.lampWinding.push(plant.world);
+      } else if (plant.state === 'running') {
+        this.lampRunning.push(plant.world);
+      } else if (plant.state === 'winding') {
+        this.lampWinding.push(plant.world);
+      }
     }
     for (const set of this.sets()) set.commit();
   }

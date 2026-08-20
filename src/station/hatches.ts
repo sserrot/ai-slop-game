@@ -185,6 +185,8 @@ export class StationHatches {
   private readonly moduleById = new Map<ModuleId, StationModule>();
   private readonly sets: HatchSlots[] = [];
   private visible: ReadonlySet<ModuleId> | null = null;
+  /** See `setPrewarm`. Only ever true for the duration of the warm frame. */
+  private prewarmAll = false;
 
   private readonly frames: HatchSlots;
   private readonly doors: HatchSlots;
@@ -329,6 +331,25 @@ export class StationHatches {
 
   setVisible(visible: ReadonlySet<ModuleId>): void {
     this.visible = visible;
+    for (const view of this.views) this.applyVisibility(view);
+    this.flush();
+  }
+
+  /**
+   * Put an instance in EVERY set for the pre-warm's one full-pipeline frame.
+   *
+   * `Renderer.prewarm()` forces `visible = true` on every object, which is
+   * enough for a plain mesh and not enough for an `InstancedMesh`: a set with
+   * `count === 0` is skipped by the draw and its vertex buffers never upload.
+   * Measured at boot, three sets in this file are empty — `hatch-seals` and
+   * `hatch-lamp-sealed` (nothing starts sealed) and whichever mode marker the
+   * level happens not to use — so the first H press of the round paid for two
+   * buffer uploads. H is a chase verb at loudness 45; that is the worst possible
+   * moment for a hitch. Turn it on before the warm frame, off immediately after.
+   */
+  setPrewarm(on: boolean): void {
+    if (this.prewarmAll === on) return;
+    this.prewarmAll = on;
     for (const view of this.views) this.applyVisibility(view);
     this.flush();
   }
@@ -512,7 +533,10 @@ export class StationHatches {
     this.spin.makeRotationZ((1 - view.bolt) * SEAL_TURN);
     this.scratch.multiplyMatrices(view.matrix, this.spin);
     this.seals.set(view.slot, this.scratch);
-    this.seals.show(view.slot, view.bolt > SEAL_SHOW && this.isShown(view));
+    this.seals.show(
+      view.slot,
+      this.prewarmAll || (view.bolt > SEAL_SHOW && this.isShown(view)),
+    );
   }
 
   /** Re-read the two modules' CURRENT gravity and move the marker instances. */
@@ -531,19 +555,20 @@ export class StationHatches {
   }
 
   private applyVisibility(view: HatchView): void {
-    const shown = this.isShown(view);
+    const all = this.prewarmAll;
+    const shown = all || this.isShown(view);
     const slot = view.slot;
     this.frames.show(slot, shown);
     this.doors.show(slot, shown);
     this.panes.show(slot, shown);
-    this.coamings.show(slot, shown && view.coaming);
-    this.seals.show(slot, shown && view.bolt > SEAL_SHOW);
+    this.coamings.show(slot, shown && (all || view.coaming));
+    this.seals.show(slot, shown && (all || view.bolt > SEAL_SHOW));
     for (const state of ['open', 'closed', 'sealed'] as const) {
-      this.lamps[state].show(slot, shown && view.state === state);
+      this.lamps[state].show(slot, shown && (all || view.state === state));
     }
     for (const mode of ['nominal', 'zero'] as const) {
-      this.markers[mode].show(slot * 2, shown && view.nearMode === mode);
-      this.markers[mode].show(slot * 2 + 1, shown && view.farMode === mode);
+      this.markers[mode].show(slot * 2, shown && (all || view.nearMode === mode));
+      this.markers[mode].show(slot * 2 + 1, shown && (all || view.farMode === mode));
     }
     for (const outer of this.outerSlots) {
       const on = !this.visible || this.visible.has(outer.module);
