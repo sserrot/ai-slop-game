@@ -71,15 +71,21 @@ import {
 } from './artKit';
 import {
   BANK_SIZE,
-  BULKHEAD_SIZE,
   HIDE_ENTRY_CLEARANCE_M,
   HIDE_SHELL_T,
   WALK_LANE_M,
   WALL_FITTING_DEPTH_M,
   bayEntryOffset,
+  cornerFinGap,
+  cornerFins,
   deckHalfWidth,
+  divider,
+  laneBeside,
+  nodeBackWalls,
+  standHalfWidth,
 } from './deckKit';
-import { KIT, PORT_RADIUS } from './kit';
+import type { DividerOptions } from './deckKit';
+import { KIT, NODE_H, NODE_ISLAND_HALF, PORT_RADIUS } from './kit';
 import { HAZARD_YELLOW } from './materials';
 import type { StationMaterials } from './materials';
 import { quatFromAxisAngle, roundQuat, roundVec } from './transform';
@@ -89,131 +95,26 @@ import { moduleMatrix } from './threeUtil';
 // PART 1 — escape geometry, as level data
 // ===========================================================================
 
+/**
+ * THE PURE AUTHORING HELPERS MOVED TO `deckKit.ts`.
+ *
+ * `divider`, `cornerFins`, `cornerFinGap`, `laneBeside` and `standHalfWidth`
+ * are chase geometry, and chase geometry now has to be reachable from `kit.ts`
+ * — every node in the station gets corner fins as part of the KIT rather than
+ * as a level-file decoration, which is what §2 means by "the props in a straight
+ * piece are doing structural design work". This file imports three.js, so
+ * `kit.ts` may never import it; `deckKit.ts` is the pure half and is where they
+ * belong. They are re-exported here so a level script that reaches for the
+ * gravity-era set-piece helpers finds all of them in one place.
+ */
+export { cornerFinGap, cornerFins, divider, laneBeside, nodeBackWalls, standHalfWidth };
+export type { DividerOptions };
+
 /** Deck furniture convention: x across the lane, y height, z along the run. */
 function deckProp(id: string, kind: string, size: Vec3, x: number, z: number, yaw = 0): PropRef {
   const p: PropRef = { id, kind, localPos: roundVec(v3(x, DECK_Y_M + size.y / 2, z)) };
   if (Math.abs(yaw) > 1e-9) p.localQuat = roundQuat(quatFromAxisAngle(v3(0, 1, 0), yaw));
   return p;
-}
-
-/** Local +X of a prop yawed by `yaw` about +Y. */
-function yawedX(yaw: number): { x: number; z: number } {
-  return { x: Math.cos(yaw), z: -Math.sin(yaw) };
-}
-
-export interface DividerOptions {
-  /** Centre across the lane, module space. */
-  x: number;
-  /** Centre along the run, module space. */
-  z: number;
-  /**
-   * Panels side by side. One is a 0.40 m fin; two make a 0.80 m stub wall, which
-   * is the first width that covers a crouched body rather than half of one.
-   */
-  panels?: number;
-  /** Yaw about +Y. 0 leaves the wall's 0.40 m running along +X. */
-  yaw?: number;
-}
-
-/**
- * A partial bulkhead (ISS-GRV-03) as one or more `bulkhead` props.
- *
- * `BULKHEAD_SIZE.y` is 1.15 m and that single number is the asset: it is over
- * `EYE_HEIGHT_CROUCH_M` (0.85), so a crouched body behind one is behind
- * something rather than beside it, and it is far over `STEP_HEIGHT_M` (0.40), so
- * nothing steps across it and the alien has to go around — which is the only
- * kind of "cover" a blind pursuer can be made to respect.
- *
- * Depth grows along the panel's own +Z, so adding panels widens the wall across
- * the lane and never deepens it into the walking envelope by surprise. Check the
- * lane you have left with `laneBeside()` before you place one.
- */
-export function divider(moduleId: ModuleId, suffix: string, o: DividerOptions): PropRef[] {
-  const n = Math.max(1, Math.round(o.panels ?? 1));
-  const yaw = o.yaw ?? 0;
-  const dir = yawedX(yaw);
-  const out: PropRef[] = [];
-  for (let i = 0; i < n; i++) {
-    const t = (i - (n - 1) / 2) * BULKHEAD_SIZE.x;
-    out.push(
-      deckProp(
-        `${moduleId}-bulkhead-${suffix}${n > 1 ? String(i + 1) : ''}`,
-        'bulkhead',
-        BULKHEAD_SIZE,
-        o.x + dir.x * t,
-        o.z + dir.z * t,
-        yaw,
-      ),
-    );
-  }
-  return out;
-}
-
-/**
- * How much lane is left when a fitting `depth` deep stands against a wall
- * `lane` metres from whatever is opposite it, and whether a body fits.
- *
- * The threshold is `2 × PLAYER_RADIUS` and not `WALK_LANE_M`: the wider number
- * is what an obstacle should aim for, the narrower one is the point at which
- * `walkable.ts` stops finding a standable cell at all and the module fails to
- * build. Both are reported so an author can tell "tight" from "broken".
- */
-export function laneBeside(lane: number, depth: number): {
-  clear: number;
-  fits: boolean;
-  comfortable: boolean;
-} {
-  const clear = lane - depth;
-  return { clear, fits: clear >= 2 * PLAYER_RADIUS, comfortable: clear >= WALK_LANE_M };
-}
-
-/**
- * ISS-GRV-02, the family's most valuable asset: "one right-angle turn converts a
- * one-dimensional chase into a decision."
- *
- * A node already has four exits and a console island, so what it is missing is
- * not a turn but the ABSENCE of a shortcut: the corners are open, so a pursuer
- * that guesses wrong can cut the diagonal and get most of its guess back. A
- * single 0.40 m panel yawed 45° across each corner closes the diagonal and
- * leaves the ring — the panel is set so the gap between its inner face and the
- * island's corner is one `WALK_LANE_M`, which is the whole placement rule and
- * the reason `inset` is derived here instead of typed in the level file.
- */
-export function cornerFins(
-  moduleId: ModuleId,
-  half: number,
-  corners: ReadonlyArray<readonly [-1 | 1, -1 | 1]>,
-  islandHalf = 0.5,
-): PropRef[] {
-  // Distance along the diagonal from the module axis to the fin's inner face,
-  // for a gap of exactly one walk lane past the island's corner.
-  const wanted = islandHalf * Math.SQRT2 + WALK_LANE_M;
-  const centreDiag = wanted + BULKHEAD_SIZE.z / 2;
-  // Keep the panel's far corner inside the room.
-  const reach = BULKHEAD_SIZE.x / 2 + BULKHEAD_SIZE.z / 2;
-  const maxDiag = (half - 0.06) * Math.SQRT2 - reach;
-  const diag = Math.min(centreDiag, maxDiag);
-  const c = diag / Math.SQRT2;
-  const out: PropRef[] = [];
-  for (const [sx, sz] of corners) {
-    out.push(
-      ...divider(moduleId, `corner-${sx > 0 ? 'p' : 'n'}${sz > 0 ? 'p' : 'n'}`, {
-        x: sx * c,
-        z: sz * c,
-        panels: 1,
-        yaw: ((sx * sz) as number) * (Math.PI / 4),
-      }),
-    );
-  }
-  return out;
-}
-
-/** The diagonal gap `cornerFins` leaves past a `islandHalf`-square island. */
-export function cornerFinGap(half: number, islandHalf = 0.5): number {
-  const fins = cornerFins('probe' as ModuleId, half, [[1, 1]], islandHalf);
-  const p = fins[0] as PropRef;
-  const diag = Math.hypot(p.localPos.x, p.localPos.z);
-  return diag - BULKHEAD_SIZE.z / 2 - islandHalf * Math.SQRT2;
 }
 
 export interface SideBayFit {
@@ -231,22 +132,6 @@ export interface SideBayFit {
   passable: boolean;
   /** Why, in one sentence, for the author who is about to ignore this. */
   note: string;
-}
-
-/**
- * Half-width the CENTRE of a standing body may occupy in a bore of `radius`.
- *
- * The deck is 1.32 m wide in a straight and this number is 0.28, and the gap
- * between those two facts is the single most expensive thing to forget in this
- * kit — see the cross-section budget at the top of `deckKit.ts`. The body's top
- * sphere sits at `DECK_Y_M + PLAYER_STAND_HEIGHT_M − PLAYER_RADIUS` = 0.60, which
- * is high enough that the round wall has closed in hard, so the floor you can see
- * is roughly twice the floor you can stand on.
- */
-export function standHalfWidth(radius: number): number {
-  const shoulder = DECK_Y_M + PLAYER_STAND_HEIGHT_M - PLAYER_RADIUS;
-  const allowed = radius - PLAYER_RADIUS;
-  return Math.sqrt(Math.max(0, allowed * allowed - shoulder * shoulder));
 }
 
 /**
@@ -440,18 +325,38 @@ export interface PlantPlacement {
  * station's floor rather than making its own. A player who learns to look for the
  * drum learns something true about the map.
  *
- * Z = ±0.91 IS DERIVED, not eyeballed: the clear ring of ceiling runs from the
- * 0.70 m port hole out to the coffer beam at 1.11 m, which is 0.41 m for a 0.38 m
- * envelope, so the envelope is centred in it. The gearbox face is turned inboard
- * (`yaw`) so the lamp is legible from the console island, which is where a player
- * under pressure actually is.
+ * THE MOUNT PLANE AND THE OFFSET ARE BOTH DERIVED from the node, not typed: the
+ * ceiling is `NODE_H` and the clear ring of ceiling runs from the `PORT_RADIUS`
+ * hole out to the coffer beam at `NODE_COFFER_INNER_M`, so the envelope is
+ * centred between the two. When the kit widened, this followed it — a plant left
+ * at y = 1.5 in a 2.25 m node would hang three quarters of a metre below the
+ * ceiling it is supposed to be bolted to. The gearbox face is turned inboard
+ * (`yaw`) so the lamp is legible from the console island, which is where a
+ * player under pressure actually is.
  */
+/**
+ * Inner edge of a node's coffered ceiling beams, from the module axis.
+ *
+ * `geometry.ts` builds the coffers at `radius − 0.34` with a 0.1 m beam, so the
+ * clear field of ceiling ends at `NODE_H − 0.34 − 0.05`. Restated here because it
+ * is not exported there and because a plant is bolted THROUGH that ceiling: if
+ * the coffer moves, this number is wrong, and the assert below is what makes
+ * that loud rather than a beam through a bearing housing.
+ */
+export const NODE_COFFER_INNER_M = NODE_H - 0.34 - 0.05;
+
+const PLANT_RING_Z = round3((PORT_RADIUS + NODE_COFFER_INNER_M) / 2);
+
 export const GRAVITY_PLANTS: readonly PlantPlacement[] = Object.freeze([
-  { module: 'node-alpha' as ModuleId, at: v3(0, 1.5, 0.91), yaw: Math.PI },
-  { module: 'node-beta' as ModuleId, at: v3(0, 1.5, -0.91), yaw: 0 },
-  { module: 'node-gamma' as ModuleId, at: v3(0.91, 1.5, 0), yaw: -Math.PI / 2 },
-  { module: 'node-delta' as ModuleId, at: v3(-0.91, 1.5, 0), yaw: Math.PI / 2 },
+  { module: 'node-alpha' as ModuleId, at: v3(0, NODE_H, PLANT_RING_Z), yaw: Math.PI },
+  { module: 'node-beta' as ModuleId, at: v3(0, NODE_H, -PLANT_RING_Z), yaw: 0 },
+  { module: 'node-gamma' as ModuleId, at: v3(PLANT_RING_Z, NODE_H, 0), yaw: -Math.PI / 2 },
+  { module: 'node-delta' as ModuleId, at: v3(-PLANT_RING_Z, NODE_H, 0), yaw: Math.PI / 2 },
 ]);
+
+function round3(v: number): number {
+  return Math.round(v * 1000) / 1000;
+}
 
 // ---------------------------------------------------------------------------
 // Geometry
@@ -648,16 +553,6 @@ function envelopeCorners(topY = -0.002): THREE.Vector3[] {
   return out;
 }
 
-/**
- * Inner edge of a node's coffered ceiling beams, from the module axis.
- *
- * `geometry.ts` builds the coffers at `radius − 0.34` with a 0.1 m beam, so the
- * clear field of ceiling ends at `1.5 − 0.34 − 0.05` = 1.11 m. Restated here
- * because it is not exported there and because a plant is bolted THROUGH that
- * ceiling: if the coffer moves, this number is wrong, and the assert below is
- * what makes that loud rather than a beam through a bearing housing.
- */
-export const NODE_COFFER_INNER_M = 1.11;
 
 /**
  * Every plant is above the walking envelope, inside its module's shell, and in
@@ -1080,7 +975,7 @@ export function assertGravityPropsCoherent(): void {
   }
   // 2 mm of slack: `cornerFinGap` measures the ROUNDED authored position, and
   // `roundVec` is deliberately 4 decimal places for diff-stable level files.
-  const gap = cornerFinGap(1.5);
+  const gap = cornerFinGap(NODE_H, NODE_ISLAND_HALF);
   if (gap + 0.002 < WALK_LANE_M) {
     failures.push(
       `corner fins leave ${gap.toFixed(3)} m past the console island, under WALK_LANE_M`,

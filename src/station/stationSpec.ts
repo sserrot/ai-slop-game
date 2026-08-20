@@ -83,8 +83,16 @@ import type { HideSpot, PropRef, StationLayout, Vec3 } from '@shared/types';
 import { v3 } from '@shared/graph/math';
 import { assembleStation } from './assemble';
 import type { StationSpec } from './assemble';
-import { PROP_ARCHETYPES, RACK_DEPTH } from './kit';
-import { CARGO_RACK_SIZE, stowageNet } from './deckKit';
+import {
+  CUPOLA_COLLAR_R,
+  KIT,
+  NODE_H,
+  NODE_PANEL_OFFSET,
+  PROP_ARCHETYPES,
+  RACK_DEPTH,
+  nodeClearFlank,
+} from './kit';
+import { CARGO_RACK_SIZE, CARGO_SLOT_PITCH, crewBunk, stowageNet } from './deckKit';
 import { orientProp } from './transform';
 import { randRange, rngFor } from './random';
 
@@ -116,9 +124,14 @@ function tubePanel(id: string, radius: number, angleDeg: number, z: number): Pro
  * Use a SIDE face (±X, ±Z). The ±Y faces are the ceiling and the underside of
  * the deck; a panel on either is unreachable once the module has a floor.
  */
-function nodePanel(id: string, faceNormal: Vec3, tangent: Vec3, offset: number): PropRef {
+function nodePanel(id: string, faceNormal: Vec3, tangent: Vec3): PropRef {
   const inset = PROP_ARCHETYPES.panel.size.y / 2 + 0.02;
-  const d = 1.5 - inset;
+  const d = NODE_H - inset;
+  // Always on the face's CLEAR flank — the side with no rack bay on it. The kit
+  // arranges the four bays as a pinwheel and exports which side that leaves
+  // free, so a level author can never bolt a breaker plate to the front of a
+  // rack by picking the wrong sign.
+  const offset = nodeClearFlank(faceNormal) * NODE_PANEL_OFFSET;
   return {
     id,
     kind: 'panel',
@@ -163,21 +176,26 @@ function cargoStow(moduleId: string, radius: number, count: number): PropRef[] {
     localQuat: orientProp(wallInward, v3(0, 0, 1)),
   });
 
+  const span = CARGO_SLOT_PITCH * (count - 1);
   for (let i = 0; i < count; i++) {
-    const z = -1.9 + i * 0.95;
+    const z = -span / 2 + i * CARGO_SLOT_PITCH;
     out.push({
       id: `${moduleId}-cargo-slot-${i + 1}`,
       kind: 'slot',
       localPos: v3(radius - slotInset, 0, z),
       localQuat: orientProp(wallInward, v3(0, 0, 1)),
     });
-    // Loose in the bore, clear of the rack face and of the rails at ±0.7.
+    // Loose in the bore, clear of the rack face on +X and of the overhead rail
+    // pair. Scattered across the WHOLE bore now rather than a 0.55 m sliver of
+    // it: the module is 3 m across, the rails are up at `RAIL_Y_M`, and five
+    // bags bunched on one side of a wide tube read as a dropped pallet rather
+    // than as a stow that got away from somebody.
     out.push({
       id: `${moduleId}-cargo-bag-${i + 1}`,
       kind: 'cargo-bag',
       localPos: v3(
-        randRange(rng, -0.45, 0.1),
-        randRange(rng, -0.35, 0.35),
+        randRange(rng, -radius * 0.5, radius * 0.15),
+        randRange(rng, -radius * 0.45, radius * 0.35),
         z + randRange(rng, -0.3, 0.3),
       ),
       interactable: true,
@@ -214,8 +232,8 @@ export const STATION_SPEC: StationSpec = {
       props: [
         // Undock lever 1 of 3 (§11 puzzle 6) plus the capsule-side console.
         // Both on side faces: the +Y face is 2.2 m over the deck now.
-        nodePanel('node-alpha-panel-undock-1', NZ, X, 1.05),
-        nodePanel('node-alpha-panel-egress', NX, Z, 1.05),
+        nodePanel('node-alpha-panel-undock-1', NZ, X),
+        nodePanel('node-alpha-panel-egress', NX, Z),
       ],
     },
     {
@@ -226,7 +244,7 @@ export const STATION_SPEC: StationSpec = {
       gravity: 'zero',
       mate: { port: 'aft', to: { module: 'node-alpha', port: 'px' } },
       lighting: 'emergency',
-      props: cargoStow('tube-spine', 1.0, 5),
+      props: cargoStow('tube-spine', KIT.straight.radius, 5),
     },
     {
       id: 'node-beta',
@@ -235,8 +253,8 @@ export const STATION_SPEC: StationSpec = {
       lighting: 'emergency',
       props: [
         // §11 puzzle 1 — six breakers, the card is stowed in another module.
-        nodePanel('node-beta-panel-breaker', NZ, X, -1.05),
-        nodePanel('node-beta-panel-undock-2', NZ, X, 1.05),
+        nodePanel('node-beta-panel-breaker', Z, X),
+        nodePanel('node-beta-panel-undock-2', NZ, X),
       ],
     },
     {
@@ -246,7 +264,7 @@ export const STATION_SPEC: StationSpec = {
       lighting: 'emergency',
       props: [
         // §11 puzzle 2 — the wheel. The gauge is a module away, in the lab.
-        nodePanel('node-gamma-panel-valve', X, Z, 1.05),
+        nodePanel('node-gamma-panel-valve', X, Z),
       ],
     },
     {
@@ -257,9 +275,9 @@ export const STATION_SPEC: StationSpec = {
       props: [
         // Axis height (0 / 180), so all three are at chest height over the deck.
         // These used to sit at 315° and 225°, i.e. 0.8 m UNDER the floor.
-        tubePanel('lab-atlas-panel-gauge', 1.4, 0, -0.2),
-        tubePanel('lab-atlas-panel-fuse-1', 1.4, 180, 2.0),
-        tubePanel('lab-atlas-panel-undock-3', 1.4, 180, -2.0),
+        tubePanel('lab-atlas-panel-gauge', KIT.lab.radius, 0, -0.2),
+        tubePanel('lab-atlas-panel-fuse-1', KIT.lab.radius, 180, 1.2),
+        tubePanel('lab-atlas-panel-undock-3', KIT.lab.radius, 180, -1.2),
       ],
     },
     {
@@ -267,7 +285,7 @@ export const STATION_SPEC: StationSpec = {
       kind: 'node',
       mate: { port: 'px', to: { module: 'lab-atlas', port: 'aft' } },
       lighting: 'emergency',
-      props: [nodePanel('node-delta-panel-fuse-2', NZ, X, 1.05)],
+      props: [nodePanel('node-delta-panel-fuse-2', NZ, X)],
     },
     // -- branches ---------------------------------------------------------
     {
@@ -284,15 +302,11 @@ export const STATION_SPEC: StationSpec = {
       kind: 'cupola',
       mate: { port: 'dock', to: { module: 'node-delta', port: 'nx' } },
       lighting: 'dark',
-      props: [
-        {
-          id: 'cupola-nadir-panel-fuse-3',
-          kind: 'panel',
-          localPos: v3(0.62, 0.42, -0.95),
-          localQuat: orientProp(v3(-0.83, -0.56, 0), v3(0, 0, 1)),
-          interactable: true,
-        },
-      ],
+      // On the collar's −X wall at axis height, where a standing crew member
+      // reads it: the +X wall is the equipment bay's, and the old authored pose
+      // (a point 0.75 m off the axis on a 34° bearing) was drawn for a 1.25 m
+      // collar and would sit 1.6 m over the deck in a 1.88 m one.
+      props: [tubePanel('cupola-nadir-panel-fuse-3', CUPOLA_COLLAR_R, 180, -1.35)],
     },
     {
       // §2's second zero-G module: §11 puzzle 5 is written for it, and it is
@@ -312,8 +326,8 @@ export const STATION_SPEC: StationSpec = {
         // §11 puzzle 5 — two keyswitches on opposite walls at opposite ends:
         // 3.9m apart in a 4m module, which is as close to §11's "four metres"
         // as an airlock you can also fit an EVA suit in gets.
-        tubePanel('airlock-eva-panel-keyswitch-a', 1.2, 0, -1.7),
-        tubePanel('airlock-eva-panel-keyswitch-b', 1.2, 180, 1.7),
+        tubePanel('airlock-eva-panel-keyswitch-a', KIT.airlock.radius, 0, -1.7),
+        tubePanel('airlock-eva-panel-keyswitch-b', KIT.airlock.radius, 180, 1.7),
       ],
       // A second net at the far end, so the pair working the keyswitches are not
       // sharing one hiding place four metres apart.
@@ -326,7 +340,15 @@ export const STATION_SPEC: StationSpec = {
       kind: 'straight',
       mate: { port: 'fwd', to: { module: 'node-alpha', port: 'nx' } },
       lighting: 'dark',
-      props: [tubePanel('escape-soyuz-panel-capsule', 1.0, 180, -1.9)],
+      props: [tubePanel('escape-soyuz-panel-capsule', KIT.straight.radius, 180, -1.35)],
+      // §4 wants six hide spots across the station and §2 wants a dead end
+      // authored AS a dead end. The aft port here is capped, so a crew berth
+      // built into it plugs a lane that leads nowhere — the one place in a
+      // corridor a body-sized recess costs the corridor nothing. It needed a
+      // 2.60 m deck to exist: at 1.32 m the same berth left 0.12 m of lane.
+      hideSpots: extraSpots(
+        crewBunk('escape-soyuz-bunk', KIT.straight.radius, -KIT.straight.length / 2, 1, 1),
+      ),
     },
   ],
   links: [

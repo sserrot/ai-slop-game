@@ -21,7 +21,7 @@
         {
           "id": "px",
           "localPos": {
-            "x": 1.5,
+            "x": 2.25,
             "y": 0,
             "z": 0
           },
@@ -43,7 +43,7 @@
         {
           "id": "nx",
           "localPos": {
-            "x": -1.5,
+            "x": -2.25,
             "y": 0,
             "z": 0
           },
@@ -66,7 +66,7 @@
           "id": "py",
           "localPos": {
             "x": 0,
-            "y": 1.5,
+            "y": 2.25,
             "z": 0
           },
           "localDir": {
@@ -85,7 +85,7 @@
           "id": "ny",
           "localPos": {
             "x": 0,
-            "y": -1.5,
+            "y": -2.25,
             "z": 0
           },
           "localDir": {
@@ -105,7 +105,7 @@
           "localPos": {
             "x": 0,
             "y": 0,
-            "z": 1.5
+            "z": 2.25
           },
           "localDir": {
             "x": 0,
@@ -127,7 +127,7 @@
           "localPos": {
             "x": 0,
             "y": 0,
-            "z": -1.5
+            "z": -2.25
           },
           "localDir": {
             "x": 0,
@@ -146,105 +146,60 @@
         {
           "id": "rs-px",
           "a": {
-            "x": 1.5,
-            "y": 0,
+            "x": 2.25,
+            "y": 1.07,
             "z": 0
           },
           "b": {
             "x": 0,
-            "y": 0,
+            "y": 1.07,
             "z": 0
           },
           "connects": [
             "rs-nx",
-            "rs-py",
-            "rs-ny",
             "rs-pz",
-            "rs-nz"
+            "rs-nz",
+            "rs-py"
           ],
           "portLink": "px"
         },
         {
           "id": "rs-nx",
           "a": {
-            "x": -1.5,
-            "y": 0,
+            "x": -2.25,
+            "y": 1.07,
             "z": 0
           },
           "b": {
             "x": 0,
-            "y": 0,
+            "y": 1.07,
             "z": 0
           },
           "connects": [
             "rs-px",
-            "rs-py",
-            "rs-ny",
             "rs-pz",
-            "rs-nz"
+            "rs-nz",
+            "rs-py"
           ],
           "portLink": "nx"
-        },
-        {
-          "id": "rs-py",
-          "a": {
-            "x": 0,
-            "y": 1.5,
-            "z": 0
-          },
-          "b": {
-            "x": 0,
-            "y": 0,
-            "z": 0
-          },
-          "connects": [
-            "rs-px",
-            "rs-nx",
-            "rs-ny",
-            "rs-pz",
-            "rs-nz"
-          ],
-          "portLink": "py"
-        },
-        {
-          "id": "rs-ny",
-          "a": {
-            "x": 0,
-            "y": -1.5,
-            "z": 0
-          },
-          "b": {
-            "x": 0,
-            "y": 0,
-            "z": 0
-          },
-          "connects": [
-            "rs-px",
-            "rs-nx",
-            "rs-py",
-            "rs-pz",
-            "rs-nz"
-          ],
-          "portLink": "ny"
         },
         {
           "id": "rs-pz",
           "a": {
             "x": 0,
-            "y": 0,
-            "z": 1.5
+            "y": 1.07,
+            "z": 2.25
           },
           "b": {
             "x": 0,
-            "y": 0,
+            "y": 1.07,
             "z": 0
           },
           "connects": [
             "rs-px",
             "rs-nx",
-            "rs-py",
-            "rs-ny",
-            "rs-nz"
+            "rs-nz",
+            "rs-py"
           ],
           "portLink": "pz"
         },
@@ -252,22 +207,41 @@
           "id": "rs-nz",
           "a": {
             "x": 0,
-            "y": 0,
-            "z": -1.5
+            "y": 1.07,
+            "z": -2.25
           },
           "b": {
             "x": 0,
-            "y": 0,
+            "y": 1.07,
             "z": 0
           },
           "connects": [
             "rs-px",
             "rs-nx",
-            "rs-py",
-            "rs-ny",
-            "rs-pz"
+            "rs-pz",
+            "rs-py"
           ],
           "portLink": "nz"
+        },
+        {
+          "id": "rs-py",
+          "a": {
+            "x": 0,
+            "y": 2.25,
+            "z": 0
+          },
+          "b": {
+            "x": 0,
+            "y": 1.07,
+            "z": 0
+          },
+          "connects": [
+            "rs-px",
+            "rs-nx",
+            "rs-pz",
+            "rs-nz"
+          ],
+          "portLink": "py"
         }
       ],
       "props": [
@@ -276,81 +250,77 @@
           "kind": "hub",
           "localPos": {
             "x": 0,
-            "y": 0,
+            "y": 1.07,
             "z": 0
           }
         },
         {
-          "id": "node-alpha-rack-0u",
+          "id": "node-alpha-rack-0",
           "kind": "rack",
           "localPos": {
-            "x": 1.434,
-            "y": 1.3,
-            "z": 0
+            "x": 2.14,
+            "y": 0,
+            "z": -1.55
           },
           "localQuat": {
             "x": 0,
             "y": 0,
             "z": 0.7071067811865475,
             "w": 0.7071067811865476
-          },
-          "scale": 0.6
+          }
         },
         {
-          "id": "node-alpha-rack-1u",
+          "id": "node-alpha-rack-1",
           "kind": "rack",
           "localPos": {
-            "x": -1.434,
-            "y": 1.3,
-            "z": 0
+            "x": -2.14,
+            "y": 0,
+            "z": 1.55
           },
           "localQuat": {
             "x": 0,
             "y": 0,
             "z": -0.7071067811865475,
             "w": 0.7071067811865476
-          },
-          "scale": 0.6
+          }
         },
         {
-          "id": "node-alpha-rack-2u",
+          "id": "node-alpha-rack-2",
           "kind": "rack",
           "localPos": {
-            "x": 0,
-            "y": 1.3,
-            "z": 1.434
+            "x": -1.55,
+            "y": 0,
+            "z": 2.14
           },
           "localQuat": {
             "x": 0.5,
             "y": -0.5,
             "z": 0.5,
             "w": -0.5
-          },
-          "scale": 0.6
+          }
         },
         {
-          "id": "node-alpha-rack-3u",
+          "id": "node-alpha-rack-3",
           "kind": "rack",
           "localPos": {
-            "x": 0,
-            "y": 1.3,
-            "z": -1.434
+            "x": 1.55,
+            "y": 0,
+            "z": -2.14
           },
           "localQuat": {
             "x": 0.5,
             "y": 0.5,
             "z": 0.5,
             "w": 0.5
-          },
-          "scale": 0.6
+          }
         },
         {
           "id": "node-alpha-cable-0",
           "kind": "cable",
           "localPos": {
-            "x": 0.9051,
+            "x": 1.9985,
             "y": 0,
-            "z": 0.9051
+            "z": 1.9985
           },
           "localQuat": {
             "x": -0.6532814824381883,
@@ -363,9 +333,9 @@
           "id": "node-alpha-cable-1",
           "kind": "cable",
           "localPos": {
-            "x": -0.9051,
+            "x": -1.9985,
             "y": 0,
-            "z": 0.9051
+            "z": 1.9985
           },
           "localQuat": {
             "x": -0.6532814824381884,
@@ -378,9 +348,9 @@
           "id": "node-alpha-cable-2",
           "kind": "cable",
           "localPos": {
-            "x": -0.9051,
+            "x": -1.9985,
             "y": 0,
-            "z": -0.9051
+            "z": -1.9985
           },
           "localQuat": {
             "x": 0.2705980500730985,
@@ -393,9 +363,9 @@
           "id": "node-alpha-cable-3",
           "kind": "cable",
           "localPos": {
-            "x": 0.9051,
+            "x": 1.9985,
             "y": 0,
-            "z": -0.9051
+            "z": -1.9985
           },
           "localQuat": {
             "x": -0.27059805007309856,
@@ -408,9 +378,9 @@
           "id": "node-alpha-laptop",
           "kind": "laptop",
           "localPos": {
-            "x": 1.18,
-            "y": -0.55,
-            "z": 0.85
+            "x": 1.93,
+            "y": 0.25,
+            "z": -1.2
           },
           "localQuat": {
             "x": 0,
@@ -423,9 +393,9 @@
           "id": "node-alpha-locker",
           "kind": "locker",
           "localPos": {
-            "x": -1.29,
-            "y": 1.35,
-            "z": 1.05
+            "x": -2.08,
+            "y": -0.45,
+            "z": -2
           },
           "localQuat": {
             "x": 0,
@@ -436,12 +406,60 @@
           "interactable": true
         },
         {
+          "id": "node-alpha-bulkhead-corner-pp",
+          "kind": "bulkhead",
+          "localPos": {
+            "x": 1.2293,
+            "y": -0.175,
+            "z": 1.2293
+          },
+          "localQuat": {
+            "x": 0,
+            "y": 0.382683,
+            "z": 0,
+            "w": 0.92388
+          }
+        },
+        {
+          "id": "node-alpha-bulkhead-corner-nn",
+          "kind": "bulkhead",
+          "localPos": {
+            "x": -1.2293,
+            "y": -0.175,
+            "z": -1.2293
+          },
+          "localQuat": {
+            "x": 0,
+            "y": 0.382683,
+            "z": 0,
+            "w": 0.92388
+          }
+        },
+        {
+          "id": "node-alpha-bulkhead-back1",
+          "kind": "bulkhead",
+          "localPos": {
+            "x": 2.03,
+            "y": -0.175,
+            "z": 1.55
+          }
+        },
+        {
+          "id": "node-alpha-bulkhead-back2",
+          "kind": "bulkhead",
+          "localPos": {
+            "x": -2.03,
+            "y": -0.175,
+            "z": -1.55
+          }
+        },
+        {
           "id": "node-alpha-panel-undock-1",
           "kind": "panel",
           "localPos": {
-            "x": 1.05,
+            "x": -1.05,
             "y": 0,
-            "z": -1.445
+            "z": -2.195
           },
           "localQuat": {
             "x": 0.5,
@@ -455,9 +473,9 @@
           "id": "node-alpha-panel-egress",
           "kind": "panel",
           "localPos": {
-            "x": -1.445,
+            "x": -2.195,
             "y": 0,
-            "z": 1.05
+            "z": -1.05
           },
           "localQuat": {
             "x": 0,
@@ -466,59 +484,11 @@
             "w": 0.707107
           },
           "interactable": true
-        },
-        {
-          "id": "node-alpha-bulkhead-corner-pp",
-          "kind": "bulkhead",
-          "localPos": {
-            "x": 1.2,
-            "y": -0.175,
-            "z": 1.2
-          },
-          "localQuat": {
-            "x": 0,
-            "y": 0.382683,
-            "z": 0,
-            "w": 0.92388
-          }
-        },
-        {
-          "id": "node-alpha-bulkhead-corner-nn",
-          "kind": "bulkhead",
-          "localPos": {
-            "x": -1.2,
-            "y": -0.175,
-            "z": -1.2
-          },
-          "localQuat": {
-            "x": 0,
-            "y": 0.382683,
-            "z": 0,
-            "w": 0.92388
-          }
-        },
-        {
-          "id": "node-alpha-bulkhead-back1",
-          "kind": "bulkhead",
-          "localPos": {
-            "x": -0.2,
-            "y": -0.175,
-            "z": -1.41
-          }
-        },
-        {
-          "id": "node-alpha-bulkhead-back2",
-          "kind": "bulkhead",
-          "localPos": {
-            "x": 0.2,
-            "y": -0.175,
-            "z": -1.41
-          }
         }
       ],
       "lighting": "emergency",
       "gravity": "nominal",
-      "volume": 27,
+      "volume": 91.13,
       "hideSpots": [
         {
           "id": "node-alpha-console",
@@ -529,14 +499,14 @@
             "z": 0
           },
           "halfExtents": {
-            "x": 0.42,
+            "x": 0.6,
             "y": 0.3,
-            "z": 0.42
+            "z": 0.6
           },
           "entryPos": {
             "x": 0,
             "y": 0.15,
-            "z": 0.95
+            "z": 1.04
           },
           "lookDir": {
             "x": 0,
@@ -552,7 +522,7 @@
       "kind": "straight",
       "transform": {
         "pos": {
-          "x": 4,
+          "x": 4.75,
           "y": 0,
           "z": 0
         },
@@ -614,12 +584,12 @@
           "id": "rf-a",
           "a": {
             "x": 0,
-            "y": 0,
+            "y": 1.07,
             "z": -2.5
           },
           "b": {
-            "x": 0,
-            "y": -0.7,
+            "x": -0.54,
+            "y": 1.07,
             "z": -1.6
           },
           "connects": [
@@ -631,13 +601,13 @@
         {
           "id": "rf-m",
           "a": {
-            "x": 0,
-            "y": -0.7,
+            "x": -0.54,
+            "y": 1.07,
             "z": -1.6
           },
           "b": {
-            "x": 0,
-            "y": -0.7,
+            "x": -0.54,
+            "y": 1.07,
             "z": 1.6
           },
           "connects": [
@@ -648,13 +618,13 @@
         {
           "id": "rf-b",
           "a": {
-            "x": 0,
-            "y": -0.7,
+            "x": -0.54,
+            "y": 1.07,
             "z": 1.6
           },
           "b": {
             "x": 0,
-            "y": 0,
+            "y": 1.07,
             "z": 2.5
           },
           "connects": [
@@ -667,12 +637,12 @@
           "id": "rc-a",
           "a": {
             "x": 0,
-            "y": 0,
+            "y": 1.07,
             "z": -2.5
           },
           "b": {
-            "x": 0,
-            "y": 0.7,
+            "x": 0.54,
+            "y": 1.07,
             "z": -1.6
           },
           "connects": [
@@ -684,13 +654,13 @@
         {
           "id": "rc-m",
           "a": {
-            "x": 0,
-            "y": 0.7,
+            "x": 0.54,
+            "y": 1.07,
             "z": -1.6
           },
           "b": {
-            "x": 0,
-            "y": 0.7,
+            "x": 0.54,
+            "y": 1.07,
             "z": 1.6
           },
           "connects": [
@@ -701,13 +671,13 @@
         {
           "id": "rc-b",
           "a": {
-            "x": 0,
-            "y": 0.7,
+            "x": 0.54,
+            "y": 1.07,
             "z": 1.6
           },
           "b": {
             "x": 0,
-            "y": 0,
+            "y": 1.07,
             "z": 2.5
           },
           "connects": [
@@ -722,7 +692,7 @@
           "id": "tube-spine-rack-00",
           "kind": "rack",
           "localPos": {
-            "x": 0.89,
+            "x": 1.39,
             "y": 0,
             "z": -1.15
           },
@@ -737,7 +707,7 @@
           "id": "tube-spine-rack-01",
           "kind": "rack",
           "localPos": {
-            "x": 0.89,
+            "x": 1.39,
             "y": 0,
             "z": 1.15
           },
@@ -753,7 +723,7 @@
           "kind": "rack",
           "localPos": {
             "x": 0,
-            "y": 0.89,
+            "y": 1.39,
             "z": -1.15
           },
           "localQuat": {
@@ -768,7 +738,7 @@
           "kind": "rack",
           "localPos": {
             "x": 0,
-            "y": 0.89,
+            "y": 1.39,
             "z": 1.15
           },
           "localQuat": {
@@ -782,7 +752,7 @@
           "id": "tube-spine-rack-20",
           "kind": "rack",
           "localPos": {
-            "x": -0.89,
+            "x": -1.39,
             "y": 0,
             "z": -1.15
           },
@@ -797,7 +767,7 @@
           "id": "tube-spine-rack-21",
           "kind": "rack",
           "localPos": {
-            "x": -0.89,
+            "x": -1.39,
             "y": 0,
             "z": 1.15
           },
@@ -813,7 +783,7 @@
           "kind": "rack",
           "localPos": {
             "x": 0,
-            "y": -0.89,
+            "y": -1.39,
             "z": -1.15
           },
           "localQuat": {
@@ -828,7 +798,7 @@
           "kind": "rack",
           "localPos": {
             "x": 0,
-            "y": -0.89,
+            "y": -1.39,
             "z": 1.15
           },
           "localQuat": {
@@ -842,8 +812,8 @@
           "id": "tube-spine-cable-00",
           "kind": "cable",
           "localPos": {
-            "x": 0.6505,
-            "y": 0.6505,
+            "x": 1.0097,
+            "y": 1.0097,
             "z": -1.65
           },
           "localQuat": {
@@ -857,8 +827,8 @@
           "id": "tube-spine-cable-01",
           "kind": "cable",
           "localPos": {
-            "x": 0.6505,
-            "y": 0.6505,
+            "x": 1.0097,
+            "y": 1.0097,
             "z": 0
           },
           "localQuat": {
@@ -872,8 +842,8 @@
           "id": "tube-spine-cable-02",
           "kind": "cable",
           "localPos": {
-            "x": 0.6505,
-            "y": 0.6505,
+            "x": 1.0097,
+            "y": 1.0097,
             "z": 1.65
           },
           "localQuat": {
@@ -887,8 +857,8 @@
           "id": "tube-spine-cable-10",
           "kind": "cable",
           "localPos": {
-            "x": -0.6505,
-            "y": 0.6505,
+            "x": -1.0097,
+            "y": 1.0097,
             "z": -1.65
           },
           "localQuat": {
@@ -902,8 +872,8 @@
           "id": "tube-spine-cable-11",
           "kind": "cable",
           "localPos": {
-            "x": -0.6505,
-            "y": 0.6505,
+            "x": -1.0097,
+            "y": 1.0097,
             "z": 0
           },
           "localQuat": {
@@ -917,8 +887,8 @@
           "id": "tube-spine-cable-12",
           "kind": "cable",
           "localPos": {
-            "x": -0.6505,
-            "y": 0.6505,
+            "x": -1.0097,
+            "y": 1.0097,
             "z": 1.65
           },
           "localQuat": {
@@ -932,8 +902,8 @@
           "id": "tube-spine-bag-0",
           "kind": "stowage",
           "localPos": {
-            "x": -0.1106,
-            "y": -0.5999,
+            "x": -0.2049,
+            "y": -1.1113,
             "z": 0.867
           },
           "localQuat": {
@@ -947,8 +917,8 @@
           "id": "tube-spine-bag-1",
           "kind": "stowage",
           "localPos": {
-            "x": 0.6048,
-            "y": -0.0794,
+            "x": 1.1204,
+            "y": -0.147,
             "z": -0.5716
           },
           "localQuat": {
@@ -962,7 +932,7 @@
           "id": "tube-spine-locker",
           "kind": "locker",
           "localPos": {
-            "x": -0.57,
+            "x": -1.11,
             "y": 0,
             "z": -0.7283
           },
@@ -978,7 +948,7 @@
           "id": "tube-spine-cargo-rack",
           "kind": "cargo-rack",
           "localPos": {
-            "x": 0.88,
+            "x": 1.39,
             "y": 0,
             "z": 0
           },
@@ -993,9 +963,9 @@
           "id": "tube-spine-cargo-slot-1",
           "kind": "slot",
           "localPos": {
-            "x": 0.73,
+            "x": 1.235,
             "y": 0,
-            "z": -1.9
+            "z": -1.7
           },
           "localQuat": {
             "x": 0,
@@ -1008,9 +978,9 @@
           "id": "tube-spine-cargo-bag-1",
           "kind": "cargo-bag",
           "localPos": {
-            "x": -0.0007,
-            "y": 0.2454,
-            "z": -1.775
+            "x": 0.0465,
+            "y": 0.3456,
+            "z": -1.575
           },
           "interactable": true
         },
@@ -1018,9 +988,9 @@
           "id": "tube-spine-cargo-slot-2",
           "kind": "slot",
           "localPos": {
-            "x": 0.73,
+            "x": 1.235,
             "y": 0,
-            "z": -0.95
+            "z": -0.85
           },
           "localQuat": {
             "x": 0,
@@ -1033,9 +1003,9 @@
           "id": "tube-spine-cargo-bag-2",
           "kind": "cargo-bag",
           "localPos": {
-            "x": -0.0648,
-            "y": -0.1345,
-            "z": -1.0782
+            "x": -0.0671,
+            "y": -0.3056,
+            "z": -0.9782
           },
           "interactable": true
         },
@@ -1043,7 +1013,7 @@
           "id": "tube-spine-cargo-slot-3",
           "kind": "slot",
           "localPos": {
-            "x": 0.73,
+            "x": 1.235,
             "y": 0,
             "z": 0
           },
@@ -1058,8 +1028,8 @@
           "id": "tube-spine-cargo-bag-3",
           "kind": "cargo-bag",
           "localPos": {
-            "x": -0.2309,
-            "y": -0.2604,
+            "x": -0.3616,
+            "y": -0.5213,
             "z": 0.2113
           },
           "interactable": true
@@ -1068,9 +1038,9 @@
           "id": "tube-spine-cargo-slot-4",
           "kind": "slot",
           "localPos": {
-            "x": 0.73,
+            "x": 1.235,
             "y": 0,
-            "z": 0.95
+            "z": 0.85
           },
           "localQuat": {
             "x": 0,
@@ -1083,9 +1053,9 @@
           "id": "tube-spine-cargo-bag-4",
           "kind": "cargo-bag",
           "localPos": {
-            "x": -0.3097,
-            "y": -0.2472,
-            "z": 0.8761
+            "x": -0.5014,
+            "y": -0.4987,
+            "z": 0.7761
           },
           "interactable": true
         },
@@ -1093,9 +1063,9 @@
           "id": "tube-spine-cargo-slot-5",
           "kind": "slot",
           "localPos": {
-            "x": 0.73,
+            "x": 1.235,
             "y": 0,
-            "z": 1.9
+            "z": 1.7
           },
           "localQuat": {
             "x": 0,
@@ -1108,16 +1078,16 @@
           "id": "tube-spine-cargo-bag-5",
           "kind": "cargo-bag",
           "localPos": {
-            "x": -0.3591,
-            "y": 0.0634,
-            "z": 1.9932
+            "x": -0.5888,
+            "y": 0.0337,
+            "z": 1.7932
           },
           "interactable": true
         }
       ],
       "lighting": "emergency",
       "gravity": "zero",
-      "volume": 15.71,
+      "volume": 35.34,
       "hideSpots": [
         {
           "id": "tube-spine-net",
@@ -1151,7 +1121,7 @@
       "kind": "node",
       "transform": {
         "pos": {
-          "x": 8,
+          "x": 9.5,
           "y": 0,
           "z": 0
         },
@@ -1166,7 +1136,7 @@
         {
           "id": "px",
           "localPos": {
-            "x": 1.5,
+            "x": 2.25,
             "y": 0,
             "z": 0
           },
@@ -1188,7 +1158,7 @@
         {
           "id": "nx",
           "localPos": {
-            "x": -1.5,
+            "x": -2.25,
             "y": 0,
             "z": 0
           },
@@ -1211,7 +1181,7 @@
           "id": "py",
           "localPos": {
             "x": 0,
-            "y": 1.5,
+            "y": 2.25,
             "z": 0
           },
           "localDir": {
@@ -1230,7 +1200,7 @@
           "id": "ny",
           "localPos": {
             "x": 0,
-            "y": -1.5,
+            "y": -2.25,
             "z": 0
           },
           "localDir": {
@@ -1250,7 +1220,7 @@
           "localPos": {
             "x": 0,
             "y": 0,
-            "z": 1.5
+            "z": 2.25
           },
           "localDir": {
             "x": 0,
@@ -1272,7 +1242,7 @@
           "localPos": {
             "x": 0,
             "y": 0,
-            "z": -1.5
+            "z": -2.25
           },
           "localDir": {
             "x": 0,
@@ -1291,105 +1261,60 @@
         {
           "id": "rs-px",
           "a": {
-            "x": 1.5,
-            "y": 0,
+            "x": 2.25,
+            "y": 1.07,
             "z": 0
           },
           "b": {
             "x": 0,
-            "y": 0,
+            "y": 1.07,
             "z": 0
           },
           "connects": [
             "rs-nx",
-            "rs-py",
-            "rs-ny",
             "rs-pz",
-            "rs-nz"
+            "rs-nz",
+            "rs-py"
           ],
           "portLink": "px"
         },
         {
           "id": "rs-nx",
           "a": {
-            "x": -1.5,
-            "y": 0,
+            "x": -2.25,
+            "y": 1.07,
             "z": 0
           },
           "b": {
             "x": 0,
-            "y": 0,
+            "y": 1.07,
             "z": 0
           },
           "connects": [
             "rs-px",
-            "rs-py",
-            "rs-ny",
             "rs-pz",
-            "rs-nz"
+            "rs-nz",
+            "rs-py"
           ],
           "portLink": "nx"
-        },
-        {
-          "id": "rs-py",
-          "a": {
-            "x": 0,
-            "y": 1.5,
-            "z": 0
-          },
-          "b": {
-            "x": 0,
-            "y": 0,
-            "z": 0
-          },
-          "connects": [
-            "rs-px",
-            "rs-nx",
-            "rs-ny",
-            "rs-pz",
-            "rs-nz"
-          ],
-          "portLink": "py"
-        },
-        {
-          "id": "rs-ny",
-          "a": {
-            "x": 0,
-            "y": -1.5,
-            "z": 0
-          },
-          "b": {
-            "x": 0,
-            "y": 0,
-            "z": 0
-          },
-          "connects": [
-            "rs-px",
-            "rs-nx",
-            "rs-py",
-            "rs-pz",
-            "rs-nz"
-          ],
-          "portLink": "ny"
         },
         {
           "id": "rs-pz",
           "a": {
             "x": 0,
-            "y": 0,
-            "z": 1.5
+            "y": 1.07,
+            "z": 2.25
           },
           "b": {
             "x": 0,
-            "y": 0,
+            "y": 1.07,
             "z": 0
           },
           "connects": [
             "rs-px",
             "rs-nx",
-            "rs-py",
-            "rs-ny",
-            "rs-nz"
+            "rs-nz",
+            "rs-py"
           ],
           "portLink": "pz"
         },
@@ -1397,22 +1322,41 @@
           "id": "rs-nz",
           "a": {
             "x": 0,
-            "y": 0,
-            "z": -1.5
+            "y": 1.07,
+            "z": -2.25
           },
           "b": {
             "x": 0,
-            "y": 0,
+            "y": 1.07,
             "z": 0
           },
           "connects": [
             "rs-px",
             "rs-nx",
-            "rs-py",
-            "rs-ny",
-            "rs-pz"
+            "rs-pz",
+            "rs-py"
           ],
           "portLink": "nz"
+        },
+        {
+          "id": "rs-py",
+          "a": {
+            "x": 0,
+            "y": 2.25,
+            "z": 0
+          },
+          "b": {
+            "x": 0,
+            "y": 1.07,
+            "z": 0
+          },
+          "connects": [
+            "rs-px",
+            "rs-nx",
+            "rs-pz",
+            "rs-nz"
+          ],
+          "portLink": "py"
         }
       ],
       "props": [
@@ -1421,81 +1365,77 @@
           "kind": "hub",
           "localPos": {
             "x": 0,
-            "y": 0,
+            "y": 1.07,
             "z": 0
           }
         },
         {
-          "id": "node-beta-rack-0u",
+          "id": "node-beta-rack-0",
           "kind": "rack",
           "localPos": {
-            "x": 1.434,
-            "y": 1.3,
-            "z": 0
+            "x": 2.14,
+            "y": 0,
+            "z": -1.55
           },
           "localQuat": {
             "x": 0,
             "y": 0,
             "z": 0.7071067811865475,
             "w": 0.7071067811865476
-          },
-          "scale": 0.6
+          }
         },
         {
-          "id": "node-beta-rack-1u",
+          "id": "node-beta-rack-1",
           "kind": "rack",
           "localPos": {
-            "x": -1.434,
-            "y": 1.3,
-            "z": 0
+            "x": -2.14,
+            "y": 0,
+            "z": 1.55
           },
           "localQuat": {
             "x": 0,
             "y": 0,
             "z": -0.7071067811865475,
             "w": 0.7071067811865476
-          },
-          "scale": 0.6
+          }
         },
         {
-          "id": "node-beta-rack-2u",
+          "id": "node-beta-rack-2",
           "kind": "rack",
           "localPos": {
-            "x": 0,
-            "y": 1.3,
-            "z": 1.434
+            "x": -1.55,
+            "y": 0,
+            "z": 2.14
           },
           "localQuat": {
             "x": 0.5,
             "y": -0.5,
             "z": 0.5,
             "w": -0.5
-          },
-          "scale": 0.6
+          }
         },
         {
-          "id": "node-beta-rack-3u",
+          "id": "node-beta-rack-3",
           "kind": "rack",
           "localPos": {
-            "x": 0,
-            "y": 1.3,
-            "z": -1.434
+            "x": 1.55,
+            "y": 0,
+            "z": -2.14
           },
           "localQuat": {
             "x": 0.5,
             "y": 0.5,
             "z": 0.5,
             "w": 0.5
-          },
-          "scale": 0.6
+          }
         },
         {
           "id": "node-beta-cable-0",
           "kind": "cable",
           "localPos": {
-            "x": 0.9051,
+            "x": 1.9985,
             "y": 0,
-            "z": 0.9051
+            "z": 1.9985
           },
           "localQuat": {
             "x": -0.6532814824381883,
@@ -1508,9 +1448,9 @@
           "id": "node-beta-cable-1",
           "kind": "cable",
           "localPos": {
-            "x": -0.9051,
+            "x": -1.9985,
             "y": 0,
-            "z": 0.9051
+            "z": 1.9985
           },
           "localQuat": {
             "x": -0.6532814824381884,
@@ -1523,9 +1463,9 @@
           "id": "node-beta-cable-2",
           "kind": "cable",
           "localPos": {
-            "x": -0.9051,
+            "x": -1.9985,
             "y": 0,
-            "z": -0.9051
+            "z": -1.9985
           },
           "localQuat": {
             "x": 0.2705980500730985,
@@ -1538,9 +1478,9 @@
           "id": "node-beta-cable-3",
           "kind": "cable",
           "localPos": {
-            "x": 0.9051,
+            "x": 1.9985,
             "y": 0,
-            "z": -0.9051
+            "z": -1.9985
           },
           "localQuat": {
             "x": -0.27059805007309856,
@@ -1553,9 +1493,9 @@
           "id": "node-beta-laptop",
           "kind": "laptop",
           "localPos": {
-            "x": 1.18,
-            "y": -0.55,
-            "z": 0.85
+            "x": 1.93,
+            "y": 0.25,
+            "z": -1.2
           },
           "localQuat": {
             "x": 0,
@@ -1568,9 +1508,9 @@
           "id": "node-beta-locker",
           "kind": "locker",
           "localPos": {
-            "x": -1.29,
-            "y": 1.35,
-            "z": -1.05
+            "x": -2.08,
+            "y": -0.45,
+            "z": -2
           },
           "localQuat": {
             "x": 0,
@@ -1581,44 +1521,12 @@
           "interactable": true
         },
         {
-          "id": "node-beta-panel-breaker",
-          "kind": "panel",
-          "localPos": {
-            "x": -1.05,
-            "y": 0,
-            "z": -1.445
-          },
-          "localQuat": {
-            "x": 0.5,
-            "y": 0.5,
-            "z": 0.5,
-            "w": 0.5
-          },
-          "interactable": true
-        },
-        {
-          "id": "node-beta-panel-undock-2",
-          "kind": "panel",
-          "localPos": {
-            "x": 1.05,
-            "y": 0,
-            "z": -1.445
-          },
-          "localQuat": {
-            "x": 0.5,
-            "y": 0.5,
-            "z": 0.5,
-            "w": 0.5
-          },
-          "interactable": true
-        },
-        {
           "id": "node-beta-bulkhead-corner-pp",
           "kind": "bulkhead",
           "localPos": {
-            "x": 1.2,
+            "x": 1.2293,
             "y": -0.175,
-            "z": 1.2
+            "z": 1.2293
           },
           "localQuat": {
             "x": 0,
@@ -1628,16 +1536,16 @@
           }
         },
         {
-          "id": "node-beta-bulkhead-corner-np",
+          "id": "node-beta-bulkhead-corner-nn",
           "kind": "bulkhead",
           "localPos": {
-            "x": -1.2,
+            "x": -1.2293,
             "y": -0.175,
-            "z": 1.2
+            "z": -1.2293
           },
           "localQuat": {
             "x": 0,
-            "y": -0.382683,
+            "y": 0.382683,
             "z": 0,
             "w": 0.92388
           }
@@ -1646,24 +1554,56 @@
           "id": "node-beta-bulkhead-back1",
           "kind": "bulkhead",
           "localPos": {
-            "x": -0.2,
+            "x": 2.03,
             "y": -0.175,
-            "z": -1.41
+            "z": 1.55
           }
         },
         {
           "id": "node-beta-bulkhead-back2",
           "kind": "bulkhead",
           "localPos": {
-            "x": 0.2,
+            "x": -2.03,
             "y": -0.175,
-            "z": -1.41
+            "z": -1.55
           }
+        },
+        {
+          "id": "node-beta-panel-breaker",
+          "kind": "panel",
+          "localPos": {
+            "x": 1.05,
+            "y": 0,
+            "z": 2.195
+          },
+          "localQuat": {
+            "x": 0.5,
+            "y": -0.5,
+            "z": 0.5,
+            "w": -0.5
+          },
+          "interactable": true
+        },
+        {
+          "id": "node-beta-panel-undock-2",
+          "kind": "panel",
+          "localPos": {
+            "x": -1.05,
+            "y": 0,
+            "z": -2.195
+          },
+          "localQuat": {
+            "x": 0.5,
+            "y": 0.5,
+            "z": 0.5,
+            "w": 0.5
+          },
+          "interactable": true
         }
       ],
       "lighting": "emergency",
       "gravity": "nominal",
-      "volume": 27,
+      "volume": 91.13,
       "hideSpots": [
         {
           "id": "node-beta-console",
@@ -1674,14 +1614,14 @@
             "z": 0
           },
           "halfExtents": {
-            "x": 0.42,
+            "x": 0.6,
             "y": 0.3,
-            "z": 0.42
+            "z": 0.6
           },
           "entryPos": {
             "x": 0,
             "y": 0.15,
-            "z": 0.95
+            "z": 1.04
           },
           "lookDir": {
             "x": 0,
@@ -1697,9 +1637,9 @@
       "kind": "node",
       "transform": {
         "pos": {
-          "x": 8,
+          "x": 9.5,
           "y": 0,
-          "z": 3
+          "z": 4.5
         },
         "quat": {
           "x": 0,
@@ -1712,7 +1652,7 @@
         {
           "id": "px",
           "localPos": {
-            "x": 1.5,
+            "x": 2.25,
             "y": 0,
             "z": 0
           },
@@ -1731,7 +1671,7 @@
         {
           "id": "nx",
           "localPos": {
-            "x": -1.5,
+            "x": -2.25,
             "y": 0,
             "z": 0
           },
@@ -1754,7 +1694,7 @@
           "id": "py",
           "localPos": {
             "x": 0,
-            "y": 1.5,
+            "y": 2.25,
             "z": 0
           },
           "localDir": {
@@ -1773,7 +1713,7 @@
           "id": "ny",
           "localPos": {
             "x": 0,
-            "y": -1.5,
+            "y": -2.25,
             "z": 0
           },
           "localDir": {
@@ -1793,7 +1733,7 @@
           "localPos": {
             "x": 0,
             "y": 0,
-            "z": 1.5
+            "z": 2.25
           },
           "localDir": {
             "x": 0,
@@ -1812,7 +1752,7 @@
           "localPos": {
             "x": 0,
             "y": 0,
-            "z": -1.5
+            "z": -2.25
           },
           "localDir": {
             "x": 0,
@@ -1834,105 +1774,60 @@
         {
           "id": "rs-px",
           "a": {
-            "x": 1.5,
-            "y": 0,
+            "x": 2.25,
+            "y": 1.07,
             "z": 0
           },
           "b": {
             "x": 0,
-            "y": 0,
+            "y": 1.07,
             "z": 0
           },
           "connects": [
             "rs-nx",
-            "rs-py",
-            "rs-ny",
             "rs-pz",
-            "rs-nz"
+            "rs-nz",
+            "rs-py"
           ],
           "portLink": "px"
         },
         {
           "id": "rs-nx",
           "a": {
-            "x": -1.5,
-            "y": 0,
+            "x": -2.25,
+            "y": 1.07,
             "z": 0
           },
           "b": {
             "x": 0,
-            "y": 0,
+            "y": 1.07,
             "z": 0
           },
           "connects": [
             "rs-px",
-            "rs-py",
-            "rs-ny",
             "rs-pz",
-            "rs-nz"
+            "rs-nz",
+            "rs-py"
           ],
           "portLink": "nx"
-        },
-        {
-          "id": "rs-py",
-          "a": {
-            "x": 0,
-            "y": 1.5,
-            "z": 0
-          },
-          "b": {
-            "x": 0,
-            "y": 0,
-            "z": 0
-          },
-          "connects": [
-            "rs-px",
-            "rs-nx",
-            "rs-ny",
-            "rs-pz",
-            "rs-nz"
-          ],
-          "portLink": "py"
-        },
-        {
-          "id": "rs-ny",
-          "a": {
-            "x": 0,
-            "y": -1.5,
-            "z": 0
-          },
-          "b": {
-            "x": 0,
-            "y": 0,
-            "z": 0
-          },
-          "connects": [
-            "rs-px",
-            "rs-nx",
-            "rs-py",
-            "rs-pz",
-            "rs-nz"
-          ],
-          "portLink": "ny"
         },
         {
           "id": "rs-pz",
           "a": {
             "x": 0,
-            "y": 0,
-            "z": 1.5
+            "y": 1.07,
+            "z": 2.25
           },
           "b": {
             "x": 0,
-            "y": 0,
+            "y": 1.07,
             "z": 0
           },
           "connects": [
             "rs-px",
             "rs-nx",
-            "rs-py",
-            "rs-ny",
-            "rs-nz"
+            "rs-nz",
+            "rs-py"
           ],
           "portLink": "pz"
         },
@@ -1940,22 +1835,41 @@
           "id": "rs-nz",
           "a": {
             "x": 0,
-            "y": 0,
-            "z": -1.5
+            "y": 1.07,
+            "z": -2.25
           },
           "b": {
             "x": 0,
-            "y": 0,
+            "y": 1.07,
             "z": 0
           },
           "connects": [
             "rs-px",
             "rs-nx",
-            "rs-py",
-            "rs-ny",
-            "rs-pz"
+            "rs-pz",
+            "rs-py"
           ],
           "portLink": "nz"
+        },
+        {
+          "id": "rs-py",
+          "a": {
+            "x": 0,
+            "y": 2.25,
+            "z": 0
+          },
+          "b": {
+            "x": 0,
+            "y": 1.07,
+            "z": 0
+          },
+          "connects": [
+            "rs-px",
+            "rs-nx",
+            "rs-pz",
+            "rs-nz"
+          ],
+          "portLink": "py"
         }
       ],
       "props": [
@@ -1964,81 +1878,77 @@
           "kind": "hub",
           "localPos": {
             "x": 0,
-            "y": 0,
+            "y": 1.07,
             "z": 0
           }
         },
         {
-          "id": "node-gamma-rack-0u",
+          "id": "node-gamma-rack-0",
           "kind": "rack",
           "localPos": {
-            "x": 1.434,
-            "y": 1.3,
-            "z": 0
+            "x": 2.14,
+            "y": 0,
+            "z": -1.55
           },
           "localQuat": {
             "x": 0,
             "y": 0,
             "z": 0.7071067811865475,
             "w": 0.7071067811865476
-          },
-          "scale": 0.6
+          }
         },
         {
-          "id": "node-gamma-rack-1u",
+          "id": "node-gamma-rack-1",
           "kind": "rack",
           "localPos": {
-            "x": -1.434,
-            "y": 1.3,
-            "z": 0
+            "x": -2.14,
+            "y": 0,
+            "z": 1.55
           },
           "localQuat": {
             "x": 0,
             "y": 0,
             "z": -0.7071067811865475,
             "w": 0.7071067811865476
-          },
-          "scale": 0.6
+          }
         },
         {
-          "id": "node-gamma-rack-2u",
+          "id": "node-gamma-rack-2",
           "kind": "rack",
           "localPos": {
-            "x": 0,
-            "y": 1.3,
-            "z": 1.434
+            "x": -1.55,
+            "y": 0,
+            "z": 2.14
           },
           "localQuat": {
             "x": 0.5,
             "y": -0.5,
             "z": 0.5,
             "w": -0.5
-          },
-          "scale": 0.6
+          }
         },
         {
-          "id": "node-gamma-rack-3u",
+          "id": "node-gamma-rack-3",
           "kind": "rack",
           "localPos": {
-            "x": 0,
-            "y": 1.3,
-            "z": -1.434
+            "x": 1.55,
+            "y": 0,
+            "z": -2.14
           },
           "localQuat": {
             "x": 0.5,
             "y": 0.5,
             "z": 0.5,
             "w": 0.5
-          },
-          "scale": 0.6
+          }
         },
         {
           "id": "node-gamma-cable-0",
           "kind": "cable",
           "localPos": {
-            "x": 0.9051,
+            "x": 1.9985,
             "y": 0,
-            "z": 0.9051
+            "z": 1.9985
           },
           "localQuat": {
             "x": -0.6532814824381883,
@@ -2051,9 +1961,9 @@
           "id": "node-gamma-cable-1",
           "kind": "cable",
           "localPos": {
-            "x": -0.9051,
+            "x": -1.9985,
             "y": 0,
-            "z": 0.9051
+            "z": 1.9985
           },
           "localQuat": {
             "x": -0.6532814824381884,
@@ -2066,9 +1976,9 @@
           "id": "node-gamma-cable-2",
           "kind": "cable",
           "localPos": {
-            "x": -0.9051,
+            "x": -1.9985,
             "y": 0,
-            "z": -0.9051
+            "z": -1.9985
           },
           "localQuat": {
             "x": 0.2705980500730985,
@@ -2081,9 +1991,9 @@
           "id": "node-gamma-cable-3",
           "kind": "cable",
           "localPos": {
-            "x": 0.9051,
+            "x": 1.9985,
             "y": 0,
-            "z": -0.9051
+            "z": -1.9985
           },
           "localQuat": {
             "x": -0.27059805007309856,
@@ -2096,9 +2006,9 @@
           "id": "node-gamma-laptop",
           "kind": "laptop",
           "localPos": {
-            "x": 1.18,
-            "y": -0.55,
-            "z": 0.85
+            "x": 1.93,
+            "y": 0.25,
+            "z": -1.2
           },
           "localQuat": {
             "x": 0,
@@ -2111,9 +2021,9 @@
           "id": "node-gamma-locker",
           "kind": "locker",
           "localPos": {
-            "x": -1.29,
-            "y": 1.35,
-            "z": -1.05
+            "x": -2.08,
+            "y": -0.45,
+            "z": -2
           },
           "localQuat": {
             "x": 0,
@@ -2124,10 +2034,58 @@
           "interactable": true
         },
         {
+          "id": "node-gamma-bulkhead-corner-pp",
+          "kind": "bulkhead",
+          "localPos": {
+            "x": 1.2293,
+            "y": -0.175,
+            "z": 1.2293
+          },
+          "localQuat": {
+            "x": 0,
+            "y": 0.382683,
+            "z": 0,
+            "w": 0.92388
+          }
+        },
+        {
+          "id": "node-gamma-bulkhead-corner-nn",
+          "kind": "bulkhead",
+          "localPos": {
+            "x": -1.2293,
+            "y": -0.175,
+            "z": -1.2293
+          },
+          "localQuat": {
+            "x": 0,
+            "y": 0.382683,
+            "z": 0,
+            "w": 0.92388
+          }
+        },
+        {
+          "id": "node-gamma-bulkhead-back1",
+          "kind": "bulkhead",
+          "localPos": {
+            "x": 2.03,
+            "y": -0.175,
+            "z": 1.55
+          }
+        },
+        {
+          "id": "node-gamma-bulkhead-back2",
+          "kind": "bulkhead",
+          "localPos": {
+            "x": -2.03,
+            "y": -0.175,
+            "z": -1.55
+          }
+        },
+        {
           "id": "node-gamma-panel-valve",
           "kind": "panel",
           "localPos": {
-            "x": 1.445,
+            "x": 2.195,
             "y": 0,
             "z": 1.05
           },
@@ -2138,59 +2096,11 @@
             "w": 0.707107
           },
           "interactable": true
-        },
-        {
-          "id": "node-gamma-bulkhead-corner-pn",
-          "kind": "bulkhead",
-          "localPos": {
-            "x": 1.2,
-            "y": -0.175,
-            "z": -1.2
-          },
-          "localQuat": {
-            "x": 0,
-            "y": -0.382683,
-            "z": 0,
-            "w": 0.92388
-          }
-        },
-        {
-          "id": "node-gamma-bulkhead-corner-np",
-          "kind": "bulkhead",
-          "localPos": {
-            "x": -1.2,
-            "y": -0.175,
-            "z": 1.2
-          },
-          "localQuat": {
-            "x": 0,
-            "y": -0.382683,
-            "z": 0,
-            "w": 0.92388
-          }
-        },
-        {
-          "id": "node-gamma-bulkhead-back1",
-          "kind": "bulkhead",
-          "localPos": {
-            "x": -0.2,
-            "y": -0.175,
-            "z": 1.41
-          }
-        },
-        {
-          "id": "node-gamma-bulkhead-back2",
-          "kind": "bulkhead",
-          "localPos": {
-            "x": 0.2,
-            "y": -0.175,
-            "z": 1.41
-          }
         }
       ],
       "lighting": "emergency",
       "gravity": "nominal",
-      "volume": 27,
+      "volume": 91.13,
       "hideSpots": [
         {
           "id": "node-gamma-console",
@@ -2201,14 +2111,14 @@
             "z": 0
           },
           "halfExtents": {
-            "x": 0.42,
+            "x": 0.6,
             "y": 0.3,
-            "z": 0.42
+            "z": 0.6
           },
           "entryPos": {
             "x": 0,
             "y": 0.15,
-            "z": 0.95
+            "z": 1.04
           },
           "lookDir": {
             "x": 0,
@@ -2224,9 +2134,9 @@
       "kind": "lab",
       "transform": {
         "pos": {
-          "x": 4,
+          "x": 4.75,
           "y": 0,
-          "z": 3
+          "z": 4.5
         },
         "quat": {
           "x": 0,
@@ -2286,12 +2196,12 @@
           "id": "rf-a",
           "a": {
             "x": 0,
-            "y": 0,
+            "y": 1.07,
             "z": -2.5
           },
           "b": {
-            "x": -1.1,
-            "y": 0,
+            "x": -1.45,
+            "y": 1.07,
             "z": -1.55
           },
           "connects": [
@@ -2303,13 +2213,13 @@
         {
           "id": "rf-m",
           "a": {
-            "x": -1.1,
-            "y": 0,
+            "x": -1.45,
+            "y": 1.07,
             "z": -1.55
           },
           "b": {
-            "x": -1.1,
-            "y": 0,
+            "x": -1.45,
+            "y": 1.07,
             "z": 1.55
           },
           "connects": [
@@ -2320,13 +2230,13 @@
         {
           "id": "rf-b",
           "a": {
-            "x": -1.1,
-            "y": 0,
+            "x": -1.45,
+            "y": 1.07,
             "z": 1.55
           },
           "b": {
             "x": 0,
-            "y": 0,
+            "y": 1.07,
             "z": 2.5
           },
           "connects": [
@@ -2339,12 +2249,12 @@
           "id": "rc-a",
           "a": {
             "x": 0,
-            "y": 0,
+            "y": 1.07,
             "z": -2.5
           },
           "b": {
-            "x": 1.1,
-            "y": 0,
+            "x": 1.45,
+            "y": 1.07,
             "z": -1.55
           },
           "connects": [
@@ -2356,13 +2266,13 @@
         {
           "id": "rc-m",
           "a": {
-            "x": 1.1,
-            "y": 0,
+            "x": 1.45,
+            "y": 1.07,
             "z": -1.55
           },
           "b": {
-            "x": 1.1,
-            "y": 0,
+            "x": 1.45,
+            "y": 1.07,
             "z": 1.55
           },
           "connects": [
@@ -2373,13 +2283,13 @@
         {
           "id": "rc-b",
           "a": {
-            "x": 1.1,
-            "y": 0,
+            "x": 1.45,
+            "y": 1.07,
             "z": 1.55
           },
           "b": {
             "x": 0,
-            "y": 0,
+            "y": 1.07,
             "z": 2.5
           },
           "connects": [
@@ -2394,7 +2304,7 @@
           "id": "lab-atlas-rack-00",
           "kind": "rack",
           "localPos": {
-            "x": 1.29,
+            "x": 1.99,
             "y": 0,
             "z": -1.6
           },
@@ -2409,7 +2319,7 @@
           "id": "lab-atlas-rack-01",
           "kind": "rack",
           "localPos": {
-            "x": 1.29,
+            "x": 1.99,
             "y": 0,
             "z": 0
           },
@@ -2424,7 +2334,7 @@
           "id": "lab-atlas-rack-02",
           "kind": "rack",
           "localPos": {
-            "x": 1.29,
+            "x": 1.99,
             "y": 0,
             "z": 1.6
           },
@@ -2439,8 +2349,8 @@
           "id": "lab-atlas-cable-00",
           "kind": "cable",
           "localPos": {
-            "x": 0.9334,
-            "y": 0.9334,
+            "x": 1.434,
+            "y": 1.434,
             "z": -1.65
           },
           "localQuat": {
@@ -2454,8 +2364,8 @@
           "id": "lab-atlas-cable-01",
           "kind": "cable",
           "localPos": {
-            "x": 0.9334,
-            "y": 0.9334,
+            "x": 1.434,
+            "y": 1.434,
             "z": 0
           },
           "localQuat": {
@@ -2469,8 +2379,8 @@
           "id": "lab-atlas-cable-02",
           "kind": "cable",
           "localPos": {
-            "x": 0.9334,
-            "y": 0.9334,
+            "x": 1.434,
+            "y": 1.434,
             "z": 1.65
           },
           "localQuat": {
@@ -2484,8 +2394,8 @@
           "id": "lab-atlas-cable-10",
           "kind": "cable",
           "localPos": {
-            "x": -0.9334,
-            "y": 0.9334,
+            "x": -1.434,
+            "y": 1.434,
             "z": -1.65
           },
           "localQuat": {
@@ -2499,8 +2409,8 @@
           "id": "lab-atlas-cable-11",
           "kind": "cable",
           "localPos": {
-            "x": -0.9334,
-            "y": 0.9334,
+            "x": -1.434,
+            "y": 1.434,
             "z": 0
           },
           "localQuat": {
@@ -2514,8 +2424,8 @@
           "id": "lab-atlas-cable-12",
           "kind": "cable",
           "localPos": {
-            "x": -0.9334,
-            "y": 0.9334,
+            "x": -1.434,
+            "y": 1.434,
             "z": 1.65
           },
           "localQuat": {
@@ -2529,8 +2439,8 @@
           "id": "lab-atlas-bag-0",
           "kind": "stowage",
           "localPos": {
-            "x": 1.0031,
-            "y": -0.1178,
+            "x": 1.7182,
+            "y": -0.2018,
             "z": -1.419
           },
           "localQuat": {
@@ -2544,8 +2454,8 @@
           "id": "lab-atlas-bag-1",
           "kind": "stowage",
           "localPos": {
-            "x": 0.9839,
-            "y": 0.228,
+            "x": 1.6853,
+            "y": 0.3906,
             "z": -0.6205
           },
           "localQuat": {
@@ -2559,8 +2469,8 @@
           "id": "lab-atlas-bag-2",
           "kind": "stowage",
           "localPos": {
-            "x": 1.006,
-            "y": -0.0896,
+            "x": 1.7232,
+            "y": -0.1534,
             "z": -0.9625
           },
           "localQuat": {
@@ -2574,7 +2484,7 @@
           "id": "lab-atlas-laptop",
           "kind": "laptop",
           "localPos": {
-            "x": 1.13,
+            "x": 1.83,
             "y": 0,
             "z": -0.8
           },
@@ -2589,7 +2499,7 @@
           "id": "lab-atlas-locker",
           "kind": "locker",
           "localPos": {
-            "x": 0.97,
+            "x": 1.71,
             "y": 0,
             "z": -2
           },
@@ -2602,10 +2512,37 @@
           "interactable": true
         },
         {
+          "id": "lab-atlas-bench-a",
+          "kind": "bench",
+          "localPos": {
+            "x": 0,
+            "y": -0.325,
+            "z": -0.65
+          }
+        },
+        {
+          "id": "lab-atlas-bench-b",
+          "kind": "bench",
+          "localPos": {
+            "x": 0,
+            "y": -0.325,
+            "z": 0.65
+          }
+        },
+        {
+          "id": "lab-atlas-bank-a",
+          "kind": "bank",
+          "localPos": {
+            "x": -1.47,
+            "y": -0.1,
+            "z": 2.1
+          }
+        },
+        {
           "id": "lab-atlas-panel-gauge",
           "kind": "panel",
           "localPos": {
-            "x": 1.135,
+            "x": 1.835,
             "y": 0,
             "z": -0.2
           },
@@ -2621,9 +2558,9 @@
           "id": "lab-atlas-panel-fuse-1",
           "kind": "panel",
           "localPos": {
-            "x": -1.135,
+            "x": -1.835,
             "y": 0,
-            "z": 2
+            "z": 1.2
           },
           "localQuat": {
             "x": 0,
@@ -2637,9 +2574,9 @@
           "id": "lab-atlas-panel-undock-3",
           "kind": "panel",
           "localPos": {
-            "x": -1.135,
+            "x": -1.835,
             "y": 0,
-            "z": -2
+            "z": -1.2
           },
           "localQuat": {
             "x": 0,
@@ -2648,50 +2585,17 @@
             "w": 0.707107
           },
           "interactable": true
-        },
-        {
-          "id": "lab-atlas-bench-a",
-          "kind": "bench",
-          "localPos": {
-            "x": 0,
-            "y": -0.325,
-            "z": 0
-          }
-        },
-        {
-          "id": "lab-atlas-bank-a",
-          "kind": "bank",
-          "localPos": {
-            "x": -0.77,
-            "y": -0.1,
-            "z": -2.1
-          }
-        },
-        {
-          "id": "lab-atlas-bulkhead-lane",
-          "kind": "bulkhead",
-          "localPos": {
-            "x": -1.092,
-            "y": -0.175,
-            "z": -1.25
-          },
-          "localQuat": {
-            "x": 0,
-            "y": 0.707107,
-            "z": 0,
-            "w": 0.707107
-          }
         }
       ],
       "lighting": "emergency",
       "gravity": "nominal",
-      "volume": 30.79,
+      "volume": 69.27,
       "hideSpots": [
         {
           "id": "lab-atlas-bay",
           "kind": "equipment-bay",
           "localPos": {
-            "x": 0.8022,
+            "x": 1.5815,
             "y": -0.12,
             "z": 2
           },
@@ -2701,12 +2605,37 @@
             "z": 0.32
           },
           "entryPos": {
-            "x": 0.0122,
+            "x": 0.8415,
             "y": 0.15,
             "z": 2
           },
           "lookDir": {
             "x": -1,
+            "y": 0,
+            "z": 0
+          },
+          "usableIn": "any"
+        },
+        {
+          "id": "lab-atlas-bay-aft",
+          "kind": "equipment-bay",
+          "localPos": {
+            "x": -1.5815,
+            "y": -0.12,
+            "z": -2
+          },
+          "halfExtents": {
+            "x": 0.3,
+            "y": 0.55,
+            "z": 0.32
+          },
+          "entryPos": {
+            "x": -0.8415,
+            "y": 0.15,
+            "z": -2
+          },
+          "lookDir": {
+            "x": 1,
             "y": 0,
             "z": 0
           },
@@ -2721,7 +2650,7 @@
         "pos": {
           "x": 0,
           "y": 0,
-          "z": 3
+          "z": 4.5
         },
         "quat": {
           "x": 0,
@@ -2734,7 +2663,7 @@
         {
           "id": "px",
           "localPos": {
-            "x": 1.5,
+            "x": 2.25,
             "y": 0,
             "z": 0
           },
@@ -2756,7 +2685,7 @@
         {
           "id": "nx",
           "localPos": {
-            "x": -1.5,
+            "x": -2.25,
             "y": 0,
             "z": 0
           },
@@ -2779,7 +2708,7 @@
           "id": "py",
           "localPos": {
             "x": 0,
-            "y": 1.5,
+            "y": 2.25,
             "z": 0
           },
           "localDir": {
@@ -2798,7 +2727,7 @@
           "id": "ny",
           "localPos": {
             "x": 0,
-            "y": -1.5,
+            "y": -2.25,
             "z": 0
           },
           "localDir": {
@@ -2818,7 +2747,7 @@
           "localPos": {
             "x": 0,
             "y": 0,
-            "z": 1.5
+            "z": 2.25
           },
           "localDir": {
             "x": 0,
@@ -2837,7 +2766,7 @@
           "localPos": {
             "x": 0,
             "y": 0,
-            "z": -1.5
+            "z": -2.25
           },
           "localDir": {
             "x": 0,
@@ -2859,105 +2788,60 @@
         {
           "id": "rs-px",
           "a": {
-            "x": 1.5,
-            "y": 0,
+            "x": 2.25,
+            "y": 1.07,
             "z": 0
           },
           "b": {
             "x": 0,
-            "y": 0,
+            "y": 1.07,
             "z": 0
           },
           "connects": [
             "rs-nx",
-            "rs-py",
-            "rs-ny",
             "rs-pz",
-            "rs-nz"
+            "rs-nz",
+            "rs-py"
           ],
           "portLink": "px"
         },
         {
           "id": "rs-nx",
           "a": {
-            "x": -1.5,
-            "y": 0,
+            "x": -2.25,
+            "y": 1.07,
             "z": 0
           },
           "b": {
             "x": 0,
-            "y": 0,
+            "y": 1.07,
             "z": 0
           },
           "connects": [
             "rs-px",
-            "rs-py",
-            "rs-ny",
             "rs-pz",
-            "rs-nz"
+            "rs-nz",
+            "rs-py"
           ],
           "portLink": "nx"
-        },
-        {
-          "id": "rs-py",
-          "a": {
-            "x": 0,
-            "y": 1.5,
-            "z": 0
-          },
-          "b": {
-            "x": 0,
-            "y": 0,
-            "z": 0
-          },
-          "connects": [
-            "rs-px",
-            "rs-nx",
-            "rs-ny",
-            "rs-pz",
-            "rs-nz"
-          ],
-          "portLink": "py"
-        },
-        {
-          "id": "rs-ny",
-          "a": {
-            "x": 0,
-            "y": -1.5,
-            "z": 0
-          },
-          "b": {
-            "x": 0,
-            "y": 0,
-            "z": 0
-          },
-          "connects": [
-            "rs-px",
-            "rs-nx",
-            "rs-py",
-            "rs-pz",
-            "rs-nz"
-          ],
-          "portLink": "ny"
         },
         {
           "id": "rs-pz",
           "a": {
             "x": 0,
-            "y": 0,
-            "z": 1.5
+            "y": 1.07,
+            "z": 2.25
           },
           "b": {
             "x": 0,
-            "y": 0,
+            "y": 1.07,
             "z": 0
           },
           "connects": [
             "rs-px",
             "rs-nx",
-            "rs-py",
-            "rs-ny",
-            "rs-nz"
+            "rs-nz",
+            "rs-py"
           ],
           "portLink": "pz"
         },
@@ -2965,22 +2849,41 @@
           "id": "rs-nz",
           "a": {
             "x": 0,
-            "y": 0,
-            "z": -1.5
+            "y": 1.07,
+            "z": -2.25
           },
           "b": {
             "x": 0,
-            "y": 0,
+            "y": 1.07,
             "z": 0
           },
           "connects": [
             "rs-px",
             "rs-nx",
-            "rs-py",
-            "rs-ny",
-            "rs-pz"
+            "rs-pz",
+            "rs-py"
           ],
           "portLink": "nz"
+        },
+        {
+          "id": "rs-py",
+          "a": {
+            "x": 0,
+            "y": 2.25,
+            "z": 0
+          },
+          "b": {
+            "x": 0,
+            "y": 1.07,
+            "z": 0
+          },
+          "connects": [
+            "rs-px",
+            "rs-nx",
+            "rs-pz",
+            "rs-nz"
+          ],
+          "portLink": "py"
         }
       ],
       "props": [
@@ -2989,81 +2892,77 @@
           "kind": "hub",
           "localPos": {
             "x": 0,
-            "y": 0,
+            "y": 1.07,
             "z": 0
           }
         },
         {
-          "id": "node-delta-rack-0u",
+          "id": "node-delta-rack-0",
           "kind": "rack",
           "localPos": {
-            "x": 1.434,
-            "y": 1.3,
-            "z": 0
+            "x": 2.14,
+            "y": 0,
+            "z": -1.55
           },
           "localQuat": {
             "x": 0,
             "y": 0,
             "z": 0.7071067811865475,
             "w": 0.7071067811865476
-          },
-          "scale": 0.6
+          }
         },
         {
-          "id": "node-delta-rack-1u",
+          "id": "node-delta-rack-1",
           "kind": "rack",
           "localPos": {
-            "x": -1.434,
-            "y": 1.3,
-            "z": 0
+            "x": -2.14,
+            "y": 0,
+            "z": 1.55
           },
           "localQuat": {
             "x": 0,
             "y": 0,
             "z": -0.7071067811865475,
             "w": 0.7071067811865476
-          },
-          "scale": 0.6
+          }
         },
         {
-          "id": "node-delta-rack-2u",
+          "id": "node-delta-rack-2",
           "kind": "rack",
           "localPos": {
-            "x": 0,
-            "y": 1.3,
-            "z": 1.434
+            "x": -1.55,
+            "y": 0,
+            "z": 2.14
           },
           "localQuat": {
             "x": 0.5,
             "y": -0.5,
             "z": 0.5,
             "w": -0.5
-          },
-          "scale": 0.6
+          }
         },
         {
-          "id": "node-delta-rack-3u",
+          "id": "node-delta-rack-3",
           "kind": "rack",
           "localPos": {
-            "x": 0,
-            "y": 1.3,
-            "z": -1.434
+            "x": 1.55,
+            "y": 0,
+            "z": -2.14
           },
           "localQuat": {
             "x": 0.5,
             "y": 0.5,
             "z": 0.5,
             "w": 0.5
-          },
-          "scale": 0.6
+          }
         },
         {
           "id": "node-delta-cable-0",
           "kind": "cable",
           "localPos": {
-            "x": 0.9051,
+            "x": 1.9985,
             "y": 0,
-            "z": 0.9051
+            "z": 1.9985
           },
           "localQuat": {
             "x": -0.6532814824381883,
@@ -3076,9 +2975,9 @@
           "id": "node-delta-cable-1",
           "kind": "cable",
           "localPos": {
-            "x": -0.9051,
+            "x": -1.9985,
             "y": 0,
-            "z": 0.9051
+            "z": 1.9985
           },
           "localQuat": {
             "x": -0.6532814824381884,
@@ -3091,9 +2990,9 @@
           "id": "node-delta-cable-2",
           "kind": "cable",
           "localPos": {
-            "x": -0.9051,
+            "x": -1.9985,
             "y": 0,
-            "z": -0.9051
+            "z": -1.9985
           },
           "localQuat": {
             "x": 0.2705980500730985,
@@ -3106,9 +3005,9 @@
           "id": "node-delta-cable-3",
           "kind": "cable",
           "localPos": {
-            "x": 0.9051,
+            "x": 1.9985,
             "y": 0,
-            "z": -0.9051
+            "z": -1.9985
           },
           "localQuat": {
             "x": -0.27059805007309856,
@@ -3121,9 +3020,9 @@
           "id": "node-delta-laptop",
           "kind": "laptop",
           "localPos": {
-            "x": 1.18,
-            "y": -0.55,
-            "z": 0.85
+            "x": 1.93,
+            "y": 0.25,
+            "z": -1.2
           },
           "localQuat": {
             "x": 0,
@@ -3136,9 +3035,9 @@
           "id": "node-delta-locker",
           "kind": "locker",
           "localPos": {
-            "x": -1.29,
-            "y": 1.35,
-            "z": -1.05
+            "x": -2.08,
+            "y": -0.45,
+            "z": -2
           },
           "localQuat": {
             "x": 0,
@@ -3149,28 +3048,12 @@
           "interactable": true
         },
         {
-          "id": "node-delta-panel-fuse-2",
-          "kind": "panel",
-          "localPos": {
-            "x": 1.05,
-            "y": 0,
-            "z": -1.445
-          },
-          "localQuat": {
-            "x": 0.5,
-            "y": 0.5,
-            "z": 0.5,
-            "w": 0.5
-          },
-          "interactable": true
-        },
-        {
           "id": "node-delta-bulkhead-corner-pp",
           "kind": "bulkhead",
           "localPos": {
-            "x": 1.2,
+            "x": 1.2293,
             "y": -0.175,
-            "z": 1.2
+            "z": 1.2293
           },
           "localQuat": {
             "x": 0,
@@ -3183,9 +3066,9 @@
           "id": "node-delta-bulkhead-corner-nn",
           "kind": "bulkhead",
           "localPos": {
-            "x": -1.2,
+            "x": -1.2293,
             "y": -0.175,
-            "z": -1.2
+            "z": -1.2293
           },
           "localQuat": {
             "x": 0,
@@ -3198,24 +3081,40 @@
           "id": "node-delta-bulkhead-back1",
           "kind": "bulkhead",
           "localPos": {
-            "x": -0.2,
+            "x": 2.03,
             "y": -0.175,
-            "z": 1.41
+            "z": 1.55
           }
         },
         {
           "id": "node-delta-bulkhead-back2",
           "kind": "bulkhead",
           "localPos": {
-            "x": 0.2,
+            "x": -2.03,
             "y": -0.175,
-            "z": 1.41
+            "z": -1.55
           }
+        },
+        {
+          "id": "node-delta-panel-fuse-2",
+          "kind": "panel",
+          "localPos": {
+            "x": -1.05,
+            "y": 0,
+            "z": -2.195
+          },
+          "localQuat": {
+            "x": 0.5,
+            "y": 0.5,
+            "z": 0.5,
+            "w": 0.5
+          },
+          "interactable": true
         }
       ],
       "lighting": "emergency",
       "gravity": "nominal",
-      "volume": 27,
+      "volume": 91.13,
       "hideSpots": [
         {
           "id": "node-delta-console",
@@ -3226,14 +3125,14 @@
             "z": 0
           },
           "halfExtents": {
-            "x": 0.42,
+            "x": 0.6,
             "y": 0.3,
-            "z": 0.42
+            "z": 0.6
           },
           "entryPos": {
             "x": 0,
             "y": 0.15,
-            "z": 0.95
+            "z": 1.04
           },
           "lookDir": {
             "x": 0,
@@ -3249,9 +3148,9 @@
       "kind": "cupola",
       "transform": {
         "pos": {
-          "x": -2.7,
+          "x": -4.05,
           "y": 0,
-          "z": 3
+          "z": 4.5
         },
         "quat": {
           "x": 0,
@@ -3266,7 +3165,7 @@
           "localPos": {
             "x": 0,
             "y": 0,
-            "z": -1.2
+            "z": -1.8
           },
           "localDir": {
             "x": 0,
@@ -3289,17 +3188,17 @@
           "id": "cs",
           "a": {
             "x": 0,
-            "y": 0,
-            "z": -1.2
+            "y": 1.07,
+            "z": -1.8
           },
           "b": {
             "x": 0,
-            "y": -0.78,
-            "z": -0.62
+            "y": 1.07,
+            "z": -0.93
           },
           "connects": [
             "cr0",
-            "cr3"
+            "cr1"
           ],
           "portLink": "dock"
         },
@@ -3307,68 +3206,68 @@
           "id": "cr0",
           "a": {
             "x": 0,
-            "y": -0.78,
-            "z": -0.62
+            "y": 1.07,
+            "z": -0.93
           },
           "b": {
-            "x": 0.78,
-            "y": 0,
-            "z": -0.62
+            "x": 1.17,
+            "y": 1.07,
+            "z": -0.12
           },
           "connects": [
             "cs",
-            "cr1"
+            "cr2"
           ]
         },
         {
           "id": "cr1",
           "a": {
-            "x": 0.78,
-            "y": 0,
-            "z": -0.62
+            "x": 0,
+            "y": 1.07,
+            "z": -0.93
           },
           "b": {
-            "x": 0,
-            "y": 0.78,
-            "z": -0.62
+            "x": -1.17,
+            "y": 1.07,
+            "z": -0.12
           },
           "connects": [
-            "cr0",
-            "cr2"
+            "cs",
+            "cr3"
           ]
         },
         {
           "id": "cr2",
           "a": {
-            "x": 0,
-            "y": 0.78,
-            "z": -0.62
+            "x": 1.17,
+            "y": 1.07,
+            "z": -0.12
           },
           "b": {
-            "x": -0.78,
-            "y": 0,
-            "z": -0.62
+            "x": 0,
+            "y": 1.07,
+            "z": -0.12
           },
           "connects": [
-            "cr1",
+            "cr0",
             "cr3"
           ]
         },
         {
           "id": "cr3",
           "a": {
-            "x": -0.78,
-            "y": 0,
-            "z": -0.62
+            "x": 0,
+            "y": 1.07,
+            "z": -0.12
           },
           "b": {
-            "x": 0,
-            "y": -0.78,
-            "z": -0.62
+            "x": -1.17,
+            "y": 1.07,
+            "z": -0.12
           },
           "connects": [
             "cr2",
-            "cs"
+            "cr1"
           ]
         }
       ],
@@ -3378,8 +3277,8 @@
           "kind": "laptop",
           "localPos": {
             "x": 0.55,
-            "y": -0.7,
-            "z": -0.82
+            "y": -0.35,
+            "z": -1.13
           },
           "localQuat": {
             "x": 0,
@@ -3393,8 +3292,8 @@
           "kind": "stowage",
           "localPos": {
             "x": 0.2862,
-            "y": -0.6,
-            "z": -0.75
+            "y": -0.45,
+            "z": -1.35
           },
           "localQuat": {
             "x": 0,
@@ -3407,9 +3306,9 @@
           "id": "cupola-nadir-locker",
           "kind": "locker",
           "localPos": {
-            "x": -0.82,
+            "x": -1.49,
             "y": 0,
-            "z": 0.2
+            "z": -0.87
           },
           "localQuat": {
             "x": 0,
@@ -3423,70 +3322,40 @@
           "id": "cupola-nadir-panel-fuse-3",
           "kind": "panel",
           "localPos": {
-            "x": 0.62,
-            "y": 0.42,
-            "z": -0.95
+            "x": -1.615,
+            "y": 0,
+            "z": -1.35
           },
           "localQuat": {
             "x": 0,
             "y": 0,
-            "z": 0.882978,
-            "w": 0.469414
+            "z": -0.707107,
+            "w": 0.707107
           },
           "interactable": true
-        },
-        {
-          "id": "cupola-nadir-bulkhead-collar",
-          "kind": "bulkhead",
-          "localPos": {
-            "x": -0.91,
-            "y": -0.175,
-            "z": -0.75
-          },
-          "localQuat": {
-            "x": 0,
-            "y": 0.707107,
-            "z": 0,
-            "w": 0.707107
-          }
-        },
-        {
-          "id": "cupola-nadir-bulkhead-dome",
-          "kind": "bulkhead",
-          "localPos": {
-            "x": 0.75,
-            "y": -0.175,
-            "z": 0.25
-          },
-          "localQuat": {
-            "x": 0,
-            "y": 0.707107,
-            "z": 0,
-            "w": 0.707107
-          }
         }
       ],
       "lighting": "dark",
       "gravity": "nominal",
-      "volume": 10.75,
+      "volume": 36.4,
       "hideSpots": [
         {
           "id": "cupola-nadir-bay",
           "kind": "equipment-bay",
           "localPos": {
-            "x": 0.71,
+            "x": 1.3439,
             "y": -0.12,
-            "z": -0.67
+            "z": -0.95
           },
           "halfExtents": {
-            "x": 0.21,
+            "x": 0.3,
             "y": 0.55,
-            "z": 0.45
+            "z": 0.32
           },
           "entryPos": {
-            "x": 0.01,
+            "x": 0.6039,
             "y": 0.15,
-            "z": -0.67
+            "z": -0.95
           },
           "lookDir": {
             "x": -1,
@@ -3502,7 +3371,7 @@
       "kind": "airlock",
       "transform": {
         "pos": {
-          "x": 11.5,
+          "x": 13.75,
           "y": 0,
           "z": 0
         },
@@ -3561,12 +3430,12 @@
           "id": "rf-a",
           "a": {
             "x": 0,
-            "y": 0,
+            "y": 1.07,
             "z": -2
           },
           "b": {
-            "x": 0,
-            "y": -0.9,
+            "x": -1.05,
+            "y": 1.07,
             "z": -1.15
           },
           "connects": [
@@ -3578,13 +3447,13 @@
         {
           "id": "rf-m",
           "a": {
-            "x": 0,
-            "y": -0.9,
+            "x": -1.05,
+            "y": 1.07,
             "z": -1.15
           },
           "b": {
-            "x": 0,
-            "y": -0.9,
+            "x": -1.05,
+            "y": 1.07,
             "z": 1.15
           },
           "connects": [
@@ -3595,13 +3464,13 @@
         {
           "id": "rf-b",
           "a": {
-            "x": 0,
-            "y": -0.9,
+            "x": -1.05,
+            "y": 1.07,
             "z": 1.15
           },
           "b": {
             "x": 0,
-            "y": 0,
+            "y": 1.07,
             "z": 2
           },
           "connects": [
@@ -3614,12 +3483,12 @@
           "id": "rc-a",
           "a": {
             "x": 0,
-            "y": 0,
+            "y": 1.07,
             "z": -2
           },
           "b": {
-            "x": 0,
-            "y": 0.9,
+            "x": 1.05,
+            "y": 1.07,
             "z": -1.15
           },
           "connects": [
@@ -3631,13 +3500,13 @@
         {
           "id": "rc-m",
           "a": {
-            "x": 0,
-            "y": 0.9,
+            "x": 1.05,
+            "y": 1.07,
             "z": -1.15
           },
           "b": {
-            "x": 0,
-            "y": 0.9,
+            "x": 1.05,
+            "y": 1.07,
             "z": 1.15
           },
           "connects": [
@@ -3648,13 +3517,13 @@
         {
           "id": "rc-b",
           "a": {
-            "x": 0,
-            "y": 0.9,
+            "x": 1.05,
+            "y": 1.07,
             "z": 1.15
           },
           "b": {
             "x": 0,
-            "y": 0,
+            "y": 1.07,
             "z": 2
           },
           "connects": [
@@ -3669,7 +3538,7 @@
           "id": "airlock-eva-rack-00",
           "kind": "rack",
           "localPos": {
-            "x": 1.09,
+            "x": 1.69,
             "y": 0,
             "z": 0
           },
@@ -3685,7 +3554,7 @@
           "kind": "rack",
           "localPos": {
             "x": 0,
-            "y": 1.09,
+            "y": 1.69,
             "z": 0
           },
           "localQuat": {
@@ -3699,7 +3568,7 @@
           "id": "airlock-eva-rack-20",
           "kind": "rack",
           "localPos": {
-            "x": -1.09,
+            "x": -1.69,
             "y": 0,
             "z": 0
           },
@@ -3715,7 +3584,7 @@
           "kind": "rack",
           "localPos": {
             "x": 0,
-            "y": -1.09,
+            "y": -1.69,
             "z": 0
           },
           "localQuat": {
@@ -3729,8 +3598,8 @@
           "id": "airlock-eva-cable-00",
           "kind": "cable",
           "localPos": {
-            "x": 0.792,
-            "y": 0.792,
+            "x": 1.2219,
+            "y": 1.2219,
             "z": -1.2
           },
           "localQuat": {
@@ -3744,8 +3613,8 @@
           "id": "airlock-eva-cable-01",
           "kind": "cable",
           "localPos": {
-            "x": 0.792,
-            "y": 0.792,
+            "x": 1.2219,
+            "y": 1.2219,
             "z": 0.5
           },
           "localQuat": {
@@ -3759,8 +3628,8 @@
           "id": "airlock-eva-cable-10",
           "kind": "cable",
           "localPos": {
-            "x": -0.792,
-            "y": 0.792,
+            "x": -1.2219,
+            "y": 1.2219,
             "z": -1.2
           },
           "localQuat": {
@@ -3774,8 +3643,8 @@
           "id": "airlock-eva-cable-11",
           "kind": "cable",
           "localPos": {
-            "x": -0.792,
-            "y": 0.792,
+            "x": -1.2219,
+            "y": 1.2219,
             "z": 0.5
           },
           "localQuat": {
@@ -3790,7 +3659,7 @@
           "kind": "locker",
           "localPos": {
             "x": 0,
-            "y": -0.77,
+            "y": -1.41,
             "z": 0.8037
           },
           "localQuat": {
@@ -3806,7 +3675,7 @@
           "kind": "stowage",
           "localPos": {
             "x": 0,
-            "y": 0.7,
+            "y": 1.28,
             "z": 1.1
           },
           "localQuat": {
@@ -3815,13 +3684,13 @@
             "z": 1,
             "w": 3.061616997868383e-17
           },
-          "scale": 1.6
+          "scale": 1.9
         },
         {
           "id": "airlock-eva-suit-1",
           "kind": "stowage",
           "localPos": {
-            "x": -0.7,
+            "x": -1.28,
             "y": 0,
             "z": -1.1
           },
@@ -3831,13 +3700,13 @@
             "z": -0.7071067811865476,
             "w": 0.7071067811865475
           },
-          "scale": 1.6
+          "scale": 1.9
         },
         {
           "id": "airlock-eva-panel-keyswitch-a",
           "kind": "panel",
           "localPos": {
-            "x": 0.935,
+            "x": 1.535,
             "y": 0,
             "z": -1.7
           },
@@ -3853,7 +3722,7 @@
           "id": "airlock-eva-panel-keyswitch-b",
           "kind": "panel",
           "localPos": {
-            "x": -0.935,
+            "x": -1.535,
             "y": 0,
             "z": 1.7
           },
@@ -3868,7 +3737,7 @@
       ],
       "lighting": "dark",
       "gravity": "zero",
-      "volume": 18.1,
+      "volume": 40.72,
       "hideSpots": [
         {
           "id": "airlock-eva-suit-bay",
@@ -3927,7 +3796,7 @@
       "kind": "straight",
       "transform": {
         "pos": {
-          "x": -4,
+          "x": -4.75,
           "y": 0,
           "z": 0
         },
@@ -3986,12 +3855,12 @@
           "id": "rf-a",
           "a": {
             "x": 0,
-            "y": 0,
+            "y": 1.07,
             "z": -2.5
           },
           "b": {
-            "x": -0.7,
-            "y": 0,
+            "x": -0.54,
+            "y": 1.07,
             "z": -1.6
           },
           "connects": [
@@ -4003,13 +3872,13 @@
         {
           "id": "rf-m",
           "a": {
-            "x": -0.7,
-            "y": 0,
+            "x": -0.54,
+            "y": 1.07,
             "z": -1.6
           },
           "b": {
-            "x": -0.7,
-            "y": 0,
+            "x": -0.54,
+            "y": 1.07,
             "z": 1.6
           },
           "connects": [
@@ -4020,13 +3889,13 @@
         {
           "id": "rf-b",
           "a": {
-            "x": -0.7,
-            "y": 0,
+            "x": -0.54,
+            "y": 1.07,
             "z": 1.6
           },
           "b": {
             "x": 0,
-            "y": 0,
+            "y": 1.07,
             "z": 2.5
           },
           "connects": [
@@ -4039,12 +3908,12 @@
           "id": "rc-a",
           "a": {
             "x": 0,
-            "y": 0,
+            "y": 1.07,
             "z": -2.5
           },
           "b": {
-            "x": 0.7,
-            "y": 0,
+            "x": 0.54,
+            "y": 1.07,
             "z": -1.6
           },
           "connects": [
@@ -4056,13 +3925,13 @@
         {
           "id": "rc-m",
           "a": {
-            "x": 0.7,
-            "y": 0,
+            "x": 0.54,
+            "y": 1.07,
             "z": -1.6
           },
           "b": {
-            "x": 0.7,
-            "y": 0,
+            "x": 0.54,
+            "y": 1.07,
             "z": 1.6
           },
           "connects": [
@@ -4073,13 +3942,13 @@
         {
           "id": "rc-b",
           "a": {
-            "x": 0.7,
-            "y": 0,
+            "x": 0.54,
+            "y": 1.07,
             "z": 1.6
           },
           "b": {
             "x": 0,
-            "y": 0,
+            "y": 1.07,
             "z": 2.5
           },
           "connects": [
@@ -4094,7 +3963,7 @@
           "id": "escape-soyuz-rack-00",
           "kind": "rack",
           "localPos": {
-            "x": -0.89,
+            "x": -1.39,
             "y": 0,
             "z": -1.15
           },
@@ -4109,7 +3978,7 @@
           "id": "escape-soyuz-rack-01",
           "kind": "rack",
           "localPos": {
-            "x": -0.89,
+            "x": -1.39,
             "y": 0,
             "z": 1.15
           },
@@ -4124,8 +3993,8 @@
           "id": "escape-soyuz-cable-00",
           "kind": "cable",
           "localPos": {
-            "x": 0.6505,
-            "y": 0.6505,
+            "x": 1.0097,
+            "y": 1.0097,
             "z": -1.65
           },
           "localQuat": {
@@ -4139,8 +4008,8 @@
           "id": "escape-soyuz-cable-01",
           "kind": "cable",
           "localPos": {
-            "x": 0.6505,
-            "y": 0.6505,
+            "x": 1.0097,
+            "y": 1.0097,
             "z": 0
           },
           "localQuat": {
@@ -4154,8 +4023,8 @@
           "id": "escape-soyuz-cable-02",
           "kind": "cable",
           "localPos": {
-            "x": 0.6505,
-            "y": 0.6505,
+            "x": 1.0097,
+            "y": 1.0097,
             "z": 1.65
           },
           "localQuat": {
@@ -4169,8 +4038,8 @@
           "id": "escape-soyuz-cable-10",
           "kind": "cable",
           "localPos": {
-            "x": -0.6505,
-            "y": 0.6505,
+            "x": -1.0097,
+            "y": 1.0097,
             "z": -1.65
           },
           "localQuat": {
@@ -4184,8 +4053,8 @@
           "id": "escape-soyuz-cable-11",
           "kind": "cable",
           "localPos": {
-            "x": -0.6505,
-            "y": 0.6505,
+            "x": -1.0097,
+            "y": 1.0097,
             "z": 0
           },
           "localQuat": {
@@ -4199,8 +4068,8 @@
           "id": "escape-soyuz-cable-12",
           "kind": "cable",
           "localPos": {
-            "x": -0.6505,
-            "y": 0.6505,
+            "x": -1.0097,
+            "y": 1.0097,
             "z": 1.65
           },
           "localQuat": {
@@ -4214,8 +4083,8 @@
           "id": "escape-soyuz-bag-0",
           "kind": "stowage",
           "localPos": {
-            "x": -0.6083,
-            "y": -0.0449,
+            "x": -1.1269,
+            "y": -0.0832,
             "z": -1.5198
           },
           "localQuat": {
@@ -4229,8 +4098,8 @@
           "id": "escape-soyuz-bag-1",
           "kind": "stowage",
           "localPos": {
-            "x": -0.609,
-            "y": 0.0347,
+            "x": -1.1282,
+            "y": 0.0643,
             "z": -0.2235
           },
           "localQuat": {
@@ -4244,7 +4113,7 @@
           "id": "escape-soyuz-locker",
           "kind": "locker",
           "localPos": {
-            "x": -0.57,
+            "x": -1.11,
             "y": 0,
             "z": -2.05
           },
@@ -4257,12 +4126,120 @@
           "interactable": true
         },
         {
+          "id": "escape-soyuz-bulkhead-a-1",
+          "kind": "bulkhead",
+          "localPos": {
+            "x": 0.2,
+            "y": -0.175,
+            "z": -0.99
+          }
+        },
+        {
+          "id": "escape-soyuz-bulkhead-a-2",
+          "kind": "bulkhead",
+          "localPos": {
+            "x": 0.6,
+            "y": -0.175,
+            "z": -0.99
+          }
+        },
+        {
+          "id": "escape-soyuz-bulkhead-a-3",
+          "kind": "bulkhead",
+          "localPos": {
+            "x": 1,
+            "y": -0.175,
+            "z": -0.99
+          }
+        },
+        {
+          "id": "escape-soyuz-bulkhead-a1-1",
+          "kind": "bulkhead",
+          "localPos": {
+            "x": 0.2,
+            "y": -0.175,
+            "z": -0.81
+          }
+        },
+        {
+          "id": "escape-soyuz-bulkhead-a1-2",
+          "kind": "bulkhead",
+          "localPos": {
+            "x": 0.6,
+            "y": -0.175,
+            "z": -0.81
+          }
+        },
+        {
+          "id": "escape-soyuz-bulkhead-a1-3",
+          "kind": "bulkhead",
+          "localPos": {
+            "x": 1,
+            "y": -0.175,
+            "z": -0.81
+          }
+        },
+        {
+          "id": "escape-soyuz-bulkhead-b-1",
+          "kind": "bulkhead",
+          "localPos": {
+            "x": -1,
+            "y": -0.175,
+            "z": 0.21
+          }
+        },
+        {
+          "id": "escape-soyuz-bulkhead-b-2",
+          "kind": "bulkhead",
+          "localPos": {
+            "x": -0.6,
+            "y": -0.175,
+            "z": 0.21
+          }
+        },
+        {
+          "id": "escape-soyuz-bulkhead-b-3",
+          "kind": "bulkhead",
+          "localPos": {
+            "x": -0.2,
+            "y": -0.175,
+            "z": 0.21
+          }
+        },
+        {
+          "id": "escape-soyuz-bulkhead-b1-1",
+          "kind": "bulkhead",
+          "localPos": {
+            "x": -1,
+            "y": -0.175,
+            "z": 0.39
+          }
+        },
+        {
+          "id": "escape-soyuz-bulkhead-b1-2",
+          "kind": "bulkhead",
+          "localPos": {
+            "x": -0.6,
+            "y": -0.175,
+            "z": 0.39
+          }
+        },
+        {
+          "id": "escape-soyuz-bulkhead-b1-3",
+          "kind": "bulkhead",
+          "localPos": {
+            "x": -0.2,
+            "y": -0.175,
+            "z": 0.39
+          }
+        },
+        {
           "id": "escape-soyuz-panel-capsule",
           "kind": "panel",
           "localPos": {
-            "x": -0.735,
+            "x": -1.235,
             "y": 0,
-            "z": -1.9
+            "z": -1.35
           },
           "localQuat": {
             "x": 0,
@@ -4271,65 +4248,54 @@
             "w": 0.707107
           },
           "interactable": true
-        },
-        {
-          "id": "escape-soyuz-bulkhead-a",
-          "kind": "bulkhead",
-          "localPos": {
-            "x": -0.4614,
-            "y": -0.175,
-            "z": -0.99
-          }
-        },
-        {
-          "id": "escape-soyuz-bulkhead-a1",
-          "kind": "bulkhead",
-          "localPos": {
-            "x": -0.4614,
-            "y": -0.175,
-            "z": -0.81
-          }
-        },
-        {
-          "id": "escape-soyuz-bulkhead-b",
-          "kind": "bulkhead",
-          "localPos": {
-            "x": 0.4614,
-            "y": -0.175,
-            "z": 0.21
-          }
-        },
-        {
-          "id": "escape-soyuz-bulkhead-b1",
-          "kind": "bulkhead",
-          "localPos": {
-            "x": 0.4614,
-            "y": -0.175,
-            "z": 0.39
-          }
         }
       ],
       "lighting": "dark",
       "gravity": "nominal",
-      "volume": 15.71,
+      "volume": 35.34,
       "hideSpots": [
+        {
+          "id": "escape-soyuz-bay",
+          "kind": "equipment-bay",
+          "localPos": {
+            "x": 0.919,
+            "y": -0.12,
+            "z": 2
+          },
+          "halfExtents": {
+            "x": 0.3,
+            "y": 0.55,
+            "z": 0.32
+          },
+          "entryPos": {
+            "x": 0.179,
+            "y": 0.15,
+            "z": 2
+          },
+          "lookDir": {
+            "x": -1,
+            "y": 0,
+            "z": 0
+          },
+          "usableIn": "any"
+        },
         {
           "id": "escape-soyuz-bunk",
           "kind": "crew-bunk",
           "localPos": {
-            "x": 0.2414,
-            "y": -0.17,
+            "x": 0.879,
+            "y": -0.195,
             "z": -2.02
           },
           "halfExtents": {
             "x": 0.34,
-            "y": 0.5,
+            "y": 0.475,
             "z": 0.4
           },
           "entryPos": {
-            "x": 0.2414,
+            "x": 0.879,
             "y": 0.15,
-            "z": -1.13
+            "z": -1.18
           },
           "lookDir": {
             "x": 0,

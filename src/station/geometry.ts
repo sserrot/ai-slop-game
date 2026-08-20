@@ -56,6 +56,7 @@ import {
   COVE_D,
   COVE_LIP,
   COVE_W,
+  CUPOLA_COLLAR_L,
   CUPOLA_COLLAR_R,
   KIT,
   NODE_CHASE_R,
@@ -229,18 +230,23 @@ function wallPlace(g: THREE.BufferGeometry, radius: number, angle: number): THRE
 // ---------------------------------------------------------------------------
 //
 // `PORT_RADIUS` is 0.7, which was a 0.35 m clearance all round when the body WAS
-// a 0.35 m sphere. The pivot made it a 1.7 m capsule standing on a deck at
-// `DECK_Y_M`, and a circle of radius 0.7 about the module axis is then 1.30 m of
-// clear height against a 1.70 m body: a walking player could not leave the room
-// they woke up in, and every validator was blind to it because each checks
+// a 0.35 m sphere. The pivot made it a standing capsule on a deck at `DECK_Y_M`,
+// and a circle of radius 0.7 about the module axis is then 1.30 m of clear
+// height against a 1.6 m body: a walking player could not leave the room they
+// woke up in, and every validator was blind to it because each checks
 // reachability WITHIN a module.
 //
-// No circle fixes it (R ≥ 1.0 — the whole bore — to pass a standing capsule
-// anywhere off-axis), so the opening is the union of the old round hole and a
+// No circle fixes it, so the opening is the union of the old round hole and a
 // doorway cut down to the deck. It reads as a hatch from the side and as a door
-// from in front, every dimension comes from §14 rather than from taste, and the
-// SAME path is used for the visible bulkhead and for the collision triangles —
-// what you can see through is what you can walk through.
+// from in front, every dimension comes from `deckKit.ts` rather than from taste,
+// and the SAME path is used for the visible bulkhead and for the collision
+// triangles — what you can see through is what you can walk through.
+//
+// PORT_RADIUS DID NOT SCALE with the corridor widening, deliberately: a hatch is
+// sized to the body that goes through it, and every port in the station being
+// the same fitting is what lets a 1.5 m straight mate to a 2.1 m lab with no
+// seam. Widening the tubes and leaving the hatch alone is what turns a threshold
+// back into something you notice.
 //
 // What does NOT change: a closed or sealed hatch still blocks. That is the
 // blocker disc in `collision.ts` / `hatchBarrier.ts` (radius `PORT_RADIUS`), not
@@ -250,13 +256,14 @@ function wallPlace(g: THREE.BufferGeometry, radius: number, angle: number): THRE
  * The opening's top and bottom edge at one x, or null outside it.
  *
  * `inflate` grows the whole outline outward (the hatch frame's raised collar),
- * and `clampR` trims it to a bore — which is not a nicety. The doorway's own
- * upper corners sit at (±0.42, 0.96), i.e. 1.048 m from the axis, so in a 1.0 m
- * straight the hole is WIDER THAN THE TUBE at head height and the bulkhead was
- * being handed a self-intersecting polygon to triangulate. Clamping shaves the
- * corner against the hull, which is what a real cut does, and it cannot reach
- * the walking envelope: the standing collider's top sphere is 8 cm clear of the
- * slot edge at every height the clamp touches.
+ * and `clampR` trims it to a bore. It is not a nicety and it is not vestigial
+ * either, though the widened kit no longer needs it: the doorway's upper corners
+ * sit 1.04 m from the axis, which fitted inside no piece of the old 1.0 m kit at
+ * all — the hole was WIDER THAN THE TUBE at head height and the bulkhead was
+ * being handed a self-intersecting polygon to triangulate. Every bore in the kit
+ * now clears it, and the clamp stays because the next narrow piece somebody
+ * draws will not. Clamping shaves the corner against the hull, which is what a
+ * real cut does, and it cannot reach the walking envelope.
  */
 function doorwayEdges(
   x: number,
@@ -437,18 +444,17 @@ function capPort(shell: ShellGeometry, port: Port, outer: boolean): void {
  * How close to the module axis a fitting at wall `angle` may come, in a module
  * with a deck. The whole interior kit is sized by this rather than by eye.
  *
- * §2's deck handshake is explicit that `DECK_HEADROOM_M` (1.75 m) leaves a 1.70 m
- * standing collider **5 cm** of clear air and that those 5 cm are deliberate. In
- * a 1.0 m straight that is the entire ceiling budget: the hull at the crown is
- * 0.40 m from the standing capsule's top sphere centre against a 0.35 m radius,
- * so a rib 7.5 cm deep at the crown is 2.5 cm INSIDE a walking player's head.
- * (Measured: it was, at every frame station in both straights.)
+ * This used to be the tightest budget in the kit and is now merely a budget. At
+ * a 1.0 m bore, `DECK_HEADROOM_M` was 1.75 m against a 1.70 m collider — 5 cm of
+ * clear air on the axis, so a rib 7.5 cm deep at the crown was 2.5 cm INSIDE a
+ * walking player's head (measured: it was, at every frame station in both
+ * straights). At `TUBE_RADIUS_M` 1.5 against a 1.6 m body the crown allows about
+ * 0.65 m, and every fitting in the interior kit asks for a tenth of that.
  *
- * Off the crown it opens up fast — a fitting at 60° may be 21 cm deep, at 45°
- * 36 cm — which is why the coves, trays and services all live in the upper
- * quadrants and the crown carries only a strap. Returns the smallest radius a
- * fitting may reach to; `Infinity` in for a module with no floor, where there is
- * no walking envelope to protect.
+ * It is still the function everything is sized by, because the kit has five
+ * bores and the narrowest of them is the one that decides. Returns the smallest
+ * radius a fitting may reach to; `Infinity` for a module with no floor, where
+ * there is no walking envelope to protect.
  */
 function hullClearance(angle: number): number {
   const bottom = DECK_Y_M + PLAYER_RADIUS;
@@ -622,12 +628,11 @@ function raceway(
  * The overhead run (ISS-GRV-11).
  *
  * "Newly important: walking means you look UP at a ceiling you never saw while
- * floating." A duct, two conduits and a hanger at every frame station — all of
- * it OFF the crown, because `DECK_HEADROOM_M` leaves a standing player 5 cm of
- * clear air on the axis and §14 says those 5 cm are deliberate. Off-axis the
- * hull has already curved away, so a 9 cm duct at a third of the radius hangs
- * well clear of the collider while sitting right in the eyeline of anyone
- * looking up.
+ * floating." A duct, two conduits and a hanger at every frame station, all of it
+ * OFF the crown — which was survival at a 1.0 m bore (5 cm of clear air on the
+ * axis) and is now composition: the crown is where the handrail pair's own
+ * quadrant is, and nothing in this run comes below `radius − 0.1`, so the
+ * services and the rails share the upper hull without sharing a millimetre.
  */
 function overheadRun(
   radius: number,
@@ -992,13 +997,13 @@ function buildCupolaShell(shell: ShellGeometry, module: StationModule, piece: Ki
   const collarR = CUPOLA_COLLAR_R;
   const domeR = piece.radius;
   const portZ = port.localPos.z;
-  const domeZ = portZ + 0.75;
+  const domeZ = portZ + CUPOLA_COLLAR_L;
 
   // Collar, skirt and dome all use DOME_SEGMENTS. They meet edge to edge, and a
   // 24-gon plate against a 16-gon tube leaves slivers you can see the fog
   // through — the hull is BackSide, so a gap in it is a black seam.
-  const collar = tube(collarR, 0.75, DOME_SEGMENTS);
-  collar.translate(0, 0, portZ + 0.375);
+  const collar = tube(collarR, CUPOLA_COLLAR_L, DOME_SEGMENTS);
+  collar.translate(0, 0, portZ + CUPOLA_COLLAR_L / 2);
   shell.hull.push(collar);
   shell.collision.push(collar.clone());
 
@@ -1026,8 +1031,8 @@ function buildCupolaShell(shell: ShellGeometry, module: StationModule, piece: Ki
   shell.trim.push(ringFrame(collarR, domeZ - 0.14, null));
   shell.trim.push(ringFrame(collarR, portZ + 0.18, null));
   for (const angle of piece.interior?.coves ?? []) {
-    const channel = cove(collarR, angle, 0.62);
-    channel.translate(0, 0, portZ + 0.375);
+    const channel = cove(collarR, angle, CUPOLA_COLLAR_L * 0.83);
+    channel.translate(0, 0, portZ + CUPOLA_COLLAR_L / 2);
     shell.trim.push(channel);
   }
 
@@ -1039,7 +1044,9 @@ function buildCupolaShell(shell: ShellGeometry, module: StationModule, piece: Ki
   // torch streaked across it, and that is a stronger read than a hole with
   // nothing behind it. Each gets a recessed well and a heavy flange, because the
   // FRAME is what says "window" at 4 m in a torch beam.
-  const paneR = 0.42;
+  // Proportional to the dome rather than absolute, so widening the kit widens
+  // the windows with it instead of leaving seven portholes in a ballroom.
+  const paneR = domeR * 0.28;
   for (let i = 0; i < 6; i++) {
     const a = (i / 6) * Math.PI * 2;
     const el = Math.PI / 4;
@@ -1052,8 +1059,8 @@ function buildCupolaShell(shell: ShellGeometry, module: StationModule, piece: Ki
     shell.trim.push(paneFrame(paneR, dir, domeR, domeZ));
   }
   const up = new THREE.Vector3(0, 0, 1);
-  shell.glass.push(pane(0.5, up, domeR, domeZ));
-  shell.trim.push(paneFrame(0.5, up, domeR, domeZ));
+  shell.glass.push(pane(domeR * 0.333, up, domeR, domeZ));
+  shell.trim.push(paneFrame(domeR * 0.333, up, domeR, domeZ));
 
   // Mullions: six ribs from the skirt toward the apex, between the windows.
   // This is the cupola's silhouette — a ribbed dome, not a bubble.
@@ -1247,11 +1254,12 @@ const SEAL_R = PORT_RADIUS + 0.03;
  * The status column: a plaque on each face carrying the state lamp above the
  * mode marker, on the upper shoulder of the doorway.
  *
- * The obvious place for both is above the crown of the arch, and it is not
- * available: `DOORWAY_TOP` is 0.96 and the narrowest bore in the kit is 1.0, so
- * a straight leaves 4 cm of wall over a doorway. The shoulder has room in every
- * piece — `hypot(0.71, 0.62)` is 0.94, inside the 1.0 m hull — and it is at
- * standing eye height, 1.2 m over the deck.
+ * The obvious place for both is above the crown of the arch, and it was not
+ * available: `DOORWAY_TOP` is 0.95 and the narrowest bore in the kit used to be
+ * 1.0, so a straight left 5 cm of wall over a doorway. The shoulder has room in
+ * every piece — `hypot(0.6, 0.56)` is 0.82, inside every hull the kit has — and
+ * it is at standing eye height over the deck, which is the better place anyway:
+ * a plaque over the crown is a plaque nobody reads.
  *
  * Mirrored in x between the two faces so both plaques land on the RIGHT of
  * whoever is walking toward the door. That is a convention a player can learn in

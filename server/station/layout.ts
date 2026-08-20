@@ -8,9 +8,10 @@
  * spine with two branches, which satisfies §2's "8–10 modules" target and gives
  * the §10 spawn solver room to place six players and an alien three hops away.
  *
- * Kit piece: a 5 m straight tube, radius 1.2 m, running along local X. Ports sit
- * on the module's local axes at 2.5 m; handrails run 0.6 m below the axis so
- * their endpoints land within `RailGraph`'s 1 m port-join tolerance.
+ * Kit piece: a 5 m straight tube of `TUBE_RADIUS_M`, running along local X.
+ * Ports sit on the module's local axes at 2.5 m; handrails run OVERHEAD, in the
+ * same single rail plane the authored kit uses, and each spoke ends directly
+ * above its port so mated modules' rails meet at one point.
  */
 
 import { readFileSync } from 'node:fs';
@@ -33,6 +34,9 @@ import {
   HIDE_SPOTS_MIN,
   MODULE_LENGTH_M,
   PLAYER_RADIUS,
+  PLAYER_STAND_HEIGHT_M,
+  RAIL_Y_M,
+  TUBE_RADIUS_M,
 } from '@shared/constants';
 import { ModuleGraph, syncHatchAttenuation } from '@shared/graph/moduleGraph';
 import { RailGraph } from '@shared/graph/railGraph';
@@ -41,26 +45,33 @@ import { normalizeLayoutGravity } from '@shared/graph/gravity';
 
 const MODULE_LENGTH = MODULE_LENGTH_M;
 /**
- * Handrail offset from the module axis.
+ * Handrail height above the deck, and the module-space Y that puts them at.
  *
- * Raised from −0.6 to +0.6 by the locomotion pivot: the deck now sits at
- * `DECK_Y_M` (−0.75), and a handrail 15 cm above it is a trip hazard bolted
- * across a walkable floor. Rails are scenery in a `nominal` module and the
- * alien's nervous system in every module (§2), so moving them costs nothing
- * mechanically and stops the built-in station looking wrong the moment anybody
- * stands up in it. Overhead is where a handrail belongs above a deck anyway.
+ * Raised twice. It was −0.6, which is 15 cm over a deck at `DECK_Y_M` — a trip
+ * hazard bolted across a walkable floor. Then +0.6, which is chest height and
+ * still a bar across the room you now walk down. It is overhead now, clearing a
+ * standing crew member by 0.22 m, which is the height `src/station/kit.ts`
+ * derives for every rail in the authored station.
+ *
+ * DUPLICATED FROM THE KIT ON PURPOSE, for now. The number belongs in §14 beside
+ * `DECK_Y_M` — it is exactly the same kind of handshake, between the piece that
+ * builds the rails and the controller that grabs them — but §14 is owned
+ * elsewhere this pass, and the server may not import `src/station/**`. When
+ * `RAIL_ABOVE_DECK_M` lands in `shared/constants`, both copies should import it
+ * and this comment should go.
  */
-const RAIL_Y = 0.6;
+const RAIL_Y = RAIL_Y_M;
 
 /**
  * Distance from the module axis at which a hide spot's shell sits.
  *
- * The straight kit piece has a 1.0 m interior radius, and a hide box is 0.3 m
- * deep, so 0.7 puts its outer face flush against the bulkhead and its inner
- * face 0.4 m off the axis — outside `DECK_HALF_WIDTH_M`'s walkable strip on the
- * far side, i.e. against a wall rather than in the middle of the corridor.
+ * A hide box is 0.3 m deep, so this puts its outer face flush against the
+ * bulkhead and its inner face 0.6 m further in — against a wall rather than in
+ * the middle of the corridor. Derived from `TUBE_RADIUS_M` rather than typed, so
+ * widening the bore moves the built-in station's cover out with it instead of
+ * leaving it standing in the middle of a wider room.
  */
-const WALL_RADIUS_M = 0.7;
+const WALL_RADIUS_M = TUBE_RADIUS_M - 0.3;
 
 /** Where you stand to climb in — inside the walkable strip, and far enough from
  *  the box that `HideSpotGraph.validate()` does not call the entry "inside its
@@ -95,7 +106,16 @@ function port(side: Side, link: { module: ModuleId; port: PortId } | null): Port
   });
 }
 
-/** One rail from the module centre out to `side`'s port, linked through it. */
+/**
+ * One rail from the module centre out to a point directly above `side`'s port,
+ * linked through it.
+ *
+ * The far end is at `RAIL_Y`, not at the port itself: the port is at axis height
+ * and a rail that dives to it crosses the doorway a body walks through. Two
+ * mated modules put their ports at one world point and their decks on one world
+ * plane, so both sides' spokes end at the same world point and the join is still
+ * exact — and `RailGraph` resolves the continuation through `portLink` anyway.
+ */
 function spoke(side: Side): RailSegment {
   return {
     id: `r-${side}`,
@@ -106,11 +126,13 @@ function spoke(side: Side): RailSegment {
   };
 }
 
+/** A stowage locker standing on the deck. `y` used to be −0.8, which is under
+ *  the floor: the prop was authored before the deck existed. */
 function locker(id: string, x: number, z: number): PropRef {
   return {
     id,
     kind: 'locker',
-    localPos: { x, y: -0.8, z },
+    localPos: { x, y: DECK_Y_M + 0.3, z },
     interactable: true,
   };
 }

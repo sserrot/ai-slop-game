@@ -45,7 +45,7 @@
 
 import * as THREE from 'three';
 import type { Gait, GravityMode, PlayerState, Vec3 } from '@shared/types';
-import { BOB_AMPLITUDE_M, SPEED_SPRINT } from '@shared/constants';
+import { BOB_AMPLITUDE_M, PLAYER_RADIUS, SPEED_SPRINT } from '@shared/constants';
 import { assertPolyBudget, chamferedBox, mergeParts, triangleCount } from '../station/artKit';
 import { PALETTE, StationMaterials, build } from '../station/materials';
 import { buildHeldItem } from '../station/items';
@@ -69,23 +69,55 @@ const ELBOW = { x: 0.28, y: -0.07, z: 0.06 };
 
 /** m — sleeve seal ring. */
 const CUFF_L = 0.055;
-/** m — visible forearm. Shorter than an anatomical one on purpose: the elbow is
- *  behind the camera, so the length that matters is the length that has to stay
- *  inside `PLAYER_RADIUS`. */
-const FOREARM_L = 0.2;
 const PALM_L = 0.055;
 const FINGER_L = 0.075;
-/** m — how far along the arm the knuckle line sits. */
-const KNUCKLE_Z = -(FOREARM_L + CUFF_L + PALM_L) + 0.012;
+/** m — where the knuckle line sits relative to the wrist end of the forearm. */
+const WRIST_TO_KNUCKLE = CUFF_L + PALM_L - 0.012;
+
+/**
+ * m — clearance kept between the resting fingertips and the closest a wall can
+ * ever be.
+ *
+ * Two centimetres, and it exists because the reach below is now DERIVED from
+ * `PLAYER_RADIUS`: without a margin the gloves would sit exactly on the surface
+ * the collider stops at, and every rounding difference between the sweep's
+ * depenetration epsilon and the render transform would show as a fingertip
+ * flickering through a bulkhead.
+ */
+const REST_REACH_MARGIN_M = 0.02;
 
 /**
  * m — how far the fingertips reach ahead of the eye when the arm is aimed
- * straight forward. Kept under `PLAYER_RADIUS` (0.35) on purpose: the swept
- * collider guarantees the eye is never closer than that to a wall, so a resting
- * arm cannot poke through one. The `reach` pose deliberately exceeds it — it is
- * aimed at a handrail, and a hand closing on a rail is *supposed* to be in it.
+ * straight forward.
+ *
+ * DERIVED from `PLAYER_RADIUS`, not authored. The swept collider guarantees the
+ * eye is never closer than a body radius to a wall, so a resting arm can only
+ * stay out of the wall if it is shorter than that radius — and the radius is a
+ * §14 constant that moves. It moved: 0.35 → 0.30 in the scale-down pass, at
+ * which point the authored 0.313 m reach was 1.3 cm PAST the collider's own
+ * guarantee and both gloves were inside every wall the player faced. The guard
+ * in `assertHandsCoherent` did not fire because it compared against a literal
+ * 0.35 that had stopped being the radius.
+ *
+ * The `reach` pose deliberately exceeds this — it is aimed at a handrail, and a
+ * hand closing on a rail is *supposed* to be in it.
  */
-export const HANDS_REST_REACH_M = -KNUCKLE_Z + FINGER_L - ELBOW.z; // 0.318
+export const HANDS_REST_REACH_M = PLAYER_RADIUS - REST_REACH_MARGIN_M;
+
+/**
+ * m — visible forearm, solved so the fingertips land exactly on
+ * `HANDS_REST_REACH_M`.
+ *
+ * Shorter than an anatomical one, and it always was: the elbow is behind the
+ * camera, so the only length that matters is the one that has to stay inside
+ * `PLAYER_RADIUS`. Making that relationship the DEFINITION rather than a
+ * comment is the whole point — the arm now tracks the body instead of drifting
+ * out of it the next time §14 resizes the player.
+ */
+const FOREARM_L = HANDS_REST_REACH_M + ELBOW.z - FINGER_L - WRIST_TO_KNUCKLE;
+
+/** m — how far along the arm the knuckle line sits. */
+const KNUCKLE_Z = -(FOREARM_L + WRIST_TO_KNUCKLE);
 
 // ===========================================================================
 // Geometry
@@ -820,10 +852,18 @@ export function assertHandsCoherent(): void {
   if (report.total > 700) {
     failures.push(`${report.total} triangles for both arms, over the bible's 700 ceiling`);
   }
-  if (HANDS_REST_REACH_M > 0.35) {
+  // Against the LIVE constant, never a literal. The literal 0.35 that used to be
+  // here is precisely why the reach survived the scale-down pass unnoticed.
+  if (HANDS_REST_REACH_M >= PLAYER_RADIUS) {
     failures.push(
-      `rest reach ${HANDS_REST_REACH_M.toFixed(3)} m exceeds PLAYER_RADIUS 0.35 — a resting ` +
-        `glove would clip every wall the collider slides along`,
+      `rest reach ${HANDS_REST_REACH_M.toFixed(3)} m reaches PLAYER_RADIUS ` +
+        `${PLAYER_RADIUS} — a resting glove would clip every wall the collider slides along`,
+    );
+  }
+  if (FOREARM_L <= 0.1) {
+    failures.push(
+      `forearm solved to ${FOREARM_L.toFixed(3)} m — PLAYER_RADIUS ${PLAYER_RADIUS} no longer ` +
+        `leaves room for an arm between the elbow and the fingertips`,
     );
   }
 

@@ -190,6 +190,194 @@
   pointer-events: none;
 }
 
+/* ====================================================== interact prompt == */
+/*
+   §6: the crosshair's `hand` state says something is here; this says WHICH KEY,
+   WHICH VERB and WHAT IT COSTS (§11's dual path is only a choice if the player
+   can see the price — so a jammed locker gets two lines, pry over pump, and
+   both numbers). It sits 40 px under the reticle — inside the noise ring, clear
+   of the charge arc — and it fades. A bright chip floating mid-screen would
+   wreck the mood, so this is a hairline row of dim phosphor and nothing more.
+*/
+
+.iss-prompt {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, 48px);
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 6px;
+  min-width: 108px;
+  padding: 5px 9px 0;
+  background: linear-gradient(
+    to bottom,
+    rgba(4, 8, 6, 0) 0%,
+    rgba(4, 8, 6, 0.55) 35%,
+    rgba(4, 8, 6, 0.55) 100%
+  );
+  pointer-events: none;
+  opacity: 0;
+  transition:
+    opacity 170ms ease-out,
+    transform 170ms ease-out;
+  will-change: opacity, transform;
+}
+
+.iss-prompt[data-shown="true"] {
+  opacity: 1;
+  transform: translate(-50%, 40px);
+}
+
+/* One offered action: a row of words over the hairline that doubles as its
+   hold bar. */
+.iss-prompt__opt {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+}
+
+/* The quiet-slow half of a §11 pair. Dimmer and a shade smaller, so the eye
+   reads "and also this" rather than "two equal buttons" — but never hidden,
+   because a path you cannot see is a path you do not have. */
+.iss-prompt__opt--alt {
+  opacity: 0.72;
+}
+
+.iss-prompt__opt--alt .iss-prompt__row {
+  font-size: 10px;
+}
+
+.iss-prompt[data-alt="false"] .iss-prompt__opt--alt {
+  display: none;
+}
+
+.iss-prompt__row {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 11px;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+/* "HOLD 25S" — the quiet-slow half of the §11 trade, stated up front. */
+.iss-prompt__time {
+  font-size: 9px;
+  letter-spacing: 0.18em;
+  color: var(--iss-text-dim);
+}
+
+.iss-prompt__opt[data-timed="false"] .iss-prompt__time {
+  display: none;
+}
+
+/* The bound key. Amber, matching the crosshair's `hand` "you may act" tint. */
+.iss-prompt__key {
+  font-family: inherit;
+  font-size: 11px;
+  line-height: 1;
+  letter-spacing: 0.08em;
+  color: var(--iss-amber);
+  background: rgba(255, 176, 58, 0.08);
+  border: 1px solid rgba(255, 176, 58, 0.55);
+  border-radius: 2px;
+  padding: 3px 6px 2px;
+  text-shadow: var(--iss-glow-amber);
+}
+
+.iss-prompt__verb {
+  color: var(--iss-text);
+}
+
+.iss-prompt__noun {
+  color: var(--iss-text-dim);
+}
+
+.iss-prompt__noun:empty {
+  display: none;
+}
+
+/* The noise price. `))` reads as a sound at a glance and costs no icon. */
+.iss-prompt__cost {
+  font-size: 10px;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.1em;
+  padding-left: 3px;
+  border-left: 1px solid var(--iss-line);
+  margin-left: 1px;
+}
+
+.iss-prompt__cost[data-kind="none"],
+.iss-prompt__cost:empty {
+  display: none;
+}
+
+.iss-prompt__cost[data-kind="cost"]::before {
+  content: "))";
+  opacity: 0.6;
+  margin-right: 3px;
+}
+
+.iss-prompt__cost[data-band="quiet"] {
+  color: var(--iss-green);
+}
+
+.iss-prompt__cost[data-band="loud"] {
+  color: var(--iss-amber);
+}
+
+.iss-prompt__cost[data-band="alarm"] {
+  color: var(--iss-red);
+}
+
+.iss-prompt__cost[data-kind="blocked"] {
+  color: var(--iss-red-dim);
+}
+
+/* In range but not usable: dim it, never hide it. A key that silently does
+   nothing reads as a broken build. */
+.iss-prompt__opt[data-usable="false"] {
+  opacity: 0.5;
+}
+
+.iss-prompt__opt[data-usable="false"] .iss-prompt__key {
+  color: var(--iss-text-dim);
+  border-color: var(--iss-line);
+  background: none;
+  text-shadow: none;
+}
+
+/* One hairline under the row, and it doubles as the hold bar — a tap verb
+   leaves it dim and empty, a hold fills it amber. Two separate rules (an
+   underline plus a progress track) would be two lines of chrome, and §6 has no
+   budget for chrome. */
+.iss-prompt__track {
+  width: 100%;
+  height: 1px;
+  background: var(--iss-line-strong);
+  overflow: hidden;
+}
+
+.iss-prompt__fill {
+  display: block;
+  width: 100%;
+  height: 100%;
+  background: var(--iss-amber);
+  box-shadow: var(--iss-glow-amber);
+  transform: scaleX(0);
+  transform-origin: left center;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .iss-prompt {
+    transition: opacity 170ms ease-out;
+    transform: translate(-50%, 40px);
+  }
+}
+
 /* ======================================================== wrist tracker == */
 
 .iss-tracker {

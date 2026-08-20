@@ -75,10 +75,16 @@ import { parseHideSpotKey } from '@shared/graph/hideSpots';
 import { Ticker, bus } from './core';
 import { Renderer } from './render';
 import { ITEM_KINDS, Station, defaultStationLayout, itemKindOf, kitPiece } from './station';
-import type { ItemKind } from './station';
+import type { ItemKind, Locker, StationPanel } from './station';
 import { FirstPersonHands, KEYMAP, Player, RemoteCrewViews, type NoiseInfo } from './player';
-import type { CrewBodyInput } from './player';
-import { createUI, type Panel } from './ui';
+import type { CrewBodyInput, InteractableInfo } from './player';
+import {
+  PROMPT,
+  createUI,
+  type InteractPromptSpec,
+  type Panel,
+  type PanelRegion,
+} from './ui';
 import { NoiseEmitter, NoiseRuntime } from './noise';
 import { createAudioSystem, type VoiceSignalling } from './audio';
 import { AlienProxy } from './alien';
@@ -88,9 +94,11 @@ import {
   CargoStow,
   PuzzleInteractor,
   createPuzzlePanels,
+  jamProgress01,
   panelSpecsFromLayout,
   puzzleStore,
 } from './puzzles';
+import type { JamState } from './puzzles';
 
 // ===========================================================================
 // Local tuning — nothing §14 defines. Everything else is imported.
@@ -635,6 +643,19 @@ function buildPlayer(): void {
     // §2: a real containment test beats `nearestModule`'s centre comparison —
     // the module id is stamped on every NoiseEvent and drives the cull set.
     moduleAt: (pos, hint) => station?.moduleAt(pos, hint) ?? null,
+
+    // §6's interact prompt, half of it. The controller resolves GEOMETRY — it
+    // has one raycast, sampled at AIM_RAYCAST_HZ, and the crosshair's `hand`
+    // glyph already comes off it — but only the station knows a breaker panel
+    // from a locker, so it asks. `object` is the raycast LEAF (a mesh under
+    // whatever went into `interactables`), which is exactly what
+    // `Station.interactableAt` walks upward from.
+    //
+    // Asked every frame with one object on purpose: a locker's `usable` goes
+    // false the moment it is emptied and the player is still standing in front
+    // of it when that happens. `_describeInfo` is refilled rather than minted —
+    // `Player.refreshInteractTarget` copies the fields out and keeps nothing.
+    describeInteractable: (object) => describeInteractable(object),
     // The player's own noise: heard instantly and locally (§8 "they have to
     // feel the mistake as they make it"), and reported to the server, which
     // re-derives the loudness from §14 (§7).
@@ -721,6 +742,20 @@ function onExtraKeys(event: KeyboardEvent): void {
     return;
   }
 
+  // §11's dual path on a jammed locker. Read through KEYMAP rather than
+  // compared against a literal: the §6 prompt names the bound key off the same
+  // map (`PROMPT.pry` / `PROMPT.pump`), and a verb whose key is typed in two
+  // places is a verb that stops following a rebind. `.includes` over a
+  // one-entry array is live, where a Set built at boot would go stale.
+  if (KEYMAP.pry.includes(event.code)) {
+    beginJam('pry');
+    return;
+  }
+  if (KEYMAP.pump.includes(event.code)) {
+    beginJam('pump');
+    return;
+  }
+
   switch (event.code) {
     case 'KeyG':
       cycleNearestHatch();
@@ -731,12 +766,6 @@ function onExtraKeys(event: KeyboardEvent): void {
     case 'KeyR':
       throwDecoy();
       break;
-    case 'KeyV':
-      beginJam('pry');
-      break;
-    case 'KeyB':
-      beginJam('pump');
-      break;
     default:
       break;
   }
@@ -744,7 +773,7 @@ function onExtraKeys(event: KeyboardEvent): void {
 
 /** The other half: both jam paths are holds, so they need a release edge. */
 function onExtraKeyUp(event: KeyboardEvent): void {
-  if (event.code === 'KeyV' || event.code === 'KeyB') endJam();
+  if (KEYMAP.pry.includes(event.code) || KEYMAP.pump.includes(event.code)) endJam();
 }
 
 // ---------------------------------------------------------------------------
@@ -1299,6 +1328,13 @@ function wireLoop(): void {
     // §4: a hide spot's lamp goes out while somebody is in it, and "is that box
     // free?" is a question a teammate has to be able to answer across a module.
     pumpHideSpots();
+    // §6's interact prompt — what [E] would do right now, and what it costs.
+    // Fixed rate, with the other HUD pumps: it reads puzzle state that only
+    // changes on a `puzzle` message, and `CargoStow.pick` is documented as a
+    // fixed-tick query. `InteractPrompt.set()` structurally compares, so an
+    // unchanged offer touches no DOM; the fade and the fill bar run per frame
+    // inside `ui.update()`.
+    pumpInteractPrompt();
 
     // §9's LightingRig pins its first light to the module you are looking at,
     // and §6's panels only draw for the module you are standing in. Both fall
@@ -1680,6 +1716,10 @@ function beginJam(mode: 'pry' | 'pump'): void {
   // them 250 ms after the last heartbeat.
   if (mode === 'pry') interactor.pry(key);
   else interactor.pump(key);
+  // §6: which of the prompt's two lines is filling. `lockerPrompt` also feeds
+  // the server's authoritative `progress`, which always wins over the local
+  // integration — this is what says WHICH path you took while it does.
+  ui.setInteractHolding(true, mode === 'pry' ? 'primary' : 'alt');
 }
 
 /**
@@ -1692,9 +1732,17 @@ function releaseAllHolds(): void {
   interactor?.releaseAll();
   heldRegion = null;
   heldJamKey = null;
+  clearPromptHolds();
+}
+
+/** Every fill bar the prompt could be drawing, in one call. */
+function clearPromptHolds(): void {
+  ui.setInteractHolding(false, 'primary');
+  ui.setInteractHolding(false, 'alt');
 }
 
 function endJam(): void {
+  clearPromptHolds();
   if (!heldJamKey || !interactor) return;
   // `releaseJam` sends 'release-locker', NOT a bare 'release': on
   // breaker-sequence 'release' is the 20 s manual override's release and never
@@ -1731,6 +1779,12 @@ function onInteractPress(): void {
       const region = panel && hit.uv ? panel.regionAt(hit.uv) : null;
       if (region && interactor?.pressRegion(region.id)) {
         heldRegion = region.id;
+        // §6: only the two controls the prompt prices as a HOLD get a fill bar.
+        // The valve regions are held too, but they are a continuous turn with
+        // no completion to draw — a bar creeping toward an end that does not
+        // exist would teach the wrong thing about the one puzzle whose whole
+        // lesson is "slow is quiet".
+        if (region.id === 'override' || region.id === 'lever') ui.setInteractHolding(true);
         return;
       }
       // The two panels that are not puzzles: the egress hatch and the capsule.
@@ -1745,11 +1799,21 @@ function onInteractPress(): void {
       // input (the §11 sequence card, a fuse). Ask for all three; the two that
       // do not apply are no-ops on the server.
       const key = `${target.module}:${target.id}`;
-      // The door is COSMETIC and client-side — §7 has no message for it — so it
-      // swings on the press, either way. It is also what reveals whatever is
-      // inside: `StationItems` gates the world item on the door, because a shut
-      // steel box showing its contents (and its amber lamp) through 3 cm of
-      // plate is worse than no world item at all.
+      // A JAMMED locker does not open to a press, and its door must not swing
+      // to one. The door is cosmetic and client-side — §7 has no message for it
+      // — so nothing upstream would have stopped it, and it is also what
+      // REVEALS the contents: `StationItems` gates the world item on the door.
+      // Swinging a jammed box open showed the fuse inside it and left the §6
+      // prompt saying "HOLD 3S PRY LOCKER" over a door that was already open.
+      // The server's answer is a toast; this is the same answer, in geometry.
+      if (jamFor(target.id)) {
+        ui.toast('jammed — pry it (60) or pump it (25 s)', 2500);
+        return;
+      }
+      // Otherwise it swings on the press, either way. `StationItems` gates the
+      // world item on the door, because a shut steel box showing its contents
+      // (and its amber lamp) through 3 cm of plate is worse than no world item
+      // at all.
       station.openLocker(target.id);
       lastOpenedLocker = target.id;
       if (net.connected) {
@@ -1822,6 +1886,7 @@ function onInteractRelease(): void {
   if (!heldRegion) return;
   interactor?.releaseRegion(heldRegion);
   heldRegion = null;
+  ui.setInteractHolding(false);
 }
 
 function pickInteractable(): THREE.Intersection | null {
@@ -1832,6 +1897,309 @@ function pickInteractable(): THREE.Intersection | null {
   pickRay.far = INTERACT_RANGE_M;
   const hits = pickRay.intersectObjects(station.interactables, true);
   return hits[0] ?? null;
+}
+
+// ---------------------------------------------------------------------------
+// 7a · the §6 interact prompt — "[E] OPEN LOCKER", priced
+// ---------------------------------------------------------------------------
+//
+// The playtest note this exists for was blunt: "can u also have an interact
+// button E pop up so people know they can interact with it." §6 already gave
+// the crosshair a `hand` state and that is all it gave — the affordance said
+// SOMETHING was there and never said which key, which verb, or what it cost.
+//
+// Two subsystems own the halves and neither may own the seam:
+//
+//   `src/player`  resolves GEOMETRY. One raycast, sampled at AIM_RAYCAST_HZ,
+//                 feeding both `Player.crosshair` and `Player.interactTarget`
+//                 — which is why a prompt built off it can never disagree with
+//                 the glyph the player is looking through. It cannot tell a
+//                 breaker panel from a locker, so it asks through
+//                 `describeInteractable` below.
+//   `src/ui`      renders and prices. `PROMPT` carries §14's loudness and hold
+//                 times so nothing here retypes a number, and it draws §11's
+//                 dual path as TWO lines rather than picking one for you.
+//
+// THE ONE RULE THIS FILE OWES BOTH OF THEM: `currentPrompt()` mirrors
+// `onInteractPress()`'s priority order exactly. A prompt naming a different
+// verb from the one the key runs is worse than no prompt at all — so the hide
+// spot you are already inside beats the bag in your hands beats the ray beats a
+// loose cargo bag beats a hide spot in reach beats a downed crewmate, in that
+// order, in both functions.
+//
+// NOT re-raycast: the common case reads `player.interactTarget`, which is the
+// cached aim result. The one live cast is against a single panel's screen mesh
+// (`regionUnderCrosshair`), because a panel's verb is per-REGION and the
+// controller does not carry a UV.
+
+/** Refilled, never minted: `Player.refreshInteractTarget` copies the fields out
+ *  on the same line and keeps no reference. */
+const _describeInfo: InteractableInfo = {};
+
+function describeInteractable(object: THREE.Object3D): InteractableInfo | null {
+  const thing = station?.interactableAt(object) ?? null;
+  if (!thing) return null;
+  if ('screen' in thing) {
+    _describeInfo.kind = 'panel';
+    _describeInfo.label = /egress|capsule/.test(thing.id) ? 'capsule' : 'panel';
+    _describeInfo.usable = true;
+    return _describeInfo;
+  }
+  _describeInfo.kind = 'locker';
+  _describeInfo.label = 'locker';
+  // A jammed locker is very much usable — it is the §11 pry-or-pump choice, and
+  // dimming it would hide the one prompt in the game that teaches the rule. An
+  // emptied one is not: a key that silently does nothing reads as a broken
+  // build, so it is reported and dimmed rather than dropped.
+  _describeInfo.usable = jamFor(thing.id) !== null || !isSpentLocker(thing);
+  return _describeInfo;
+}
+
+/** Open, and with nothing left in it that this client knows about. */
+function isSpentLocker(locker: Locker): boolean {
+  return locker.open && (station?.items.contentsOf(locker.id).length ?? 0) === 0;
+}
+
+/**
+ * The live jam on a locker, or null.
+ *
+ * §11's jammed lockers are SERVER state and they belong to two different
+ * puzzles — the breaker card's locker and each of the three fuse lockers — so
+ * "is this box jammed" is a question only the puzzle store can answer. Both
+ * record it against the locker's own prop id, which is what
+ * `Station.interactableAt` hands back.
+ */
+function jamFor(lockerId: string): JamState | null {
+  const card = puzzleStore.state('breaker-sequence')?.card;
+  if (card && card.locker === lockerId && card.jam?.jammed) return card.jam;
+  const fuses = puzzleStore.state('fuse-hunt')?.fuses;
+  if (fuses) {
+    for (const record of fuses) {
+      if (record.locker === lockerId && record.jam.jammed) return record.jam;
+    }
+  }
+  return null;
+}
+
+function pumpInteractPrompt(): void {
+  ui.setInteractPrompt(currentPrompt());
+}
+
+/**
+ * What [E] would do this instant, priced — or null for "nothing in reach".
+ *
+ * Reads `onInteractPress()`'s order top to bottom. Keep them in step.
+ */
+function currentPrompt(): InteractPromptSpec | null {
+  if (!player || !station) return null;
+  // A corpse watching a module camera has no hands, and neither has anyone
+  // staring at the menu with the pointer released (§10, §6).
+  if (!player.alive || spectating !== null || !player.pointerLocked) return null;
+
+  // Inside a hide spot, E is the way out and nothing else (§4).
+  if (player.hideSpot) return PROMPT.leaveHide(player.hideSpot);
+  // A bag in your hands is what E is for until you put it down (§11 puzzle 3).
+  if (cargo?.carrying) return PROMPT.dropBag(cargo.carrying);
+
+  // The cached aim result — the same one the crosshair's `hand` state comes
+  // from. `object` is null only for a hide spot, which is handled below.
+  const target = player.interactTarget;
+  const thing = target?.object ? station.interactableAt(target.object) : null;
+  if (thing) {
+    // Both branches are terminal in `onInteractPress`, so they are terminal
+    // here: a panel with no control under the crosshair offers nothing, and it
+    // must not fall through to the bunk you happen to be standing beside.
+    return 'screen' in thing ? panelPrompt(thing) : lockerPrompt(thing);
+  }
+
+  // A loose cargo bag. Not an `interactable` — it is a rigid body in the Rapier
+  // world — so it has its own pick, and `CargoStow.pick` is documented as a
+  // fixed-tick query, which is the rate this runs at.
+  if (cargo && player.module === cargo.module) {
+    const bag = cargo.pick(player.position, cameraForward(_pickDir), INTERACT_RANGE_M);
+    if (bag) return PROMPT.takeBag(bag);
+  }
+
+  // A hide spot in reach (§4). PRICED BY THE GAIT YOU ARE HOLDING RIGHT NOW:
+  // `hideCandidate` recomputes both numbers from §14 every frame, so the cost
+  // chip visibly drops from 30 to 8 as you let go of sprint. That is the
+  // loud-fast/quiet-slow rule taught in one glance, with no tutorial text.
+  const spot = player.hideCandidate;
+  if (spot) {
+    const usable = target?.kind === 'hide' ? target.usable : true;
+    return {
+      ...PROMPT.hide(spot.volume.key, spot.loudness, spot.seconds),
+      usable,
+      blocked: usable ? undefined : 'taken',
+    };
+  }
+
+  // A downed crewmate within arm's reach (§10). Read off the raw schema rather
+  // than `net.players()`, which mints a PlayerView plus a pos/quat/items triple
+  // per player to answer one distance question.
+  const me = player.position;
+  let downed: string | null = null;
+  net.state?.players.forEach((other) => {
+    if (downed !== null || other.id === localId || other.alive || other.escaped) return;
+    const dx = other.pos.x - me.x;
+    const dy = other.pos.y - me.y;
+    const dz = other.pos.z - me.z;
+    if (dx * dx + dy * dy + dz * dz <= REVIVE_RANGE_M * REVIVE_RANGE_M) downed = other.id;
+  });
+  return downed === null ? null : PROMPT.revive(downed);
+}
+
+/** A §11 panel: whichever control is actually under the crosshair. */
+function panelPrompt(panel: StationPanel): InteractPromptSpec | null {
+  const face = panelByProp.get(`${panel.module}:${panel.id}`);
+  const region = face ? regionUnderCrosshair(panel, face) : null;
+  const spec = region ? promptForRegion(region.id) : null;
+  if (spec) return spec;
+  // The two panels that are not puzzles: the egress hatch and the capsule.
+  // `onInteractPress` falls back to them the same way, after the regions.
+  if (/egress|capsule/.test(panel.id)) return PROMPT.board();
+  // A §11 panel with no control under the crosshair. Pressing E here really
+  // does nothing — `pressRegion` returns false and the handler returns — and
+  // that is easier to hit than it sounds: the six breakers are authored with a
+  // 1% dead lane between them, and the exact centre of the main bus panel falls
+  // in it (measured headlessly). A `hand` crosshair over silence is the precise
+  // complaint this prompt exists to answer, so it says which half is missing
+  // rather than nothing at all.
+  return face
+    ? {
+        id: `${panel.module}:${panel.id}`,
+        verb: 'use',
+        noun: 'panel',
+        usable: false,
+        blocked: 'aim at a control',
+      }
+    : null;
+}
+
+/**
+ * The panel region the crosshair is on, from ONE mesh.
+ *
+ * `pickInteractable()` casts against all 22 interactables to find out WHICH
+ * thing you are aiming at; `player.interactTarget` has already answered that,
+ * so this only has to ask WHERE on that panel's glass — one mesh, no
+ * broad-phase, and nothing allocated past three's own intersection records. It
+ * is cast from the CAMERA, exactly like the press-time ray, so the prompt and
+ * the key resolve the same control; and if the head has turned off the panel
+ * since the controller last sampled its aim, the cast simply misses and the
+ * prompt goes.
+ */
+const _regionHits: THREE.Intersection[] = [];
+
+function regionUnderCrosshair(panel: StationPanel, face: Panel<unknown>): PanelRegion | null {
+  camera.getWorldDirection(pickDir);
+  pickRay.set(camera.getWorldPosition(_rayOrigin), pickDir);
+  pickRay.near = 0;
+  pickRay.far = INTERACT_RANGE_M;
+  _regionHits.length = 0;
+  pickRay.intersectObject(panel.screen, false, _regionHits);
+  const uv = _regionHits[0]?.uv ?? null;
+  _regionHits.length = 0;
+  return uv ? face.regionAt(uv) : null;
+}
+
+/**
+ * One panel control → its priced prompt. Mirrors `PuzzleInteractor.pressRegion`
+ * case for case; a region it does not name is a control that does nothing, and
+ * offering a verb for one would be a lie.
+ */
+function promptForRegion(regionId: string): InteractPromptSpec | null {
+  const breaker = /^breaker-(\d+)$/.exec(regionId);
+  if (breaker) return PROMPT.breaker(Number.parseInt(breaker[1]!, 10));
+  switch (regionId) {
+    case 'override':
+      return overridePrompt();
+    case 'valve-open-slow':
+    case 'valve-close-slow':
+      return PROMPT.valveSlow();
+    case 'valve-open-fast':
+    case 'valve-close-fast':
+      return PROMPT.valveFast();
+    case 'valve-lock':
+      return PROMPT.valveLock();
+    case 'key-a':
+      return PROMPT.keyswitch('a');
+    case 'key-b':
+      return PROMPT.keyswitch('b');
+    case 'lever':
+      return leverPrompt();
+    case 'install':
+      return installPrompt();
+    case 'board':
+    case 'launch':
+      return PROMPT.board();
+    default:
+      return null;
+  }
+}
+
+/**
+ * The fusebox (§11 puzzle 4). You need a fuse in your hands.
+ *
+ * Read off the puzzle state and not off `inventory`: the room tracks a fuse as
+ * `FuseRecord.carriedBy` and that is what its `install` handler consults, so
+ * anything else here would be a second opinion. Fitting one has no entry in
+ * §14's loudness table, and inventing a number is exactly what `PROMPT` exists
+ * to prevent — so it is offered unpriced rather than priced wrongly.
+ */
+function installPrompt(): InteractPromptSpec {
+  const fuses = puzzleStore.state('fuse-hunt')?.fuses;
+  const carrying = fuses?.some((f) => f.carriedBy === localId && !f.installed) ?? false;
+  return {
+    id: 'fuse-hunt:install',
+    verb: 'fit',
+    noun: 'fuse',
+    usable: carrying,
+    blocked: carrying ? undefined : 'no fuse',
+  };
+}
+
+/** The 20 s manual override, with the SERVER's count rather than the HUD's. */
+function overridePrompt(): InteractPromptSpec {
+  const override = puzzleStore.state('breaker-sequence')?.override;
+  const spec = PROMPT.override();
+  // Somebody else's hold is their progress, not yours — and a bar filling while
+  // your hands are nowhere near the lever would be a lie about who is exposed.
+  // Only mirror it when the holder is us.
+  return override && override.holder === localId
+    ? { ...spec, progress: override.progress01 }
+    : spec;
+}
+
+/** An undock lever (§11 puzzle 6). Three players, five seconds, all at once. */
+function leverPrompt(): InteractPromptSpec {
+  const undock = puzzleStore.state('undock-sequence');
+  const spec = PROMPT.lever();
+  if (!undock) return spec;
+  // `progress` is the SHARED count — it only moves while all three are down and
+  // any release zeroes it. That is the number three people are counting to over
+  // voice, so it is the number the bar should show.
+  const progress = undock.required > 0 ? undock.progress / undock.required : 0;
+  return undock.armed
+    ? { ...spec, progress }
+    : { ...spec, progress: 0, usable: false, blocked: 'not armed' };
+}
+
+/** A locker: the §11 dual path if it is jammed, otherwise the door. */
+function lockerPrompt(locker: Locker): InteractPromptSpec {
+  const key = `${locker.module}:${locker.id}`;
+  const jam = jamFor(locker.id);
+  // BOTH prices, stacked — pry (60, 3 s) over pump (6, 25 s). §11 calls the
+  // loud-fast/quiet-slow rule "what keeps the noise system relevant after the
+  // map is learned", and a prompt naming only the pry bar would delete the
+  // quiet half for every player who never found B. The progress is the
+  // server's own: it owns the hold and drops it 250 ms after the last
+  // heartbeat, so a locally integrated bar would keep filling after a lag spike
+  // had already cost you the 25 seconds.
+  if (jam) return { ...PROMPT.jammed(key), progress: jamProgress01(jam) };
+  if (isSpentLocker(locker)) {
+    return { ...PROMPT.openLocker(), id: key, usable: false, blocked: 'empty' };
+  }
+  return { ...PROMPT.openLocker(), id: key };
 }
 
 // ---------------------------------------------------------------------------

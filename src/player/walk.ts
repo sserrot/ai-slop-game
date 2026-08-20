@@ -238,8 +238,9 @@ export function heightGain(a: THREE.Vector3, b: THREE.Vector3): number {
  * How far the camera is currently behind the body, along `STATION_UP`.
  *
  * Every vertical correction the controller makes — a step over a 0.4 m coaming,
- * a snap down a lip, a crouch, the moment a floating sphere becomes a 1.7 m
- * body standing on a deck — is fed in here as a signed metre count and comes
+ * a snap down a lip, a crouch, the moment a floating sphere becomes a
+ * `PLAYER_STAND_HEIGHT_M` body standing on a deck — is fed in here as a signed
+ * metre count and comes
  * back out over the next few frames. §13 lists motion sickness as a risk that
  * costs you players; a camera that teleports vertically is the most reliable way
  * to cause it, and there is no version of this controller that does not make

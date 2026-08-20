@@ -46,6 +46,8 @@ export type {
 } from './collision';
 export { HatchBarrier } from './hatchBarrier';
 export type { HatchBlock } from './hatchBarrier';
+export { PropBarrier, makePropContact } from './propBarrier';
+export type { PropContact } from './propBarrier';
 export {
   DOWN,
   HeadBob,
@@ -64,15 +66,26 @@ export {
 export type { GroundInfo } from './walk';
 export { HideController, hasteForGait } from './hiding';
 export type { HideEvent, HidePhase } from './hiding';
-export { FirstPersonHands, HANDS_REST_REACH_M } from './hands';
+export { FirstPersonHands, HANDS_REST_REACH_M, assertHandsCoherent } from './hands';
 export type { HandsInput, HandsOptions } from './hands';
-export { RemoteCrewViews, CrewIdentities, CREW_TINTS, crewIdentityAt } from './bodyView';
+export {
+  RemoteCrewViews,
+  CrewIdentities,
+  CREW_HEIGHT_M,
+  CREW_SHOULDER_W_M,
+  CREW_TINTS,
+  assertCrewCoherent,
+  crewIdentityAt,
+} from './bodyView';
 export type { CrewBodyInput, CrewIdentity, CrewSyncOptions, RemoteCrewOptions } from './bodyView';
 export { HeartRate } from './heartRate';
 export { Extinguisher } from './extinguisher';
 export type {
   CrosshairState,
   HidePrompt,
+  InteractKind,
+  InteractTarget,
+  InteractableInfo,
   InteractionHit,
   NoiseInfo,
   NoiseSink,

@@ -79,7 +79,8 @@ import * as THREE from 'three';
 import type { HideSpot, ModuleId, StationLayout, StationModule } from '@shared/types';
 import { PROP_ARCHETYPES, propArchetype } from './kit';
 import type { PropKind } from './kit';
-import { BULKHEAD_SIZE, HIDE_SHELL_T } from './deckKit';
+import { CARGO_BAG_COUNT } from '@shared/constants';
+import { BULKHEAD_SIZE, CARGO_SLOT_PITCH, HIDE_SHELL_T } from './deckKit';
 import { InstancedSet, variantIndex } from './instancing';
 import type { InstanceEntry } from './instancing';
 import type { StationMaterials } from './materials';
@@ -1084,8 +1085,27 @@ function equipmentBank(): THREE.BufferGeometry {
 // ISS-PZL-06 · Cargo rack and the five numbered bags
 // ===========================================================================
 
-/** Slot centres along the rack, straight out of `stationSpec`'s `cargoStow`. */
-const CARGO_SLOT_Z: readonly number[] = [-1.9, -0.95, 0, 0.95, 1.9];
+/**
+ * Slot centres along the rack — DERIVED from `CARGO_SLOT_PITCH`, never typed.
+ *
+ * These were the literals `[-1.9, -0.95, 0, 0.95, 1.9]`, described in this very
+ * comment as coming "straight out of `stationSpec`'s `cargoStow`". They stopped
+ * doing so the moment the art pass narrowed the rack: `CARGO_SLOT_PITCH` went to
+ * 0.85 and `stationSpec` moved the five slot markers to ±1.7 / ±0.85 / 0, while
+ * the painted bay numbers and the retention bars stayed where they were. That is
+ * a 20 cm error at the end bays of the ONE puzzle whose entire content is "put
+ * bag N in bay N", and it also pushed the end retention bars — 0.5 m long,
+ * centred on the slot — 0.20 m past the rack's own end, which is precisely the
+ * failure the bar's own comment below warns about: steel outside the
+ * `box(arch.size)` the BVH holds, in the lane, invisible to the sweep.
+ *
+ * Deriving both from the pitch makes that class of drift impossible: at pitch
+ * 0.85 the outermost bar reaches ±1.95, exactly flush with `CARGO_RACK_SIZE.z`.
+ */
+const CARGO_SLOT_Z: readonly number[] = Array.from(
+  { length: CARGO_BAG_COUNT },
+  (_unused, i) => (i - (CARGO_BAG_COUNT - 1) / 2) * CARGO_SLOT_PITCH,
+);
 
 /**
  * Five bays, numbered by band count.
@@ -1118,7 +1138,14 @@ function cargoRack(): THREE.BufferGeometry {
       ),
     );
   }
-  const dividers = [-hz, -1.425, -0.475, 0.475, 1.425, hz];
+  // Midpoints between consecutive slots, plus the two ends. Derived for the same
+  // reason the slot centres are: hand-typed midpoints survive exactly one change
+  // to the pitch.
+  const dividers = [
+    -hz,
+    ...CARGO_SLOT_Z.slice(1).map((z, i) => (z + (CARGO_SLOT_Z[i] as number)) / 2),
+    hz,
+  ];
   for (const z of dividers) {
     const inset = Math.abs(z) >= hz ? 0.025 : 0;
     parts.push(

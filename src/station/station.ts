@@ -54,7 +54,7 @@ import { StationHandrails } from './handrails';
 import { StationHatches } from './hatches';
 import { StationItems } from './stationItems';
 import type { ItemKind } from './items';
-import { KIT } from './kit';
+import { CUPOLA_COLLAR_L, KIT } from './kit';
 import { defaultStationLayout, fetchStationLayout } from './layout';
 import { StationLockers } from './lockers';
 import type { Locker } from './lockers';
@@ -168,7 +168,7 @@ export class Station {
     this.materials = new StationMaterials();
     this.scene = buildStationScene(layout, this.materials);
     this.props = new StationProps(layout, this.materials);
-    this.handrails = new StationHandrails(this.rails, this.materials);
+    this.handrails = new StationHandrails(this.rails, this.materials, this.graph);
     this.hatches = new StationHatches(layout, this.materials);
     this.lockers = new StationLockers(layout, this.materials);
     // `body: false` — `StationFixtures` draws the panel shell as part of its own
@@ -559,7 +559,11 @@ export class Station {
     if (module.kind === 'cupola') {
       const port = module.ports[0];
       const zMin = port ? port.localPos.z : -piece.length / 2;
-      return p.z >= zMin && p.z <= zMin + 0.75 + piece.radius && Math.hypot(p.x, p.y) <= piece.radius;
+      return (
+        p.z >= zMin &&
+        p.z <= zMin + CUPOLA_COLLAR_L + piece.radius &&
+        Math.hypot(p.x, p.y) <= piece.radius
+      );
     }
     return Math.abs(p.z) <= piece.length / 2 && Math.hypot(p.x, p.y) <= piece.radius;
   }
