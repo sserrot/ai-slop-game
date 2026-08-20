@@ -1,0 +1,1756 @@
+<title>Station Stowage Manifest</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Saira+Condensed:wght@500;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+
+<style>
+  :root {
+    --ground: #F2F4F5;
+    --surface: #FFFFFF;
+    --surface-2: #E8ECEE;
+    --line: #CBD4D8;
+    --line-soft: #DDE3E6;
+    --ink: #10161A;
+    --ink-2: #47565E;
+    --ink-3: #6E8189;
+
+    /* Preview wells stay dark in both themes: these assets exist to be read in
+       darkness, and a white ground would misrepresent every one of them. */
+    --well: #0B0F12;
+    --well-line: #1F2A30;
+    --well-ink: #8A9AA1;
+
+    --interact: #C97A00;
+    --interact-glow: #FFB020;
+    --rail: #1F6FD0;
+    --rail-glow: #4DA3FF;
+    --danger: #C4321F;
+    --ok: #2F7D50;
+
+    --step: 1.5rem;
+    --measure: 68ch;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --ground: #0B0F12;
+      --surface: #12181C;
+      --surface-2: #171F24;
+      --line: #253238;
+      --line-soft: #1B252A;
+      --ink: #D6E0E4;
+      --ink-2: #93A5AC;
+      --ink-3: #6E8189;
+
+      --interact: #FFB020;
+      --rail: #4DA3FF;
+      --danger: #FF5A46;
+      --ok: #5FD08A;
+    }
+  }
+
+  :root[data-theme="dark"] {
+    --ground: #0B0F12;
+    --surface: #12181C;
+    --surface-2: #171F24;
+    --line: #253238;
+    --line-soft: #1B252A;
+    --ink: #D6E0E4;
+    --ink-2: #93A5AC;
+    --ink-3: #6E8189;
+
+    --interact: #FFB020;
+    --rail: #4DA3FF;
+    --danger: #FF5A46;
+    --ok: #5FD08A;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    background: var(--ground);
+    color: var(--ink);
+    font-family: "IBM Plex Sans", system-ui, -apple-system, sans-serif;
+    font-size: 15px;
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .wrap {
+    max-width: 1180px;
+    margin: 0 auto;
+    padding: 0 24px 96px;
+  }
+
+  /* ---------------------------------------------------------------- header */
+
+  header.masthead {
+    padding: 56px 0 0;
+  }
+
+  .stencil {
+    font-family: "IBM Plex Mono", ui-monospace, monospace;
+    font-size: 11px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+  }
+
+  h1 {
+    font-family: "Saira Condensed", "Arial Narrow", sans-serif;
+    font-weight: 700;
+    font-size: clamp(2.6rem, 7vw, 4.6rem);
+    line-height: 0.94;
+    letter-spacing: -0.005em;
+    text-transform: uppercase;
+    margin: 10px 0 0;
+    text-wrap: balance;
+  }
+
+  .thesis {
+    margin: 28px 0 0;
+    padding: 22px 24px;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-left: 3px solid var(--interact);
+    max-width: var(--measure);
+  }
+
+  .thesis p { margin: 0; }
+  .thesis p + p { margin-top: 10px; }
+
+  .thesis strong {
+    font-weight: 600;
+    color: var(--interact);
+  }
+
+  /* ------------------------------------------------------------ constraints */
+
+  .constraints {
+    margin-top: 40px;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(148px, 1fr));
+    gap: 1px;
+    background: var(--line);
+    border: 1px solid var(--line);
+  }
+
+  .constraint {
+    background: var(--surface);
+    padding: 14px 16px;
+  }
+
+  .constraint dt {
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 10px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+  }
+
+  .constraint dd {
+    margin: 4px 0 0;
+    font-family: "Saira Condensed", sans-serif;
+    font-weight: 700;
+    font-size: 1.5rem;
+    line-height: 1.1;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .constraint dd small {
+    font-family: "IBM Plex Sans", sans-serif;
+    font-weight: 400;
+    font-size: 0.72rem;
+    color: var(--ink-2);
+    display: block;
+    letter-spacing: 0;
+  }
+
+  /* ----------------------------------------------------------------- legend */
+
+  .legend {
+    margin-top: 56px;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 20px;
+  }
+
+  .key {
+    display: flex;
+    gap: 12px;
+    align-items: flex-start;
+  }
+
+  .chip-demo {
+    flex: 0 0 auto;
+    width: 34px;
+    height: 34px;
+    border: 1px solid var(--well-line);
+    background: var(--well);
+    display: grid;
+    place-items: center;
+  }
+
+  .key h4 {
+    margin: 0;
+    font-family: "Saira Condensed", sans-serif;
+    font-weight: 700;
+    font-size: 0.95rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+
+  .key p {
+    margin: 2px 0 0;
+    font-size: 0.82rem;
+    color: var(--ink-2);
+    line-height: 1.45;
+  }
+
+  /* ---------------------------------------------------------------- section */
+
+  section { margin-top: 72px; }
+
+  .sec-head {
+    display: flex;
+    align-items: baseline;
+    gap: 16px;
+    flex-wrap: wrap;
+    padding-bottom: 12px;
+    border-bottom: 2px solid var(--ink);
+  }
+
+  .sec-head h2 {
+    font-family: "Saira Condensed", sans-serif;
+    font-weight: 700;
+    font-size: 1.9rem;
+    text-transform: uppercase;
+    letter-spacing: 0.01em;
+    margin: 0;
+  }
+
+  .sec-head .count {
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 11px;
+    letter-spacing: 0.1em;
+    color: var(--ink-3);
+    margin-left: auto;
+    text-transform: uppercase;
+  }
+
+  .sec-note {
+    margin: 14px 0 0;
+    max-width: var(--measure);
+    color: var(--ink-2);
+    font-size: 0.9rem;
+  }
+
+  /* ------------------------------------------------------------------ cards */
+
+  .grid {
+    margin-top: 28px;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(272px, 1fr));
+    gap: 20px;
+  }
+
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    display: flex;
+    flex-direction: column;
+  }
+
+  .card-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 8px;
+    padding: 9px 12px;
+    border-bottom: 1px solid var(--line-soft);
+  }
+
+  .desig {
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 10.5px;
+    letter-spacing: 0.08em;
+    color: var(--ink-3);
+  }
+
+  .status {
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 9.5px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    padding: 2px 7px;
+    border: 1px solid currentColor;
+    white-space: nowrap;
+  }
+
+  .status.missing { color: var(--danger); }
+  .status.blob { color: var(--interact); }
+
+  .well {
+    background: var(--well);
+    border-bottom: 1px solid var(--line-soft);
+    padding: 0;
+    display: block;
+    position: relative;
+  }
+
+  .well svg { display: block; width: 100%; height: auto; }
+
+  .card-body { padding: 13px 14px 15px; }
+
+  .card-body h3 {
+    font-family: "Saira Condensed", sans-serif;
+    font-weight: 700;
+    font-size: 1.18rem;
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+    margin: 0;
+    line-height: 1.05;
+  }
+
+  .card-body .read {
+    margin: 7px 0 0;
+    font-size: 0.83rem;
+    line-height: 1.5;
+    color: var(--ink-2);
+  }
+
+  .specs {
+    margin: 12px 0 0;
+    border-top: 1px solid var(--line-soft);
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 0;
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 10.5px;
+  }
+
+  .specs dt {
+    padding: 5px 10px 5px 0;
+    color: var(--ink-3);
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    border-bottom: 1px solid var(--line-soft);
+  }
+
+  .specs dd {
+    margin: 0;
+    padding: 5px 0;
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+    color: var(--ink);
+    border-bottom: 1px solid var(--line-soft);
+  }
+
+  .specs dt:last-of-type, .specs dd:last-of-type { border-bottom: none; }
+
+  .yes { color: var(--interact); }
+  .no { color: var(--ink-3); }
+
+  /* ------------------------------------------------------------------ close */
+
+  .closing {
+    margin-top: 80px;
+    padding-top: 32px;
+    border-top: 2px solid var(--ink);
+  }
+
+  .closing h2 {
+    font-family: "Saira Condensed", sans-serif;
+    font-weight: 700;
+    font-size: 1.5rem;
+    text-transform: uppercase;
+    margin: 0 0 16px;
+  }
+
+  .closing ul {
+    max-width: var(--measure);
+    padding-left: 20px;
+    margin: 0;
+    color: var(--ink-2);
+  }
+
+  .closing li { margin-bottom: 9px; }
+  .closing strong { color: var(--ink); font-weight: 600; }
+
+  .tally {
+    margin-top: 32px;
+    width: 100%;
+    border-collapse: collapse;
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 11.5px;
+  }
+
+  .tally th, .tally td {
+    text-align: left;
+    padding: 8px 12px 8px 0;
+    border-bottom: 1px solid var(--line-soft);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .tally th {
+    color: var(--ink-3);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    font-weight: 500;
+    border-bottom: 1px solid var(--line);
+  }
+
+  .tally td:not(:first-child), .tally th:not(:first-child) { text-align: right; }
+
+  .scroller { overflow-x: auto; }
+
+  @media (max-width: 560px) {
+    .wrap { padding: 0 16px 64px; }
+    header.masthead { padding-top: 36px; }
+  }
+</style>
+
+<div class="wrap">
+
+  <header class="masthead">
+    <div class="stencil">ISS · Art Direction · Rev B · 41 assets · gravity pivot</div>
+    <h1>Station Stowage Manifest</h1>
+
+    <div class="thesis">
+      <p>The station runs on a 5-candela flashlight, one shadow map and exponential fog. Every art
+        decision follows from that: a player identifies an object by its <em>outline</em> in a torch
+        beam, never by its surface.</p>
+      <p><strong>Emissive means you can touch it.</strong> Every interactable object carries one small
+        self-lit accent so it is findable with the torch off. Everything inert stays dark — the moment
+        a non-interactive prop glows, the signal is worthless. This is the one rule that cannot bend.</p>
+      <p><strong>Rev B — players walk now.</strong> Gravity is the default and zero-G is a per-module
+        condition (<code>GravityMode = 'nominal' | 'zero'</code>). That changes what art has to do:
+        interiors need floors, corners and cover, hiding becomes a real mechanic that needs real
+        geometry, and a player must be able to tell a module's gravity mode <em>before</em> stepping
+        through the hatch.</p>
+    </div>
+
+    <dl class="constraints">
+      <div class="constraint">
+        <dt>Torch</dt>
+        <dd>5 cd<small>13 m · 23° cone</small></dd>
+      </div>
+      <div class="constraint">
+        <dt>Eye height</dt>
+        <dd>1.55 m<small>0.85 crouched</small></dd>
+      </div>
+      <div class="constraint">
+        <dt>Cover height</dt>
+        <dd>1.00 m<small>hides a crouch</small></dd>
+      </div>
+      <div class="constraint">
+        <dt>Step-over</dt>
+        <dd>0.40 m<small>coaming max</small></dd>
+      </div>
+      <div class="constraint">
+        <dt>Walk stride</dt>
+        <dd>0.75 m<small>footstep spacing</small></dd>
+      </div>
+      <div class="constraint">
+        <dt>Draw budget</dt>
+        <dd>100<small>calls, 2-hop view</small></dd>
+      </div>
+      <div class="constraint">
+        <dt>Not yet built</dt>
+        <dd>28<small>of 41 assets</small></dd>
+      </div>
+    </dl>
+
+    <div class="legend">
+      <div class="key">
+        <div class="chip-demo">
+          <svg width="20" height="20" viewBox="0 0 20 20" aria-hidden="true">
+            <rect x="3" y="6" width="14" height="9" fill="none" stroke="#8A9AA1" stroke-width="1"/>
+            <circle cx="15" cy="8" r="1.4" fill="#FFB020"/>
+          </svg>
+        </div>
+        <div>
+          <h4>Interactable</h4>
+          <p>Amber indicator. Lockers, items, panels, valves — anything a player can act on.</p>
+        </div>
+      </div>
+      <div class="key">
+        <div class="chip-demo">
+          <svg width="20" height="20" viewBox="0 0 20 20" aria-hidden="true">
+            <rect x="3" y="6" width="14" height="9" fill="none" stroke="#8A9AA1" stroke-width="1"/>
+          </svg>
+        </div>
+        <div>
+          <h4>Inert</h4>
+          <p>No accent, ever. Racks, cables, wall panels. Keeps the amber signal meaningful.</p>
+        </div>
+      </div>
+      <div class="key">
+        <div class="chip-demo">
+          <svg width="20" height="20" viewBox="0 0 20 20" aria-hidden="true">
+            <rect x="2" y="9" width="16" height="2.6" fill="#4DA3FF"/>
+          </svg>
+        </div>
+        <div>
+          <h4>Handrail blue</h4>
+          <p>The movement grammar. Must stay the most readable thing in any frame — nothing
+            out-contrasts it.</p>
+        </div>
+      </div>
+      <div class="key">
+        <div class="chip-demo">
+          <svg width="20" height="20" viewBox="0 0 20 20" aria-hidden="true">
+            <circle cx="10" cy="10" r="6" fill="none" stroke="#FF5A46" stroke-width="1.4"/>
+            <path d="M7 10h6" stroke="#FF5A46" stroke-width="1.4"/>
+          </svg>
+        </div>
+        <div>
+          <h4>Sealed red</h4>
+          <p>Reserved for a sealed hatch. Mistaking sealed for merely closed is a death, so it gets
+            its own colour.</p>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- ================================================== CARRYABLES ======= -->
+  <section>
+    <div class="sec-head">
+      <h2>Carryables</h2>
+      <span class="count">ISS-CAR · 6 assets · 0 built</span>
+    </div>
+    <p class="sec-note">The largest gap in the game. All six exist only as <code>ItemKind</code>
+      strings on the server and have never been visible to a player. Each needs two forms — resting in
+      the world, and held in first person. Differentiate by silhouette first: these are found by
+      torchlight in a dark locker.</p>
+
+    <div class="grid">
+
+      <article class="card">
+        <div class="card-top"><span class="desig">ISS-CAR-01</span><span class="status missing">not built</span></div>
+        <div class="well">
+          <svg viewBox="0 0 200 120" aria-label="Medkit: a soft-cornered case with a handle, a webbing strap and a lit cross indicator.">
+            <rect x="46" y="42" width="108" height="62" rx="7" fill="none" stroke="#8A9AA1" stroke-width="1.6"/>
+            <path d="M84 42v-8a6 6 0 0 1 6-6h20a6 6 0 0 1 6 6v8" fill="none" stroke="#8A9AA1" stroke-width="1.6"/>
+            <path d="M46 66h108" stroke="#5A6B72" stroke-width="1"/>
+            <rect x="70" y="52" width="12" height="44" fill="#39464C"/>
+            <path d="M94 62h18M103 53v18" stroke="#FFB020" stroke-width="3.4"/>
+            <circle cx="142" cy="94" r="2.6" fill="#FFB020"/>
+          </svg>
+        </div>
+        <div class="card-body">
+          <h3>Medkit</h3>
+          <p class="read">Only asset with a carry handle above its body — reads as luggage at any angle.
+            Carried to a downed friend, so it must read while held.</p>
+          <dl class="specs">
+            <dt>Size</dt><dd>0.30 × 0.22 × 0.12</dd>
+            <dt>Tris</dt><dd>400–600</dd>
+            <dt>Accent</dt><dd class="yes">lit cross</dd>
+            <dt>Spec</dt><dd>§10 revival</dd>
+          </dl>
+        </div>
+      </article>
+
+      <article class="card">
+        <div class="card-top"><span class="desig">ISS-CAR-02</span><span class="status missing">not built</span></div>
+        <div class="well">
+          <svg viewBox="0 0 200 120" aria-label="Decoy: a compact banded cylinder with an arming light and a throwing grip.">
+            <rect x="74" y="30" width="52" height="66" rx="5" fill="none" stroke="#8A9AA1" stroke-width="1.6"/>
+            <path d="M74 46h52M74 80h52" stroke="#FFCF3D" stroke-width="3"/>
+            <path d="M74 62h52" stroke="#5A6B72" stroke-width="1"/>
+            <circle cx="100" cy="24" r="6" fill="none" stroke="#8A9AA1" stroke-width="1.6"/>
+            <circle cx="100" cy="96" r="3.2" fill="#FFB020"/>
+            <path d="M62 56v14M138 56v14" stroke="#5A6B72" stroke-width="1.4"/>
+          </svg>
+        </div>
+        <div class="card-body">
+          <h3>Decoy</h3>
+          <p class="read">Squat, hazard-banded, with a pull ring on top. Must never be confused with the
+            medkit — you have two per round and throwing the wrong thing is fatal.</p>
+          <dl class="specs">
+            <dt>Size</dt><dd>0.14 ⌀ × 0.20</dd>
+            <dt>Tris</dt><dd>300–450</dd>
+            <dt>Accent</dt><dd class="yes">arming light</dd>
+            <dt>Spec</dt><dd>§5 · loudness 70</dd>
+          </dl>
+        </div>
+      </article>
+
+      <article class="card">
+        <div class="card-top"><span class="desig">ISS-CAR-03</span><span class="status missing">not built</span></div>
+        <div class="well">
+          <svg viewBox="0 0 200 120" aria-label="Fuse: a small glass cylinder with metal contact caps and a coloured body band.">
+            <rect x="72" y="52" width="56" height="20" fill="none" stroke="#8A9AA1" stroke-width="1.6"/>
+            <rect x="60" y="50" width="13" height="24" fill="#5A6B72"/>
+            <rect x="127" y="50" width="13" height="24" fill="#5A6B72"/>
+            <rect x="88" y="52" width="24" height="20" fill="#39464C"/>
+            <path d="M78 62h44" stroke="#FFB020" stroke-width="1.6"/>
+            <circle cx="100" cy="62" r="2.4" fill="#FFB020"/>
+          </svg>
+        </div>
+        <div class="card-body">
+          <h3>Fuse</h3>
+          <p class="read">Smallest asset in the game — a barrel with bright end caps. Three carried per
+            round; size alone distinguishes it.</p>
+          <dl class="specs">
+            <dt>Size</dt><dd>0.05 ⌀ × 0.11</dd>
+            <dt>Tris</dt><dd>120–200</dd>
+            <dt>Accent</dt><dd class="yes">filament</dd>
+            <dt>Spec</dt><dd>§11 puzzle 4</dd>
+          </dl>
+        </div>
+      </article>
+
+      <article class="card">
+        <div class="card-top"><span class="desig">ISS-CAR-04</span><span class="status missing">not built</span></div>
+        <div class="well">
+          <svg viewBox="0 0 200 120" aria-label="Sequence card: a thin laminated card with a punched corner and printed order bars.">
+            <path d="M58 34h74l12 12v40H58z" fill="none" stroke="#8A9AA1" stroke-width="1.6"/>
+            <path d="M132 34v12h12" fill="none" stroke="#5A6B72" stroke-width="1.2"/>
+            <circle cx="67" cy="43" r="3.2" fill="none" stroke="#5A6B72" stroke-width="1.2"/>
+            <path d="M76 56h58M76 64h58M76 72h34" stroke="#5A6B72" stroke-width="2"/>
+            <path d="M76 48h20" stroke="#FFB020" stroke-width="2.4"/>
+          </svg>
+        </div>
+        <div class="card-body">
+          <h3>Sequence card</h3>
+          <p class="read">The only flat asset. Punched corner and clipped edge read as paperwork. Its
+            face must accept a canvas texture later without redesign — it is read, not just held.</p>
+          <dl class="specs">
+            <dt>Size</dt><dd>0.14 × 0.09 × 0.002</dd>
+            <dt>Tris</dt><dd>40–80</dd>
+            <dt>Accent</dt><dd class="yes">edge tag</dd>
+            <dt>Spec</dt><dd>§11 puzzle 1</dd>
+          </dl>
+        </div>
+      </article>
+
+      <article class="card">
+        <div class="card-top"><span class="desig">ISS-CAR-05</span><span class="status missing">not built</span></div>
+        <div class="well">
+          <svg viewBox="0 0 200 120" aria-label="Extinguisher: a tall pressure cylinder with a trigger head and a flared horn.">
+            <rect x="82" y="34" width="36" height="72" rx="14" fill="none" stroke="#8A9AA1" stroke-width="1.6"/>
+            <path d="M92 34v-8h16v8" fill="none" stroke="#8A9AA1" stroke-width="1.6"/>
+            <path d="M108 26c14 0 22 6 26 14l-9 4c-4-7-9-10-17-10" fill="none" stroke="#8A9AA1" stroke-width="1.6"/>
+            <path d="M82 56h36M82 88h36" stroke="#5A6B72" stroke-width="1"/>
+            <path d="M84 22h14" stroke="#8A9AA1" stroke-width="2.6"/>
+            <circle cx="100" cy="70" r="3" fill="#FFB020"/>
+          </svg>
+        </div>
+        <div class="card-body">
+          <h3>Extinguisher</h3>
+          <p class="read">Tallest carryable, with an unmistakable horn. Doubles as the zero-G thruster,
+            so the silhouette has to read as something you <em>point</em>.</p>
+          <dl class="specs">
+            <dt>Size</dt><dd>0.13 ⌀ × 0.42</dd>
+            <dt>Tris</dt><dd>500–800</dd>
+            <dt>Accent</dt><dd class="yes">charge gauge</dd>
+            <dt>Spec</dt><dd>§4 · loudness 65</dd>
+          </dl>
+        </div>
+      </article>
+
+      <article class="card">
+        <div class="card-top"><span class="desig">ISS-CAR-06</span><span class="status missing">not built</span></div>
+        <div class="well">
+          <svg viewBox="0 0 200 120" aria-label="Pry bar: a long flat crowbar with a hooked, split claw at one end.">
+            <path d="M28 74c10-2 18-4 24-8" fill="none" stroke="#8A9AA1" stroke-width="1.6"/>
+            <path d="M30 80c14-3 26-7 34-13l104-24" fill="none" stroke="#8A9AA1" stroke-width="5" stroke-linecap="round"/>
+            <path d="M26 78l12-6" stroke="#8A9AA1" stroke-width="1.6"/>
+            <path d="M150 48l18-4" stroke="#FFB020" stroke-width="5" stroke-linecap="round"/>
+            <path d="M96 62l6 2" stroke="#0B0F12" stroke-width="2"/>
+          </svg>
+        </div>
+        <div class="card-body">
+          <h3>Pry bar</h3>
+          <p class="read">The only long thin item — lean on that. A split claw at one end, an amber
+            grip at the other. Loudest hand tool in the game.</p>
+          <dl class="specs">
+            <dt>Size</dt><dd>0.68 × 0.05 × 0.02</dd>
+            <dt>Tris</dt><dd>200–320</dd>
+            <dt>Accent</dt><dd class="yes">grip band</dd>
+            <dt>Spec</dt><dd>§11 · loudness 60</dd>
+          </dl>
+        </div>
+      </article>
+
+    </div>
+  </section>
+
+  <!-- ================================================ SCATTER PROPS ====== -->
+  <section>
+    <div class="sec-head">
+      <h2>Scatter props</h2>
+      <span class="count">ISS-PRP · 8 kinds · 149 instances</span>
+    </div>
+    <p class="sec-note">The visual bulk of the station, and all currently blobs. Every kind renders as
+      one instanced draw call, so variety has to come from a small set of variants rather than
+      per-instance detail. The rack is 64 of the 149 instances — it alone decides what the station
+      looks like.</p>
+
+    <div class="grid">
+
+      <article class="card">
+        <div class="card-top"><span class="desig">ISS-PRP-01 ×64</span><span class="status blob">blob</span></div>
+        <div class="well">
+          <svg viewBox="0 0 200 120" aria-label="Equipment rack: a framed face with recessed sub-panels, a vent grille and corner fasteners.">
+            <rect x="46" y="18" width="108" height="86" fill="none" stroke="#8A9AA1" stroke-width="1.6"/>
+            <rect x="54" y="26" width="92" height="26" fill="none" stroke="#5A6B72" stroke-width="1.2"/>
+            <rect x="54" y="58" width="42" height="38" fill="none" stroke="#5A6B72" stroke-width="1.2"/>
+            <g stroke="#5A6B72" stroke-width="1.4">
+              <path d="M106 64h40M106 70h40M106 76h40M106 82h40M106 88h40"/>
+            </g>
+            <g fill="#5A6B72">
+              <circle cx="51" cy="23" r="1.5"/><circle cx="149" cy="23" r="1.5"/>
+              <circle cx="51" cy="99" r="1.5"/><circle cx="149" cy="99" r="1.5"/>
+            </g>
+          </svg>
+        </div>
+        <div class="card-body">
+          <h3>Equipment rack</h3>
+          <p class="read">Three variants — blank, vented, instrumented — as separate instanced meshes so
+            a wall of 64 doesn't visibly tile. Inert: no accent.</p>
+          <dl class="specs">
+            <dt>Size</dt><dd>0.90 × 1.10 × 0.55</dd>
+            <dt>Tris</dt><dd>250–400</dd>
+            <dt>Accent</dt><dd class="no">none</dd>
+            <dt>Variants</dt><dd>3</dd>
+          </dl>
+        </div>
+      </article>
+
+      <article class="card">
+        <div class="card-top"><span class="desig">ISS-PRP-02 ×38</span><span class="status blob">blob</span></div>
+        <div class="well">
+          <svg viewBox="0 0 200 120" aria-label="Cable bundle: sagging conduit runs held by tie-wraps between wall anchors.">
+            <path d="M22 34q40 26 80 12t76 22" fill="none" stroke="#8A9AA1" stroke-width="4"/>
+            <path d="M22 44q42 28 82 14t74 20" fill="none" stroke="#6E8189" stroke-width="3"/>
+            <path d="M22 54q44 30 84 16t72 18" fill="none" stroke="#5A6B72" stroke-width="2.4"/>
+            <g stroke="#39464C" stroke-width="4">
+              <path d="M62 48v14M120 46v14"/>
+            </g>
+            <rect x="14" y="28" width="9" height="34" fill="#5A6B72"/>
+            <rect x="177" y="60" width="9" height="34" fill="#5A6B72"/>
+          </svg>
+        </div>
+        <div class="card-body">
+          <h3>Cable bundle</h3>
+          <p class="read">Three sagging runs, tie-wrapped at intervals, anchored at both ends. This is
+            the asset that makes the station read as lived-in rather than modelled.</p>
+          <dl class="specs">
+            <dt>Span</dt><dd>0.60 – 2.40</dd>
+            <dt>Tris</dt><dd>120–220</dd>
+            <dt>Accent</dt><dd class="no">none</dd>
+            <dt>Variants</dt><dd>2</dd>
+          </dl>
+        </div>
+      </article>
+
+      <article class="card">
+        <div class="card-top"><span class="desig">ISS-PRP-03 ×13</span><span class="status blob">blob</span></div>
+        <div class="well">
+          <svg viewBox="0 0 200 120" aria-label="Wall panel: a plain bezelled plate with four fasteners and no indicator.">
+            <rect x="58" y="30" width="84" height="60" fill="none" stroke="#8A9AA1" stroke-width="1.6"/>
+            <rect x="65" y="37" width="70" height="46" fill="none" stroke="#39464C" stroke-width="1.2"/>
+            <g fill="#5A6B72">
+              <circle cx="63" cy="35" r="1.6"/><circle cx="137" cy="35" r="1.6"/>
+              <circle cx="63" cy="85" r="1.6"/><circle cx="137" cy="85" r="1.6"/>
+            </g>
+          </svg>
+        </div>
+        <div class="card-body">
+          <h3>Wall panel</h3>
+          <p class="read">Deliberately the dullest asset here. It exists to be ignored — which is
+            exactly why it must never glow.</p>
+          <dl class="specs">
+            <dt>Size</dt><dd>0.50 × 0.40 × 0.06</dd>
+            <dt>Tris</dt><dd>80–140</dd>
+            <dt>Accent</dt><dd class="no">none</dd>
+            <dt>Variants</dt><dd>2</dd>
+          </dl>
+        </div>
+      </article>
+
+      <article class="card">
+        <div class="card-top"><span class="desig">ISS-PRP-04 ×10</span><span class="status blob">blob</span></div>
+        <div class="well">
+          <svg viewBox="0 0 200 120" aria-label="Stowage bag: a bulged soft cargo bag held down by two webbing straps.">
+            <path d="M50 92q-6-38 12-46 20-9 38-9t38 9q18 8 12 46z" fill="none" stroke="#8A9AA1" stroke-width="1.6"/>
+            <path d="M78 40v52M122 40v52" stroke="#5A6B72" stroke-width="5"/>
+            <path d="M50 92h100" stroke="#8A9AA1" stroke-width="1.6"/>
+            <path d="M92 34h16" stroke="#8A9AA1" stroke-width="2.4"/>
+          </svg>
+        </div>
+        <div class="card-body">
+          <h3>Stowage bag</h3>
+          <p class="read">Soft, bulged, Velcro'd down under two straps. The only non-rigid silhouette in
+            the scatter set, which is what sells it.</p>
+          <dl class="specs">
+            <dt>Size</dt><dd>0.55 × 0.40 × 0.30</dd>
+            <dt>Tris</dt><dd>180–300</dd>
+            <dt>Accent</dt><dd class="no">none</dd>
+            <dt>Variants</dt><dd>2</dd>
+          </dl>
+        </div>
+      </article>
+
+      <article class="card">
+        <div class="card-top"><span class="desig">ISS-PRP-05 ×9</span><span class="status blob">blob</span></div>
+        <div class="well">
+          <svg viewBox="0 0 200 120" aria-label="Stowage locker: a hinged door with a latch, a label plate and an amber status indicator.">
+            <rect x="52" y="20" width="96" height="84" fill="none" stroke="#8A9AA1" stroke-width="1.6"/>
+            <path d="M62 20v84" stroke="#5A6B72" stroke-width="1.2"/>
+            <g stroke="#39464C" stroke-width="3"><path d="M57 34v8M57 82v8"/></g>
+            <rect x="118" y="52" width="18" height="12" rx="2" fill="none" stroke="#8A9AA1" stroke-width="1.6"/>
+            <rect x="76" y="32" width="34" height="14" fill="#39464C"/>
+            <circle cx="127" cy="40" r="3" fill="#FFB020"/>
+          </svg>
+        </div>
+        <div class="card-body">
+          <h3>Stowage locker</h3>
+          <p class="read">Lootable and jammable, so it carries the accent and needs a readable
+            open/closed state. Items live in here — the amber dot is how you find one in the dark.</p>
+          <dl class="specs">
+            <dt>Size</dt><dd>0.70 × 0.90 × 0.50</dd>
+            <dt>Tris</dt><dd>300–450</dd>
+            <dt>Accent</dt><dd class="yes">status dot</dd>
+            <dt>Spec</dt><dd>§11 · jam 0.35</dd>
+          </dl>
+        </div>
+      </article>
+
+      <article class="card">
+        <div class="card-top"><span class="desig">ISS-PRP-06 ×6</span><span class="status blob">blob</span></div>
+        <div class="well">
+          <svg viewBox="0 0 200 120" aria-label="Crew laptop on an articulated arm mount, lid open at an angle with a faintly glowing screen.">
+            <path d="M66 84h74l6 12H60z" fill="none" stroke="#8A9AA1" stroke-width="1.6"/>
+            <path d="M72 84l10-52h56l-8 52z" fill="none" stroke="#8A9AA1" stroke-width="1.6"/>
+            <path d="M80 78l9-40h44l-6 40z" fill="#141E24"/>
+            <path d="M86 66h30" stroke="#2E4A57" stroke-width="2"/>
+            <path d="M148 96l16 14M164 110h12" fill="none" stroke="#5A6B72" stroke-width="2.4"/>
+            <circle cx="103" cy="90" r="2.2" fill="#FFB020"/>
+          </svg>
+        </div>
+        <div class="card-body">
+          <h3>Crew laptop</h3>
+          <p class="read">Angled on an arm mount, screen dark with a faint glow. Not a puzzle terminal —
+            the accent is a small power light only.</p>
+          <dl class="specs">
+            <dt>Size</dt><dd>0.34 × 0.24 × 0.22</dd>
+            <dt>Tris</dt><dd>200–320</dd>
+            <dt>Accent</dt><dd class="yes">power led</dd>
+            <dt>Variants</dt><dd>2</dd>
+          </dl>
+        </div>
+      </article>
+
+      <article class="card">
+        <div class="card-top"><span class="desig">ISS-PRP-07 ×5</span><span class="status blob">blob</span></div>
+        <div class="well">
+          <svg viewBox="0 0 200 120" aria-label="Cargo slot: an empty recessed socket with a lip and an alignment chevron.">
+            <path d="M50 30h100v64H50z" fill="none" stroke="#8A9AA1" stroke-width="1.6"/>
+            <path d="M62 42h76v40H62z" fill="#0E1418" stroke="#39464C" stroke-width="1.2"/>
+            <path d="M50 30l12 12M150 30l-12 12M50 94l12-12M150 94l-12-12" stroke="#5A6B72" stroke-width="1"/>
+            <path d="M94 58l6-6 6 6" fill="none" stroke="#FFB020" stroke-width="2.2"/>
+            <path d="M88 74h24" stroke="#FFB020" stroke-width="2.2"/>
+          </svg>
+        </div>
+        <div class="card-body">
+          <h3>Cargo slot</h3>
+          <p class="read">Must read as <em>something goes here</em> — a dark recess with a lip and an
+            alignment chevron. Emptiness is the whole message.</p>
+          <dl class="specs">
+            <dt>Size</dt><dd>0.40 × 0.35 × 0.40</dd>
+            <dt>Tris</dt><dd>150–250</dd>
+            <dt>Accent</dt><dd class="yes">chevron</dd>
+            <dt>Spec</dt><dd>§11 puzzle 3</dd>
+          </dl>
+        </div>
+      </article>
+
+      <article class="card">
+        <div class="card-top"><span class="desig">ISS-PRP-08 ×4</span><span class="status blob">blob</span></div>
+        <div class="well">
+          <svg viewBox="0 0 200 120" aria-label="Junction hub: a drum with radiating conduit stubs and a cluster of small indicators.">
+            <circle cx="100" cy="60" r="30" fill="none" stroke="#8A9AA1" stroke-width="1.6"/>
+            <circle cx="100" cy="60" r="20" fill="none" stroke="#39464C" stroke-width="1.2"/>
+            <g stroke="#5A6B72" stroke-width="5">
+              <path d="M100 30V16M100 90v14M70 60H56M130 60h14"/>
+            </g>
+            <g fill="#FFB020">
+              <circle cx="94" cy="56" r="2.2"/><circle cx="100" cy="56" r="2.2"/><circle cx="106" cy="56" r="2.2"/>
+            </g>
+            <path d="M90 68h20" stroke="#39464C" stroke-width="2"/>
+          </svg>
+        </div>
+        <div class="card-body">
+          <h3>Junction hub</h3>
+          <p class="read">Radiating conduit stubs make it read as infrastructure. Indicator cluster
+            doubles as a wayfinding light in a dark node.</p>
+          <dl class="specs">
+            <dt>Size</dt><dd>0.30 ⌀ × 0.28</dd>
+            <dt>Tris</dt><dd>200–300</dd>
+            <dt>Accent</dt><dd class="yes">led cluster</dd>
+            <dt>Variants</dt><dd>1</dd>
+          </dl>
+        </div>
+      </article>
+
+    </div>
+  </section>
+
+  <!-- =============================================== PUZZLE FIXTURES ===== -->
+  <section>
+    <div class="sec-head">
+      <h2>Puzzle fixtures</h2>
+      <span class="count">ISS-PZL · 6 assets · 0 built</span>
+    </div>
+    <p class="sec-note">The puzzles are currently flat drawings on canvas panels. The canvas readouts
+      are correct and stay — what's missing is the physical hardware around them, so a player can spot
+      a puzzle across a module and know which one it is. Every fixture needs moving geometry, because
+      state must be readable from an angle.</p>
+
+    <div class="grid">
+
+      <article class="card">
+        <div class="card-top"><span class="desig">ISS-PZL-01</span><span class="status missing">not built</span></div>
+        <div class="well">
+          <svg viewBox="0 0 200 120" aria-label="Breaker panel: a hinged cabinet with six throw levers, a buzzer grille and an override lever beneath.">
+            <rect x="46" y="14" width="108" height="76" fill="none" stroke="#8A9AA1" stroke-width="1.6"/>
+            <g stroke="#8A9AA1" stroke-width="3.4">
+              <path d="M60 30v12M78 30v12M96 38v12M114 30v12M132 38v12"/>
+            </g>
+            <g fill="#39464C">
+              <rect x="55" y="26" width="10" height="22"/><rect x="73" y="26" width="10" height="22"/>
+              <rect x="91" y="34" width="10" height="22"/><rect x="109" y="26" width="10" height="22"/>
+              <rect x="127" y="34" width="10" height="22"/>
+            </g>
+            <g stroke="#5A6B72" stroke-width="1.2"><path d="M56 66h88M56 72h88M56 78h88"/></g>
+            <path d="M86 98h28v8H86z" fill="none" stroke="#FFB020" stroke-width="1.8"/>
+            <circle cx="146" cy="22" r="2.6" fill="#FFB020"/>
+          </svg>
+        </div>
+        <div class="card-body">
+          <h3>Breaker panel</h3>
+          <p class="read">Six physical throw levers that animate between positions, a buzzer grille for
+            the wrong-order reset, and the 20-second manual override beneath.</p>
+          <dl class="specs">
+            <dt>Size</dt><dd>0.80 × 1.00 × 0.18</dd>
+            <dt>Tris</dt><dd>700–1000</dd>
+            <dt>Animates</dt><dd class="yes">6 levers</dd>
+            <dt>Spec</dt><dd>§11 puzzle 1</dd>
+          </dl>
+        </div>
+      </article>
+
+      <article class="card">
+        <div class="card-top"><span class="desig">ISS-PZL-02</span><span class="status missing">not built</span></div>
+        <div class="well">
+          <svg viewBox="0 0 200 120" aria-label="Coolant valve: a five-spoked brass handwheel on a flanged valve body.">
+            <circle cx="100" cy="54" r="34" fill="none" stroke="#C08A3E" stroke-width="3.4"/>
+            <circle cx="100" cy="54" r="9" fill="none" stroke="#C08A3E" stroke-width="2.4"/>
+            <g stroke="#C08A3E" stroke-width="2.8">
+              <path d="M100 45V22M100 63v22M91 54H68M109 54h23M84 40l-14-9M116 68l14 9"/>
+            </g>
+            <path d="M84 92h32v14H84z" fill="none" stroke="#8A9AA1" stroke-width="1.6"/>
+            <path d="M78 106h44" stroke="#5A6B72" stroke-width="3"/>
+            <circle cx="122" cy="98" r="2.4" fill="#FFB020"/>
+          </svg>
+        </div>
+        <div class="card-body">
+          <h3>Coolant valve wheel</h3>
+          <p class="read">Brass so it reads as plumbing, not electronics. Animates as it turns — slow is
+            quiet, spinning it is loud. Deliberately shares a visual family with the gauge.</p>
+          <dl class="specs">
+            <dt>Size</dt><dd>0.36 ⌀</dd>
+            <dt>Tris</dt><dd>500–700</dd>
+            <dt>Animates</dt><dd class="yes">rotation</dd>
+            <dt>Spec</dt><dd>§11 puzzle 2</dd>
+          </dl>
+        </div>
+      </article>
+
+      <article class="card">
+        <div class="card-top"><span class="desig">ISS-PZL-03</span><span class="status missing">not built</span></div>
+        <div class="well">
+          <svg viewBox="0 0 200 120" aria-label="Coolant gauge: a round dial housing with a glass face, a geometric needle and a green target band.">
+            <circle cx="100" cy="58" r="38" fill="none" stroke="#C08A3E" stroke-width="3"/>
+            <circle cx="100" cy="58" r="30" fill="#0E1418" stroke="#39464C" stroke-width="1.2"/>
+            <path d="M78 34a34 34 0 0 1 20-6" fill="none" stroke="#5FD08A" stroke-width="4"/>
+            <path d="M100 58L84 40" stroke="#E4EAEC" stroke-width="2.6"/>
+            <circle cx="100" cy="58" r="4" fill="#8A9AA1"/>
+            <g stroke="#5A6B72" stroke-width="1.6">
+              <path d="M100 28v6M130 58h-6M100 88v-6M70 58h6"/>
+            </g>
+            <path d="M88 100h24v6H88z" fill="#39464C"/>
+          </svg>
+        </div>
+        <div class="card-body">
+          <h3>Coolant gauge</h3>
+          <p class="read">Needle is geometry, not a drawing, so it's readable off-axis — the whole
+            puzzle is one player reading it aloud to another. Green target band is the only green in
+            the station.</p>
+          <dl class="specs">
+            <dt>Size</dt><dd>0.28 ⌀</dd>
+            <dt>Tris</dt><dd>400–600</dd>
+            <dt>Animates</dt><dd class="yes">needle</dd>
+            <dt>Spec</dt><dd>§11 puzzle 2</dd>
+          </dl>
+        </div>
+      </article>
+
+      <article class="card">
+        <div class="card-top"><span class="desig">ISS-PZL-04</span><span class="status missing">not built</span></div>
+        <div class="well">
+          <svg viewBox="0 0 200 120" aria-label="Keyswitch: a keyed rotary switch on a plate, flanked by a raised guard.">
+            <rect x="62" y="22" width="76" height="76" fill="none" stroke="#8A9AA1" stroke-width="1.6"/>
+            <circle cx="100" cy="56" r="20" fill="none" stroke="#8A9AA1" stroke-width="2.4"/>
+            <path d="M100 56l-11-11" stroke="#E4EAEC" stroke-width="3.4"/>
+            <circle cx="100" cy="56" r="4.4" fill="#5A6B72"/>
+            <path d="M70 30v52M130 30v52" stroke="#39464C" stroke-width="4"/>
+            <path d="M84 86h32" stroke="#5A6B72" stroke-width="2"/>
+            <circle cx="100" cy="34" r="2.4" fill="#FFB020"/>
+          </svg>
+        </div>
+        <div class="card-body">
+          <h3>Keyswitch</h3>
+          <p class="read">Two sit 4 m apart and must turn within a second of each other, so both have to
+            be spottable at once. Raised guards imply "deliberate action only."</p>
+          <dl class="specs">
+            <dt>Size</dt><dd>0.18 × 0.22 × 0.10</dd>
+            <dt>Tris</dt><dd>300–450</dd>
+            <dt>Animates</dt><dd class="yes">key turn</dd>
+            <dt>Spec</dt><dd>§11 puzzle 5</dd>
+          </dl>
+        </div>
+      </article>
+
+      <article class="card">
+        <div class="card-top"><span class="desig">ISS-PZL-05</span><span class="status missing">not built</span></div>
+        <div class="well">
+          <svg viewBox="0 0 200 120" aria-label="Undock lever: a large two-handed release lever under a hinged safety cover.">
+            <rect x="56" y="30" width="88" height="72" fill="none" stroke="#8A9AA1" stroke-width="1.6"/>
+            <path d="M56 30l88-16v18" fill="none" stroke="#FF5A46" stroke-width="2"/>
+            <path d="M100 92V50" stroke="#8A9AA1" stroke-width="6" stroke-linecap="round"/>
+            <path d="M86 50h28" stroke="#8A9AA1" stroke-width="6" stroke-linecap="round"/>
+            <circle cx="100" cy="92" r="7" fill="none" stroke="#5A6B72" stroke-width="2"/>
+            <g stroke="#FFCF3D" stroke-width="3"><path d="M64 100h14M122 100h14"/></g>
+            <circle cx="136" cy="40" r="2.6" fill="#FF5A46"/>
+          </svg>
+        </div>
+        <div class="card-body">
+          <h3>Undock lever</h3>
+          <p class="read">Two-handed, under a hinged red safety cover, hazard-striped at the base. Three
+            of these end the game — they should feel final and slightly frightening to touch.</p>
+          <dl class="specs">
+            <dt>Size</dt><dd>0.25 × 0.55 × 0.20</dd>
+            <dt>Tris</dt><dd>500–750</dd>
+            <dt>Animates</dt><dd class="yes">cover + throw</dd>
+            <dt>Spec</dt><dd>§11 puzzle 6</dd>
+          </dl>
+        </div>
+      </article>
+
+      <article class="card">
+        <div class="card-top"><span class="desig">ISS-PZL-06 ×5</span><span class="status missing">not built</span></div>
+        <div class="well">
+          <svg viewBox="0 0 200 120" aria-label="Numbered cargo bag: a soft bag with webbing straps and three coloured rank bands denoting its number.">
+            <path d="M52 94q-4-40 14-48 18-8 34-8t34 8q18 8 14 48z" fill="none" stroke="#8A9AA1" stroke-width="1.6"/>
+            <path d="M80 42v52M120 42v52" stroke="#5A6B72" stroke-width="4"/>
+            <g stroke="#FFB020" stroke-width="4">
+              <path d="M60 62h14M60 72h14M60 82h14"/>
+            </g>
+            <path d="M52 94h96" stroke="#8A9AA1" stroke-width="1.6"/>
+            <path d="M92 36h16" stroke="#8A9AA1" stroke-width="2.4"/>
+          </svg>
+        </div>
+        <div class="card-body">
+          <h3>Cargo bag &amp; rack</h3>
+          <p class="read">Numbered by <em>band count</em>, not text — one to five stripes, language-free.
+            Rigid bodies in zero-G: shove one and it bounces at loudness 30, then keeps bouncing.</p>
+          <dl class="specs">
+            <dt>Size</dt><dd>0.45 × 0.30 × 0.25</dd>
+            <dt>Tris</dt><dd>250–400</dd>
+            <dt>Physics</dt><dd class="yes">rapier body</dd>
+            <dt>Status</dt><dd>inert today</dd>
+          </dl>
+        </div>
+      </article>
+
+    </div>
+  </section>
+
+  <!-- ==================================================== CHARACTERS ===== -->
+  <section>
+    <div class="sec-head">
+      <h2>Characters</h2>
+      <span class="count">ISS-CHR · 3 assets · 0 built</span>
+    </div>
+    <p class="sec-note">Two of the three don't exist at all. The critical requirement is decisive
+      silhouette separation: mistaking a crewmate for the alien at 10 m in a dark tube should be a
+      moment of relief, never confusion.</p>
+
+    <div class="grid">
+
+      <article class="card">
+        <div class="card-top"><span class="desig">ISS-CHR-01</span><span class="status blob">capsule</span></div>
+        <div class="well">
+          <svg viewBox="0 0 200 120" aria-label="The alien: a long thin pale figure with elongated gripping limbs and a smooth eyeless head.">
+            <path d="M100 16q7 0 7 10t-7 12q-7-2-7-12t7-10" fill="#C8CFC6"/>
+            <path d="M100 38q6 14 4 34t-4 32" fill="none" stroke="#C8CFC6" stroke-width="7"/>
+            <path d="M98 46q-22 6-34 24t-6 30" fill="none" stroke="#C8CFC6" stroke-width="4"/>
+            <path d="M102 46q22 6 34 24t6 30" fill="none" stroke="#C8CFC6" stroke-width="4"/>
+            <path d="M98 88q-12 8-14 22M102 88q12 8 14 22" fill="none" stroke="#C8CFC6" stroke-width="3.4"/>
+            <path d="M58 100l-8 6M142 100l8 6" stroke="#C8CFC6" stroke-width="2.6"/>
+          </svg>
+        </div>
+        <div class="card-body">
+          <h3>The alien</h3>
+          <p class="read"><strong>No eyes</strong> — it hunts by sound, and glowing eyes would be both a
+            cliché and a lie about the mechanic. Pale value against a dark hull is its only cue.
+            <strong>Rev B needs two locomotions:</strong> a rail-pull in zero-G and a walk in gravity
+            modules. Its gait is how you read its state from down a corridor — patrol, search, hunt.</p>
+          <dl class="specs">
+            <dt>Length</dt><dd>2.40</dd>
+            <dt>Tris</dt><dd>600–1500</dd>
+            <dt>Accent</dt><dd class="no">none — pale only</dd>
+            <dt>Animates</dt><dd class="yes">walk + rail-pull</dd>
+          </dl>
+        </div>
+      </article>
+
+      <article class="card">
+        <div class="card-top"><span class="desig">ISS-CHR-02</span><span class="status missing">not built</span></div>
+        <div class="well">
+          <svg viewBox="0 0 200 120" aria-label="First-person gloved hands reaching forward toward a handrail.">
+            <path d="M18 104q26-16 44-30 8-6 16-4" fill="none" stroke="#8A9AA1" stroke-width="12" stroke-linecap="round"/>
+            <path d="M182 104q-26-16-44-30-8-6-16-4" fill="none" stroke="#8A9AA1" stroke-width="12" stroke-linecap="round"/>
+            <path d="M74 70q10-8 20-4M126 70q-10-8-20-4" fill="none" stroke="#6E8189" stroke-width="6" stroke-linecap="round"/>
+            <rect x="40" y="86" width="14" height="4" fill="#FFCF3D"/>
+            <rect x="146" y="86" width="14" height="4" fill="#FFCF3D"/>
+            <rect x="72" y="40" width="56" height="7" rx="3" fill="#4DA3FF"/>
+          </svg>
+        </div>
+        <div class="card-body">
+          <h3>First-person hands</h3>
+          <p class="read">Gloved forearms that reach for a rail while gripping, brace on impact, and
+            hold whichever item you carry. §9: this sells zero-G more than anything else.</p>
+          <dl class="specs">
+            <dt>Space</dt><dd>camera-local</dd>
+            <dt>Tris</dt><dd>400–700</dd>
+            <dt>Shadow</dt><dd class="no">never casts</dd>
+            <dt>In BVH</dt><dd class="no">no</dd>
+          </dl>
+        </div>
+      </article>
+
+      <article class="card">
+        <div class="card-top"><span class="desig">ISS-CHR-03</span><span class="status missing">not built</span></div>
+        <div class="well">
+          <svg viewBox="0 0 200 120" aria-label="Remote crew member: a suited human figure with a rounded helmet and a coloured identification band.">
+            <circle cx="100" cy="28" r="15" fill="none" stroke="#8A9AA1" stroke-width="2.4"/>
+            <path d="M90 24a10 10 0 0 1 14-4" fill="none" stroke="#2E4A57" stroke-width="3"/>
+            <path d="M84 46h32v40H84z" fill="none" stroke="#8A9AA1" stroke-width="2.4"/>
+            <path d="M84 52h32" stroke="#4DA3FF" stroke-width="5"/>
+            <path d="M84 50l-18 22M116 50l18 22" fill="none" stroke="#8A9AA1" stroke-width="6" stroke-linecap="round"/>
+            <path d="M90 86l-6 26M110 86l6 26" fill="none" stroke="#8A9AA1" stroke-width="7" stroke-linecap="round"/>
+            <circle cx="108" cy="60" r="2.4" fill="#FFB020"/>
+          </svg>
+        </div>
+        <div class="card-body">
+          <h3>Crew member</h3>
+          <p class="read">Squat, upright, broad-shouldered, hard helmet — the opposite of the alien's
+            long thin curve. Per-player colour band so six people can tell each other apart in the
+            dark.</p>
+          <dl class="specs">
+            <dt>Height</dt><dd>1.80</dd>
+            <dt>Tris</dt><dd>800–1200</dd>
+            <dt>Accent</dt><dd class="yes">id band ×6</dd>
+            <dt>Source</dt><dd>RemoteBodyView</dd>
+          </dl>
+        </div>
+      </article>
+
+    </div>
+  </section>
+
+  <!-- ============================================== GRAVITY GEOMETRY ===== -->
+  <section>
+    <div class="sec-head">
+      <h2>Gravity-era geometry</h2>
+      <span class="count">ISS-GRV · 11 assets · 0 built</span>
+    </div>
+    <p class="sec-note">New for Rev B, and the reason the pivot is worth doing. A 5 m tube gives a
+      fleeing player nothing to use — no corners, no sightline breaks, no cover — so the alien at
+      SPEED_HUNT 3.0 always runs down a sprinter at 2.4. These assets are the escape geometry, and
+      every dimension is derived from a real constant rather than eyeballed. Hiding is a brand-new
+      mechanic: the alien is blind, so hiding means it won't physically sweep through you <em>and</em>
+      you must stay quiet. No sight-based logic anywhere.</p>
+
+    <div class="grid">
+
+      <article class="card">
+        <div class="card-top"><span class="desig">ISS-GRV-01</span><span class="status missing">not built</span></div>
+        <div class="well">
+          <svg viewBox="0 0 200 120" aria-label="Deck plating: walkable grating panels with a raised nosing and fastener rows.">
+            <path d="M14 92h172M14 74h172M14 56h172" stroke="#5A6B72" stroke-width="1.2"/>
+            <g stroke="#39464C" stroke-width="1"><path d="M50 56v36M100 56v36M150 56v36"/></g>
+            <g stroke="#6E8189" stroke-width="1"><path d="M22 60v28M34 60v28M62 60v28M74 60v28M112 60v28M124 60v28M162 60v28M174 60v28"/></g>
+            <path d="M14 94h172v6H14z" fill="#39464C"/>
+            <path d="M56 40h18M120 40h18" stroke="#FFCF3D" stroke-width="2" opacity="0.5"/>
+            <path d="M56 30v6M74 30v6" stroke="#8A9AA1" stroke-width="1"/>
+            <text x="60" y="26" fill="#8A9AA1" font-family="monospace" font-size="9">0.75</text>
+          </svg>
+        </div>
+        <div class="card-body">
+          <h3>Deck plating</h3>
+          <p class="read">The surface you now spend the whole game on. Panel joints spaced to the
+            0.75 m walk stride so footfalls visually land on seams. Grating vs solid plate should
+            differentiate footstep timbre.</p>
+          <dl class="specs">
+            <dt>Panel</dt><dd>0.75 × 0.75</dd>
+            <dt>Tris</dt><dd>200–340</dd>
+            <dt>Accent</dt><dd class="no">none</dd>
+            <dt>Mode</dt><dd>nominal only</dd>
+          </dl>
+        </div>
+      </article>
+
+      <article class="card">
+        <div class="card-top"><span class="desig">ISS-GRV-02</span><span class="status missing">not built</span></div>
+        <div class="well">
+          <svg viewBox="0 0 200 120" aria-label="Corner junction: an L-shaped interior that breaks a straight sightline.">
+            <path d="M20 100V40h60V20h100" fill="none" stroke="#8A9AA1" stroke-width="2"/>
+            <path d="M20 100h80V60h80" fill="none" stroke="#8A9AA1" stroke-width="2"/>
+            <path d="M100 60l-20-20" stroke="#39464C" stroke-width="1.2"/>
+            <path d="M84 44h12v12" fill="none" stroke="#FFCF3D" stroke-width="2" opacity="0.6"/>
+            <path d="M30 96v-8M44 96v-8" stroke="#5A6B72" stroke-width="1"/>
+            <path d="M150 24l14 14" stroke="#FF5A46" stroke-width="1.4" opacity="0.6" stroke-dasharray="3 3"/>
+          </svg>
+        </div>
+        <div class="card-body">
+          <h3>Corner junction</h3>
+          <p class="read">The single most valuable asset in this family. One right-angle turn converts a
+            one-dimensional chase into a decision, because the alien loses your exact position the
+            moment it loses the straight line.</p>
+          <dl class="specs">
+            <dt>Turn</dt><dd>90°</dd>
+            <dt>Tris</dt><dd>900–1300</dd>
+            <dt>Accent</dt><dd class="no">none</dd>
+            <dt>Purpose</dt><dd>sightline break</dd>
+          </dl>
+        </div>
+      </article>
+
+      <article class="card">
+        <div class="card-top"><span class="desig">ISS-GRV-03</span><span class="status missing">not built</span></div>
+        <div class="well">
+          <svg viewBox="0 0 200 120" aria-label="Partial bulkhead: a waist-height barrier with a capped rail, too tall to step over.">
+            <path d="M14 96h172" stroke="#5A6B72" stroke-width="1.4"/>
+            <rect x="58" y="52" width="84" height="44" fill="none" stroke="#8A9AA1" stroke-width="2"/>
+            <rect x="54" y="46" width="92" height="7" rx="3" fill="#5A6B72"/>
+            <g stroke="#39464C" stroke-width="1.2"><path d="M76 53v43M100 53v43M124 53v43"/></g>
+            <path d="M28 46h18M28 96h18" stroke="#8A9AA1" stroke-width="1"/>
+            <path d="M37 46v50" stroke="#8A9AA1" stroke-width="1"/>
+            <text x="16" y="74" fill="#8A9AA1" font-family="monospace" font-size="9">1.00</text>
+            <path d="M160 78a10 10 0 0 1 12 0" fill="none" stroke="#5FD08A" stroke-width="1.6"/>
+            <circle cx="166" cy="88" r="4" fill="none" stroke="#5FD08A" stroke-width="1.4"/>
+          </svg>
+        </div>
+        <div class="card-body">
+          <h3>Partial bulkhead</h3>
+          <p class="read">1.00 m exactly — above the 0.85 m crouched eye line so a crouching player is
+            fully hidden, and far above the 0.40 m step-over so the alien must go <em>around</em>. That
+            single number is the whole asset.</p>
+          <dl class="specs">
+            <dt>Height</dt><dd>1.00</dd>
+            <dt>Tris</dt><dd>180–300</dd>
+            <dt>Hides</dt><dd class="yes">crouch</dd>
+            <dt>Step-over</dt><dd class="no">no</dd>
+          </dl>
+        </div>
+      </article>
+
+      <article class="card">
+        <div class="card-top"><span class="desig">ISS-GRV-04</span><span class="status missing">not built</span></div>
+        <div class="well">
+          <svg viewBox="0 0 200 120" aria-label="Side bay: a recessed alcove off the main run, deep enough to stand out of the corridor.">
+            <path d="M14 26h48v-8h76v8h48" fill="none" stroke="#8A9AA1" stroke-width="2"/>
+            <path d="M14 98h48V56h76v42h48" fill="none" stroke="#8A9AA1" stroke-width="2"/>
+            <path d="M62 18v38M138 18v38" stroke="#39464C" stroke-width="1.2"/>
+            <path d="M70 30h60" stroke="#FFCF3D" stroke-width="2" opacity="0.5"/>
+            <path d="M74 40h52v14H74z" fill="none" stroke="#5A6B72" stroke-width="1.4"/>
+            <path d="M154 62v8M170 62v8" stroke="#8A9AA1" stroke-width="1"/>
+            <text x="150" y="82" fill="#8A9AA1" font-family="monospace" font-size="9">1.2</text>
+          </svg>
+        </div>
+        <div class="card-body">
+          <h3>Side bay</h3>
+          <p class="read">A 1.2 m recess off the main run. Deep enough to stand out of the corridor
+            entirely, shallow enough that it's a gamble rather than a guarantee — the alien sweeps
+            bays.</p>
+          <dl class="specs">
+            <dt>Depth</dt><dd>1.20</dd>
+            <dt>Tris</dt><dd>400–650</dd>
+            <dt>Hides</dt><dd class="yes">stand</dd>
+            <dt>Swept</dt><dd class="yes">yes</dd>
+          </dl>
+        </div>
+      </article>
+
+      <article class="card">
+        <div class="card-top"><span class="desig">ISS-GRV-05</span><span class="status missing">not built</span></div>
+        <div class="well">
+          <svg viewBox="0 0 200 120" aria-label="Enterable stowage locker: a full-height cabinet with a louvred door standing ajar.">
+            <rect x="60" y="10" width="80" height="102" fill="none" stroke="#8A9AA1" stroke-width="2"/>
+            <path d="M100 10v102" stroke="#5A6B72" stroke-width="1.4"/>
+            <path d="M100 10l26 8v86l-26 8" fill="#0E1418" stroke="#8A9AA1" stroke-width="1.6"/>
+            <g stroke="#39464C" stroke-width="1.2"><path d="M106 34h14M106 44h14M106 54h14"/></g>
+            <g stroke="#39464C" stroke-width="1.2"><path d="M68 34h24M68 44h24M68 54h24"/></g>
+            <path d="M148 22v10M152 22v10" stroke="#8A9AA1" stroke-width="1"/>
+            <text x="144" y="46" fill="#8A9AA1" font-family="monospace" font-size="9">1.8</text>
+            <circle cx="96" cy="62" r="3" fill="#FFB020"/>
+          </svg>
+        </div>
+        <div class="card-body">
+          <h3>Enterable locker</h3>
+          <p class="read">1.8 m internal so you hide standing. Louvres let you see out, which is the
+            whole horror of it — you watch it pass. Reads as a bigger sibling of ISS-PRP-05, so players
+            generalise the affordance without a tutorial.</p>
+          <dl class="specs">
+            <dt>Internal</dt><dd>0.70 × 1.80</dd>
+            <dt>Tris</dt><dd>450–700</dd>
+            <dt>Accent</dt><dd class="yes">latch</dd>
+            <dt>Hides</dt><dd class="yes">stand</dd>
+          </dl>
+        </div>
+      </article>
+
+      <article class="card">
+        <div class="card-top"><span class="desig">ISS-GRV-06</span><span class="status missing">not built</span></div>
+        <div class="well">
+          <svg viewBox="0 0 200 120" aria-label="Equipment bay: a crouch-height void beneath a rack run, open at the front.">
+            <rect x="34" y="14" width="132" height="52" fill="none" stroke="#8A9AA1" stroke-width="2"/>
+            <g stroke="#39464C" stroke-width="1.2"><path d="M60 14v52M100 14v52M140 14v52"/></g>
+            <path d="M34 66h132" stroke="#8A9AA1" stroke-width="2.4"/>
+            <path d="M34 66v34M166 66v34" stroke="#5A6B72" stroke-width="1.6"/>
+            <path d="M34 100h132" stroke="#5A6B72" stroke-width="1.4"/>
+            <path d="M46 70h108v28H46z" fill="#0A1016"/>
+            <path d="M176 68v30" stroke="#8A9AA1" stroke-width="1"/>
+            <text x="170" y="88" fill="#8A9AA1" font-family="monospace" font-size="9">1.0</text>
+          </svg>
+        </div>
+        <div class="card-body">
+          <h3>Equipment bay</h3>
+          <p class="read">The 1.0 m void under a rack run — exactly PLAYER_CROUCH_HEIGHT. Crouch-only,
+            so entering costs you your sprint and the noise budget is 4 per step instead of 30.</p>
+          <dl class="specs">
+            <dt>Clearance</dt><dd>1.00</dd>
+            <dt>Tris</dt><dd>250–400</dd>
+            <dt>Hides</dt><dd class="yes">crouch</dd>
+            <dt>Exit</dt><dd>slow</dd>
+          </dl>
+        </div>
+      </article>
+
+      <article class="card">
+        <div class="card-top"><span class="desig">ISS-GRV-07</span><span class="status missing">not built</span></div>
+        <div class="well">
+          <svg viewBox="0 0 200 120" aria-label="Crew bunk: a padded sleep station with a privacy curtain drawn partly across.">
+            <rect x="22" y="34" width="156" height="56" fill="none" stroke="#8A9AA1" stroke-width="2"/>
+            <path d="M22 78h156" stroke="#5A6B72" stroke-width="1.4"/>
+            <path d="M30 62q30-8 58-6" fill="none" stroke="#6E8189" stroke-width="4"/>
+            <path d="M120 34q6 28 0 56" fill="none" stroke="#5A6B72" stroke-width="3"/>
+            <path d="M132 34q5 28 0 56M144 34q5 28 0 56M156 34q5 28 0 56" fill="none" stroke="#39464C" stroke-width="3"/>
+            <path d="M22 30h156" stroke="#8A9AA1" stroke-width="2.4"/>
+            <circle cx="34" cy="42" r="2.4" fill="#FFB020"/>
+            <text x="52" y="100" fill="#8A9AA1" font-family="monospace" font-size="9">2.0 × 0.8</text>
+          </svg>
+        </div>
+        <div class="card-body">
+          <h3>Crew bunk</h3>
+          <p class="read">Entered lying down — the slowest hiding spot to get into and out of, and the
+            best concealed. A drawn curtain is the readable "occupied" state, which also means a
+            teammate can tell you're in there.</p>
+          <dl class="specs">
+            <dt>Internal</dt><dd>2.00 × 0.80</dd>
+            <dt>Tris</dt><dd>350–550</dd>
+            <dt>Hides</dt><dd class="yes">prone</dd>
+            <dt>Exit</dt><dd>slowest</dd>
+          </dl>
+        </div>
+      </article>
+
+      <article class="card">
+        <div class="card-top"><span class="desig">ISS-GRV-08</span><span class="status missing">not built</span></div>
+        <div class="well">
+          <svg viewBox="0 0 200 120" aria-label="Gravity plant: a drum-shaped machine with a spinning rotor, cooling fins and a mode indicator.">
+            <rect x="56" y="26" width="88" height="76" rx="6" fill="none" stroke="#8A9AA1" stroke-width="2"/>
+            <circle cx="100" cy="60" r="24" fill="none" stroke="#5A6B72" stroke-width="2.4"/>
+            <path d="M100 40a20 20 0 0 1 17 10" fill="none" stroke="#5FD08A" stroke-width="3"/>
+            <circle cx="100" cy="60" r="5" fill="#5A6B72"/>
+            <g stroke="#39464C" stroke-width="2"><path d="M62 32h-8M62 42h-8M62 52h-8M138 32h8M138 42h8M138 52h8"/></g>
+            <path d="M74 92h52" stroke="#39464C" stroke-width="2"/>
+            <circle cx="132" cy="92" r="3.4" fill="#5FD08A"/>
+            <path d="M100 108v6" stroke="#5A6B72" stroke-width="2"/>
+          </svg>
+        </div>
+        <div class="card-body">
+          <h3>Gravity plant</h3>
+          <p class="read">The machine that fails. It winds down <em>audibly</em> before the floor lets
+            go — that warning window is the fairness guarantee, so the rotor must visibly slow and the
+            indicator flip green → amber → dark. A set-piece, not a prop.</p>
+          <dl class="specs">
+            <dt>Size</dt><dd>0.90 × 1.40</dd>
+            <dt>Tris</dt><dd>700–1100</dd>
+            <dt>Animates</dt><dd class="yes">rotor spin-down</dd>
+            <dt>Drives</dt><dd>GravityShiftEvent</dd>
+          </dl>
+        </div>
+      </article>
+
+      <article class="card">
+        <div class="card-top"><span class="desig">ISS-GRV-09</span><span class="status missing">not built</span></div>
+        <div class="well">
+          <svg viewBox="0 0 200 120" aria-label="Mode threshold marker: a hatch frame band showing nominal on one side and zero-G chevrons on the other.">
+            <path d="M64 12v96M136 12v96" stroke="#8A9AA1" stroke-width="2.4"/>
+            <rect x="64" y="12" width="72" height="12" fill="#39464C"/>
+            <g fill="#5FD08A"><rect x="70" y="30" width="26" height="5"/><rect x="70" y="40" width="26" height="5"/></g>
+            <g stroke="#FFB020" stroke-width="3" fill="none">
+              <path d="M106 34l10-6 10 6M106 48l10-6 10 6M106 62l10-6 10 6"/>
+            </g>
+            <path d="M64 78h72" stroke="#5A6B72" stroke-width="1.4"/>
+            <path d="M70 90h26v10H70z" fill="none" stroke="#5FD08A" stroke-width="1.6"/>
+            <path d="M106 90h26v10h-26z" fill="none" stroke="#FFB020" stroke-width="1.6"/>
+            <path d="M24 60h34M142 60h34" stroke="#39464C" stroke-width="1.4" stroke-dasharray="4 3"/>
+          </svg>
+        </div>
+        <div class="card-body">
+          <h3>Mode threshold marker</h3>
+          <p class="read"><strong>Not in the pivot spec, and load-bearing.</strong> If a player can't
+            tell a module's mode before crossing, every transition is a surprise instead of a decision —
+            and transitions are the reason to do this pivot. Green bars = floor. Amber chevrons = you
+            will float.</p>
+          <dl class="specs">
+            <dt>Size</dt><dd>hatch frame band</dd>
+            <dt>Tris</dt><dd>80–160</dd>
+            <dt>Accent</dt><dd class="yes">mode-coded</dd>
+            <dt>Readable</dt><dd>both sides</dd>
+          </dl>
+        </div>
+      </article>
+
+      <article class="card">
+        <div class="card-top"><span class="desig">ISS-GRV-10</span><span class="status missing">not built</span></div>
+        <div class="well">
+          <svg viewBox="0 0 200 120" aria-label="Hatch coaming: a raised threshold lip with hazard striping, low enough to step over.">
+            <path d="M14 84h172" stroke="#5A6B72" stroke-width="1.4"/>
+            <path d="M70 84V62h60v22" fill="none" stroke="#8A9AA1" stroke-width="2.4"/>
+            <path d="M70 62h60" stroke="#8A9AA1" stroke-width="3"/>
+            <g stroke="#FFCF3D" stroke-width="3">
+              <path d="M74 80l6-6M86 80l6-6M98 80l6-6M110 80l6-6M122 80l6-6"/>
+            </g>
+            <path d="M40 62v22" stroke="#8A9AA1" stroke-width="1"/>
+            <path d="M36 62h8M36 84h8" stroke="#8A9AA1" stroke-width="1"/>
+            <text x="18" y="76" fill="#8A9AA1" font-family="monospace" font-size="9">0.40</text>
+            <path d="M150 44q10 10 0 18" fill="none" stroke="#6E8189" stroke-width="1.6" stroke-dasharray="3 2"/>
+          </svg>
+        </div>
+        <div class="card-body">
+          <h3>Hatch coaming</h3>
+          <p class="read">0.40 m — exactly STEP_HEIGHT_M, so you step over it without jumping and it
+            never blocks you. Hazard-striped because in the dark a shin-height lip you didn't see is a
+            stumble, and a stumble is noise.</p>
+          <dl class="specs">
+            <dt>Height</dt><dd>0.40</dd>
+            <dt>Tris</dt><dd>120–200</dd>
+            <dt>Accent</dt><dd class="no">hazard only</dd>
+            <dt>Step-over</dt><dd class="yes">yes</dd>
+          </dl>
+        </div>
+      </article>
+
+      <article class="card">
+        <div class="card-top"><span class="desig">ISS-GRV-11</span><span class="status missing">not built</span></div>
+        <div class="well">
+          <svg viewBox="0 0 200 120" aria-label="Overhead run: ceiling conduit, ducting and shielded lighting coves seen from below.">
+            <path d="M14 22h172" stroke="#8A9AA1" stroke-width="2.4"/>
+            <rect x="28" y="26" width="144" height="10" fill="none" stroke="#5A6B72" stroke-width="1.4"/>
+            <path d="M36 40h128" stroke="#6E8189" stroke-width="5"/>
+            <path d="M36 50h128" stroke="#5A6B72" stroke-width="3"/>
+            <g stroke="#39464C" stroke-width="3"><path d="M60 36v18M120 36v18"/></g>
+            <rect x="44" y="60" width="112" height="6" fill="#FFCF3D" opacity="0.8"/>
+            <path d="M40 58h120" stroke="#39464C" stroke-width="2"/>
+            <path d="M60 72q40 20 80 0" fill="none" stroke="#FFCF3D" stroke-width="1" opacity="0.25"/>
+          </svg>
+        </div>
+        <div class="card-body">
+          <h3>Overhead run</h3>
+          <p class="read">Newly important: walking means you look <em>up</em> at a ceiling you never saw
+            while floating. Conduit, ducting and shielded coves give the eye somewhere to go and hide
+            the light source.</p>
+          <dl class="specs">
+            <dt>Length</dt><dd>per module</dd>
+            <dt>Tris</dt><dd>300–500</dd>
+            <dt>Accent</dt><dd class="no">none</dd>
+            <dt>Mode</dt><dd>both</dd>
+          </dl>
+        </div>
+      </article>
+
+    </div>
+  </section>
+
+  <!-- ============================================ SHELLS &amp; STRUCTURE == -->
+  <section>
+    <div class="sec-head">
+      <h2>Shells &amp; structure</h2>
+      <span class="count">ISS-STR · 7 assets · all blob</span>
+    </div>
+    <p class="sec-note">The frame every other asset sits inside. These carry the collision BVH and the
+      rail graph, so geometry changes here have mechanical consequences — hatch doors stay out of the
+      BVH deliberately and are blocked analytically instead.</p>
+
+    <div class="grid">
+
+      <article class="card">
+        <div class="card-top"><span class="desig">ISS-STR-01</span><span class="status blob">blob</span></div>
+        <div class="well">
+          <svg viewBox="0 0 200 120" aria-label="Straight module: a 5 metre tube in section, showing ring frames, lighting coves and a raceway.">
+            <path d="M16 22h168M16 98h168" stroke="#8A9AA1" stroke-width="2"/>
+            <g stroke="#5A6B72" stroke-width="1.4">
+              <path d="M50 22v76M84 22v76M118 22v76M152 22v76"/>
+            </g>
+            <path d="M16 30h168M16 90h168" stroke="#FFCF3D" stroke-width="2.4" opacity="0.55"/>
+            <path d="M16 60h168" stroke="#39464C" stroke-width="1"/>
+            <rect x="16" y="70" width="168" height="5" fill="#253238"/>
+          </svg>
+        </div>
+        <div class="card-body">
+          <h3>Straight segment</h3>
+          <p class="read">Ring frames at intervals give length a rhythm, and recessed coves hide the
+            emissive strips. A floor/ceiling distinction gives an intuitive "up" even in zero-G.</p>
+          <dl class="specs">
+            <dt>Length</dt><dd>5.00</dd>
+            <dt>Tris</dt><dd>900–1400</dd>
+            <dt>Carries</dt><dd>BVH + rails</dd>
+            <dt>Count</dt><dd>2 in level</dd>
+          </dl>
+        </div>
+      </article>
+
+      <article class="card">
+        <div class="card-top"><span class="desig">ISS-STR-02</span><span class="status blob">blob</span></div>
+        <div class="well">
+          <svg viewBox="0 0 200 120" aria-label="Six-way node: a hub with hatch openings on every face.">
+            <rect x="62" y="22" width="76" height="76" fill="none" stroke="#8A9AA1" stroke-width="2"/>
+            <g stroke="#5A6B72" stroke-width="1.4">
+              <path d="M62 34h76M62 86h76"/>
+            </g>
+            <g fill="none" stroke="#8A9AA1" stroke-width="2">
+              <path d="M100 22V6M100 98v16M62 60H46M138 60h16"/>
+            </g>
+            <circle cx="100" cy="60" r="15" fill="none" stroke="#39464C" stroke-width="1.6"/>
+            <path d="M76 46h48" stroke="#FFCF3D" stroke-width="2" opacity="0.5"/>
+          </svg>
+        </div>
+        <div class="card-body">
+          <h3>Six-way node</h3>
+          <p class="read">Junction geometry with a hatch on each face. Four of nine modules are nodes,
+            so it needs to feel like a decision point, not a corridor.</p>
+          <dl class="specs">
+            <dt>Size</dt><dd>2.60 cube</dd>
+            <dt>Tris</dt><dd>1100–1600</dd>
+            <dt>Ports</dt><dd>6</dd>
+            <dt>Count</dt><dd>4 in level</dd>
+          </dl>
+        </div>
+      </article>
+
+      <article class="card">
+        <div class="card-top"><span class="desig">ISS-STR-03</span><span class="status blob">blob</span></div>
+        <div class="well">
+          <svg viewBox="0 0 200 120" aria-label="Cupola: a domed observation module with seven trapezoidal windows.">
+            <path d="M46 96V66a54 54 0 0 1 108 0v30" fill="none" stroke="#8A9AA1" stroke-width="2"/>
+            <path d="M74 92V70a26 26 0 0 1 52 0v22" fill="#0A1016" stroke="#2E4A57" stroke-width="1.6"/>
+            <g stroke="#5A6B72" stroke-width="1.6">
+              <path d="M100 44v48M74 70l52 0"/>
+            </g>
+            <path d="M46 96h108" stroke="#8A9AA1" stroke-width="2.4"/>
+            <circle cx="88" cy="60" r="1.2" fill="#D6E0E4"/>
+            <circle cx="114" cy="54" r="1" fill="#D6E0E4"/>
+          </svg>
+        </div>
+        <div class="card-body">
+          <h3>Cupola</h3>
+          <p class="read">Real windows with a view worth having — the only place the player sees outside,
+            and the only relief in the level. Earth-light through it is free atmosphere.</p>
+          <dl class="specs">
+            <dt>Size</dt><dd>2.00 ⌀ dome</dd>
+            <dt>Tris</dt><dd>800–1200</dd>
+            <dt>Windows</dt><dd>7</dd>
+            <dt>Count</dt><dd>1 in level</dd>
+          </dl>
+        </div>
+      </article>
+
+      <article class="card">
+        <div class="card-top"><span class="desig">ISS-STR-04</span><span class="status blob">blob</span></div>
+        <div class="well">
+          <svg viewBox="0 0 200 120" aria-label="Airlock: a chamber with a heavy outer door and hazard striping.">
+            <rect x="40" y="24" width="120" height="72" fill="none" stroke="#8A9AA1" stroke-width="2"/>
+            <circle cx="132" cy="60" r="26" fill="none" stroke="#8A9AA1" stroke-width="3"/>
+            <circle cx="132" cy="60" r="17" fill="none" stroke="#5A6B72" stroke-width="1.6"/>
+            <g stroke="#FFCF3D" stroke-width="3">
+              <path d="M46 92l8-8M60 92l8-8M74 92l8-8"/>
+            </g>
+            <path d="M40 40h34M40 80h34" stroke="#5A6B72" stroke-width="1.4"/>
+            <circle cx="132" cy="60" r="4" fill="#FF5A46"/>
+          </svg>
+        </div>
+        <div class="card-body">
+          <h3>Airlock</h3>
+          <p class="read">The outer door must read as a <em>threat</em> — heavier than any internal
+            hatch, hazard-striped floor, red centre indicator. Vacuum is on the other side.</p>
+          <dl class="specs">
+            <dt>Size</dt><dd>2.20 × 3.00</dd>
+            <dt>Tris</dt><dd>1000–1500</dd>
+            <dt>Accent</dt><dd class="yes">outer seal</dd>
+            <dt>Count</dt><dd>1 in level</dd>
+          </dl>
+        </div>
+      </article>
+
+      <article class="card">
+        <div class="card-top"><span class="desig">ISS-STR-05</span><span class="status blob">blob</span></div>
+        <div class="well">
+          <svg viewBox="0 0 200 120" aria-label="Handrail: a round blue rail on two standoff brackets, sized for a hand grab.">
+            <rect x="28" y="52" width="144" height="11" rx="5.5" fill="#4DA3FF"/>
+            <g fill="#5A6B72">
+              <rect x="44" y="63" width="10" height="20"/><rect x="146" y="63" width="10" height="20"/>
+              <rect x="38" y="83" width="22" height="6"/><rect x="140" y="83" width="22" height="6"/>
+            </g>
+            <path d="M28 46h144" stroke="#7FC0FF" stroke-width="2" opacity="0.5"/>
+            <path d="M72 96h56" stroke="#39464C" stroke-width="1.4"/>
+            <path d="M72 92v8M128 92v8" stroke="#39464C" stroke-width="1.4"/>
+          </svg>
+        </div>
+        <div class="card-body">
+          <h3>Handrail</h3>
+          <p class="read"><strong>Rev B: zero-G modules only.</strong> Rails are now scoped to
+            <code>gravity: 'zero'</code>, which cuts most of the authoring burden — but inside those
+            modules they must stay the most readable object in frame, because there they are the
+            <em>only</em> way to move. Never casts shadow; that exclusion is a deliberate perf fix.</p>
+          <dl class="specs">
+            <dt>Grab span</dt><dd>0.80</dd>
+            <dt>Tris</dt><dd>120–200</dd>
+            <dt>Instanced</dt><dd class="yes">yes</dd>
+            <dt>Mode</dt><dd>zero only</dd>
+          </dl>
+        </div>
+      </article>
+
+      <article class="card">
+        <div class="card-top"><span class="desig">ISS-STR-06</span><span class="status blob">blob</span></div>
+        <div class="well">
+          <svg viewBox="0 0 200 120" aria-label="Pressure hatch: a heavy ring with eight dogs around the rim, a window and a central wheel.">
+            <circle cx="100" cy="60" r="42" fill="none" stroke="#8A9AA1" stroke-width="3"/>
+            <circle cx="100" cy="60" r="33" fill="none" stroke="#5A6B72" stroke-width="1.6"/>
+            <g fill="#5A6B72">
+              <rect x="97" y="15" width="6" height="8"/><rect x="97" y="97" width="6" height="8"/>
+              <rect x="55" y="57" width="8" height="6"/><rect x="137" y="57" width="8" height="6"/>
+              <rect x="69" y="27" width="7" height="6" transform="rotate(-45 72 30)"/>
+              <rect x="124" y="87" width="7" height="6" transform="rotate(-45 128 90)"/>
+            </g>
+            <circle cx="100" cy="46" r="9" fill="#0A1016" stroke="#2E4A57" stroke-width="1.4"/>
+            <circle cx="100" cy="70" r="13" fill="none" stroke="#8A9AA1" stroke-width="2.4"/>
+            <g stroke="#8A9AA1" stroke-width="2"><path d="M100 57v26M87 70h26"/></g>
+            <circle cx="126" cy="88" r="3" fill="#5FD08A"/>
+          </svg>
+        </div>
+        <div class="card-body">
+          <h3>Pressure hatch</h3>
+          <p class="read">Three states readable across a module: green open, dark closed, red sealed.
+            Getting this wrong is a death — the alien opens closed hatches in 3 s but never sealed
+            ones.</p>
+          <dl class="specs">
+            <dt>Size</dt><dd>0.90 ⌀</dd>
+            <dt>Tris</dt><dd>600–900</dd>
+            <dt>States</dt><dd class="yes">open/closed/sealed</dd>
+            <dt>In BVH</dt><dd class="no">analytic only</dd>
+          </dl>
+        </div>
+      </article>
+
+      <article class="card">
+        <div class="card-top"><span class="desig">ISS-STR-07</span><span class="status blob">blob</span></div>
+        <div class="well">
+          <svg viewBox="0 0 200 120" aria-label="Lighting cove: a recessed channel holding an emissive strip with a shielded lip.">
+            <path d="M20 40h160v14H20z" fill="none" stroke="#5A6B72" stroke-width="1.4"/>
+            <rect x="26" y="44" width="148" height="6" fill="#FFCF3D" opacity="0.85"/>
+            <path d="M20 54q80 22 160 0" fill="none" stroke="#39464C" stroke-width="1.2"/>
+            <path d="M20 38h160" stroke="#8A9AA1" stroke-width="2"/>
+            <path d="M40 60l-6 26M100 62l0 26M160 60l6 26" stroke="#FFCF3D" stroke-width="1" opacity="0.3"/>
+          </svg>
+        </div>
+        <div class="card-body">
+          <h3>Lighting cove</h3>
+          <p class="read">Not a light — geometry that <em>hides</em> one. Shielded lip means you see the
+            wash, never the source, which is what keeps a 5-candela torch feeling like the brightest
+            thing you own.</p>
+          <dl class="specs">
+            <dt>Length</dt><dd>per module</dd>
+            <dt>Tris</dt><dd>60–120</dd>
+            <dt>Emissive</dt><dd class="yes">strip</dd>
+            <dt>Lighting</dt><dd>3 states</dd>
+          </dl>
+        </div>
+      </article>
+
+    </div>
+  </section>
+
+  <!-- ======================================================== CLOSING ==== -->
+  <div class="closing">
+    <h2>Rules that decide the ambiguous cases</h2>
+    <ul>
+      <li><strong>When in doubt, don't glow.</strong> The amber accent is a promise that a player can
+        act on something. Every false positive costs you every true one.</li>
+      <li><strong>Two assets that matter never share a profile.</strong> If a medkit and a decoy read
+        the same in a torch beam at 4 m, one of them is wrong — and the player throws the wrong thing.</li>
+      <li><strong>Detail goes into the outline, not the surface.</strong> No one will ever see a bevel.
+        They will absolutely see a handle, a horn, a claw, a spoke.</li>
+      <li><strong>Colour is never the only cue.</strong> Cargo bags are numbered by band count, not
+        hue. Hatch states differ in geometry as well as indicator colour.</li>
+      <li><strong>Nothing out-contrasts a handrail — inside a zero-G module.</strong> There it is the
+        only way to move. In gravity modules that priority passes to cover and thresholds.</li>
+      <li><strong>Gravity mode must be readable before you commit.</strong> A player standing at a hatch
+        has to know whether the far side has a floor. Surprise transitions turn the pivot's best moment
+        into a bug report.</li>
+      <li><strong>Cover heights come from constants, not taste.</strong> 1.00 m hides a crouch because
+        crouched eyes sit at 0.85 m; 0.40 m is steppable because STEP_HEIGHT_M says so. Every barrier
+        in the station is one of those two numbers, and anything in between is a trap that reads as
+        cover and isn't.</li>
+      <li><strong>Check every asset against the body, not the room.</strong> 1.55 m standing eye,
+        0.85 m crouched, 0.35 m radius, 0.75 m stride. Doll furniture is the most common failure.</li>
+    </ul>
+
+    <div class="scroller">
+      <table class="tally">
+        <thead>
+          <tr><th>Family</th><th>Assets</th><th>Instances</th><th>Tri budget</th><th>Built</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>Carryables</td><td>6</td><td>~14 / round</td><td>1 560 – 2 450</td><td>0</td></tr>
+          <tr><td>Scatter props</td><td>8</td><td>149</td><td>1 480 – 2 380</td><td>8 crude</td></tr>
+          <tr><td>Puzzle fixtures</td><td>6</td><td>18</td><td>2 650 – 3 900</td><td>0</td></tr>
+          <tr><td>Characters</td><td>3</td><td>1 + 6</td><td>1 800 – 3 400</td><td>1 capsule</td></tr>
+          <tr><td>Gravity geometry</td><td>11</td><td>per module</td><td>3 930 – 6 200</td><td>0</td></tr>
+          <tr><td>Shells &amp; structure</td><td>7</td><td>9 modules</td><td>4 580 – 6 920</td><td>7 crude</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+</div>

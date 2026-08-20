@@ -1,0 +1,35 @@
+{
+  "name": "iss",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "description": "ISS - co-op first-person zero-g horror. Something hunts by sound.",
+  "scripts": {
+    "dev": "vite",
+    "server": "tsx watch server/index.ts",
+    "build": "vite build",
+    "preview": "vite preview",
+    "typecheck": "tsc --noEmit",
+    "verify": "tsx scripts/verify.ts"
+  },
+  "dependencies": {
+    "@colyseus/core": "0.16.24",
+    "@colyseus/schema": "3.0.76",
+    "@colyseus/ws-transport": "0.16.4",
+    "@dimforge/rapier3d-compat": "^0.20.0",
+    "colyseus": "0.16.5",
+    "colyseus.js": "0.16.22",
+    "events": "^3.3.0",
+    "simple-peer": "^9.11.1",
+    "three": "^0.185.1",
+    "three-mesh-bvh": "^0.9.14"
+  },
+  "devDependencies": {
+    "@types/node": "^26.2.0",
+    "@types/simple-peer": "^9.11.9",
+    "@types/three": "^0.185.4",
+    "tsx": "^4.23.12",
+    "typescript": "^7.0.2",
+    "vite": "^8.2.1"
+  }
+}

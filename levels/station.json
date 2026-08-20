@@ -1,0 +1,4065 @@
+{
+  "id": "iss-station-01",
+  "modules": [
+    {
+      "id": "node-alpha",
+      "kind": "node",
+      "transform": {
+        "pos": {
+          "x": 0,
+          "y": 0,
+          "z": 0
+        },
+        "quat": {
+          "x": 0,
+          "y": 0,
+          "z": 0,
+          "w": 1
+        }
+      },
+      "ports": [
+        {
+          "id": "px",
+          "localPos": {
+            "x": 1.5,
+            "y": 0,
+            "z": 0
+          },
+          "localDir": {
+            "x": 1,
+            "y": 0,
+            "z": 0
+          },
+          "link": {
+            "module": "tube-spine",
+            "port": "aft"
+          },
+          "hatch": {
+            "open": true,
+            "sealed": false,
+            "attenuationDb": -3
+          }
+        },
+        {
+          "id": "nx",
+          "localPos": {
+            "x": -1.5,
+            "y": 0,
+            "z": 0
+          },
+          "localDir": {
+            "x": -1,
+            "y": 0,
+            "z": 0
+          },
+          "link": {
+            "module": "escape-soyuz",
+            "port": "fwd"
+          },
+          "hatch": {
+            "open": true,
+            "sealed": false,
+            "attenuationDb": -3
+          }
+        },
+        {
+          "id": "py",
+          "localPos": {
+            "x": 0,
+            "y": 1.5,
+            "z": 0
+          },
+          "localDir": {
+            "x": 0,
+            "y": 1,
+            "z": 0
+          },
+          "link": null,
+          "hatch": {
+            "open": false,
+            "sealed": false,
+            "attenuationDb": -25
+          }
+        },
+        {
+          "id": "ny",
+          "localPos": {
+            "x": 0,
+            "y": -1.5,
+            "z": 0
+          },
+          "localDir": {
+            "x": 0,
+            "y": -1,
+            "z": 0
+          },
+          "link": null,
+          "hatch": {
+            "open": false,
+            "sealed": false,
+            "attenuationDb": -25
+          }
+        },
+        {
+          "id": "pz",
+          "localPos": {
+            "x": 0,
+            "y": 0,
+            "z": 1.5
+          },
+          "localDir": {
+            "x": 0,
+            "y": 0,
+            "z": 1
+          },
+          "link": {
+            "module": "node-delta",
+            "port": "nz"
+          },
+          "hatch": {
+            "open": true,
+            "sealed": false,
+            "attenuationDb": -3
+          }
+        },
+        {
+          "id": "nz",
+          "localPos": {
+            "x": 0,
+            "y": 0,
+            "z": -1.5
+          },
+          "localDir": {
+            "x": 0,
+            "y": 0,
+            "z": -1
+          },
+          "link": null,
+          "hatch": {
+            "open": false,
+            "sealed": false,
+            "attenuationDb": -25
+          }
+        }
+      ],
+      "rails": [
+        {
+          "id": "rs-px",
+          "a": {
+            "x": 1.5,
+            "y": 0,
+            "z": 0
+          },
+          "b": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "connects": [
+            "rs-nx",
+            "rs-py",
+            "rs-ny",
+            "rs-pz",
+            "rs-nz"
+          ],
+          "portLink": "px"
+        },
+        {
+          "id": "rs-nx",
+          "a": {
+            "x": -1.5,
+            "y": 0,
+            "z": 0
+          },
+          "b": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "connects": [
+            "rs-px",
+            "rs-py",
+            "rs-ny",
+            "rs-pz",
+            "rs-nz"
+          ],
+          "portLink": "nx"
+        },
+        {
+          "id": "rs-py",
+          "a": {
+            "x": 0,
+            "y": 1.5,
+            "z": 0
+          },
+          "b": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "connects": [
+            "rs-px",
+            "rs-nx",
+            "rs-ny",
+            "rs-pz",
+            "rs-nz"
+          ],
+          "portLink": "py"
+        },
+        {
+          "id": "rs-ny",
+          "a": {
+            "x": 0,
+            "y": -1.5,
+            "z": 0
+          },
+          "b": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "connects": [
+            "rs-px",
+            "rs-nx",
+            "rs-py",
+            "rs-pz",
+            "rs-nz"
+          ],
+          "portLink": "ny"
+        },
+        {
+          "id": "rs-pz",
+          "a": {
+            "x": 0,
+            "y": 0,
+            "z": 1.5
+          },
+          "b": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "connects": [
+            "rs-px",
+            "rs-nx",
+            "rs-py",
+            "rs-ny",
+            "rs-nz"
+          ],
+          "portLink": "pz"
+        },
+        {
+          "id": "rs-nz",
+          "a": {
+            "x": 0,
+            "y": 0,
+            "z": -1.5
+          },
+          "b": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "connects": [
+            "rs-px",
+            "rs-nx",
+            "rs-py",
+            "rs-ny",
+            "rs-pz"
+          ],
+          "portLink": "nz"
+        }
+      ],
+      "props": [
+        {
+          "id": "node-alpha-hub",
+          "kind": "hub",
+          "localPos": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          }
+        },
+        {
+          "id": "node-alpha-rack-0u",
+          "kind": "rack",
+          "localPos": {
+            "x": 1.434,
+            "y": 1.3,
+            "z": 0
+          },
+          "localQuat": {
+            "x": 0,
+            "y": 0,
+            "z": 0.7071067811865475,
+            "w": 0.7071067811865476
+          },
+          "scale": 0.6
+        },
+        {
+          "id": "node-alpha-rack-1u",
+          "kind": "rack",
+          "localPos": {
+            "x": -1.434,
+            "y": 1.3,
+            "z": 0
+          },
+          "localQuat": {
+            "x": 0,
+            "y": 0,
+            "z": -0.7071067811865475,
+            "w": 0.7071067811865476
+          },
+          "scale": 0.6
+        },
+        {
+          "id": "node-alpha-rack-2u",
+          "kind": "rack",
+          "localPos": {
+            "x": 0,
+            "y": 1.3,
+            "z": 1.434
+          },
+          "localQuat": {
+            "x": 0.5,
+            "y": -0.5,
+            "z": 0.5,
+            "w": -0.5
+          },
+          "scale": 0.6
+        },
+        {
+          "id": "node-alpha-rack-3u",
+          "kind": "rack",
+          "localPos": {
+            "x": 0,
+            "y": 1.3,
+            "z": -1.434
+          },
+          "localQuat": {
+            "x": 0.5,
+            "y": 0.5,
+            "z": 0.5,
+            "w": 0.5
+          },
+          "scale": 0.6
+        },
+        {
+          "id": "node-alpha-cable-0",
+          "kind": "cable",
+          "localPos": {
+            "x": 0.9051,
+            "y": 0,
+            "z": 0.9051
+          },
+          "localQuat": {
+            "x": -0.6532814824381883,
+            "y": 0.2705980500730985,
+            "z": 0.2705980500730985,
+            "w": 0.6532814824381883
+          }
+        },
+        {
+          "id": "node-alpha-cable-1",
+          "kind": "cable",
+          "localPos": {
+            "x": -0.9051,
+            "y": 0,
+            "z": 0.9051
+          },
+          "localQuat": {
+            "x": -0.6532814824381884,
+            "y": -0.2705980500730985,
+            "z": -0.2705980500730985,
+            "w": 0.6532814824381884
+          }
+        },
+        {
+          "id": "node-alpha-cable-2",
+          "kind": "cable",
+          "localPos": {
+            "x": -0.9051,
+            "y": 0,
+            "z": -0.9051
+          },
+          "localQuat": {
+            "x": 0.2705980500730985,
+            "y": 0.6532814824381883,
+            "z": 0.6532814824381884,
+            "w": -0.2705980500730985
+          }
+        },
+        {
+          "id": "node-alpha-cable-3",
+          "kind": "cable",
+          "localPos": {
+            "x": 0.9051,
+            "y": 0,
+            "z": -0.9051
+          },
+          "localQuat": {
+            "x": -0.27059805007309856,
+            "y": 0.6532814824381883,
+            "z": 0.6532814824381884,
+            "w": 0.27059805007309856
+          }
+        },
+        {
+          "id": "node-alpha-laptop",
+          "kind": "laptop",
+          "localPos": {
+            "x": 1.18,
+            "y": -0.55,
+            "z": 0.85
+          },
+          "localQuat": {
+            "x": 0,
+            "y": 0,
+            "z": 0.7071067811865475,
+            "w": 0.7071067811865476
+          }
+        },
+        {
+          "id": "node-alpha-locker",
+          "kind": "locker",
+          "localPos": {
+            "x": -1.29,
+            "y": 1.35,
+            "z": 1.05
+          },
+          "localQuat": {
+            "x": 0,
+            "y": 0,
+            "z": -0.7071067811865475,
+            "w": 0.7071067811865476
+          },
+          "interactable": true
+        },
+        {
+          "id": "node-alpha-panel-undock-1",
+          "kind": "panel",
+          "localPos": {
+            "x": 1.05,
+            "y": 0,
+            "z": -1.445
+          },
+          "localQuat": {
+            "x": 0.5,
+            "y": 0.5,
+            "z": 0.5,
+            "w": 0.5
+          },
+          "interactable": true
+        },
+        {
+          "id": "node-alpha-panel-egress",
+          "kind": "panel",
+          "localPos": {
+            "x": -1.445,
+            "y": 0,
+            "z": 1.05
+          },
+          "localQuat": {
+            "x": 0,
+            "y": 0,
+            "z": -0.707107,
+            "w": 0.707107
+          },
+          "interactable": true
+        }
+      ],
+      "lighting": "emergency",
+      "gravity": "nominal",
+      "volume": 27,
+      "hideSpots": [
+        {
+          "id": "node-alpha-console",
+          "kind": "equipment-bay",
+          "localPos": {
+            "x": 0,
+            "y": -0.37,
+            "z": 0
+          },
+          "halfExtents": {
+            "x": 0.42,
+            "y": 0.3,
+            "z": 0.42
+          },
+          "entryPos": {
+            "x": 0,
+            "y": 0.15,
+            "z": 0.95
+          },
+          "lookDir": {
+            "x": 0,
+            "y": 0,
+            "z": 1
+          },
+          "usableIn": "any"
+        }
+      ]
+    },
+    {
+      "id": "tube-spine",
+      "kind": "straight",
+      "transform": {
+        "pos": {
+          "x": 4,
+          "y": 0,
+          "z": 0
+        },
+        "quat": {
+          "x": 0,
+          "y": 0.707107,
+          "z": 0,
+          "w": 0.707107
+        }
+      },
+      "ports": [
+        {
+          "id": "aft",
+          "localPos": {
+            "x": 0,
+            "y": 0,
+            "z": -2.5
+          },
+          "localDir": {
+            "x": 0,
+            "y": 0,
+            "z": -1
+          },
+          "link": {
+            "module": "node-alpha",
+            "port": "px"
+          },
+          "hatch": {
+            "open": true,
+            "sealed": false,
+            "attenuationDb": -3
+          }
+        },
+        {
+          "id": "fwd",
+          "localPos": {
+            "x": 0,
+            "y": 0,
+            "z": 2.5
+          },
+          "localDir": {
+            "x": 0,
+            "y": 0,
+            "z": 1
+          },
+          "link": {
+            "module": "node-beta",
+            "port": "nx"
+          },
+          "hatch": {
+            "open": true,
+            "sealed": false,
+            "attenuationDb": -3
+          }
+        }
+      ],
+      "rails": [
+        {
+          "id": "rf-a",
+          "a": {
+            "x": 0,
+            "y": 0,
+            "z": -2.5
+          },
+          "b": {
+            "x": 0,
+            "y": -0.7,
+            "z": -1.6
+          },
+          "connects": [
+            "rf-m",
+            "rc-a"
+          ],
+          "portLink": "aft"
+        },
+        {
+          "id": "rf-m",
+          "a": {
+            "x": 0,
+            "y": -0.7,
+            "z": -1.6
+          },
+          "b": {
+            "x": 0,
+            "y": -0.7,
+            "z": 1.6
+          },
+          "connects": [
+            "rf-a",
+            "rf-b"
+          ]
+        },
+        {
+          "id": "rf-b",
+          "a": {
+            "x": 0,
+            "y": -0.7,
+            "z": 1.6
+          },
+          "b": {
+            "x": 0,
+            "y": 0,
+            "z": 2.5
+          },
+          "connects": [
+            "rf-m",
+            "rc-b"
+          ],
+          "portLink": "fwd"
+        },
+        {
+          "id": "rc-a",
+          "a": {
+            "x": 0,
+            "y": 0,
+            "z": -2.5
+          },
+          "b": {
+            "x": 0,
+            "y": 0.7,
+            "z": -1.6
+          },
+          "connects": [
+            "rc-m",
+            "rf-a"
+          ],
+          "portLink": "aft"
+        },
+        {
+          "id": "rc-m",
+          "a": {
+            "x": 0,
+            "y": 0.7,
+            "z": -1.6
+          },
+          "b": {
+            "x": 0,
+            "y": 0.7,
+            "z": 1.6
+          },
+          "connects": [
+            "rc-a",
+            "rc-b"
+          ]
+        },
+        {
+          "id": "rc-b",
+          "a": {
+            "x": 0,
+            "y": 0.7,
+            "z": 1.6
+          },
+          "b": {
+            "x": 0,
+            "y": 0,
+            "z": 2.5
+          },
+          "connects": [
+            "rc-m",
+            "rf-b"
+          ],
+          "portLink": "fwd"
+        }
+      ],
+      "props": [
+        {
+          "id": "tube-spine-rack-00",
+          "kind": "rack",
+          "localPos": {
+            "x": 0.89,
+            "y": 0,
+            "z": -1.15
+          },
+          "localQuat": {
+            "x": 0,
+            "y": 0,
+            "z": 0.7071067811865475,
+            "w": 0.7071067811865476
+          }
+        },
+        {
+          "id": "tube-spine-rack-01",
+          "kind": "rack",
+          "localPos": {
+            "x": 0.89,
+            "y": 0,
+            "z": 1.15
+          },
+          "localQuat": {
+            "x": 0,
+            "y": 0,
+            "z": 0.7071067811865475,
+            "w": 0.7071067811865476
+          }
+        },
+        {
+          "id": "tube-spine-rack-10",
+          "kind": "rack",
+          "localPos": {
+            "x": 0,
+            "y": 0.89,
+            "z": -1.15
+          },
+          "localQuat": {
+            "x": 0,
+            "y": 0,
+            "z": 1,
+            "w": 3.061616997868383e-17
+          }
+        },
+        {
+          "id": "tube-spine-rack-11",
+          "kind": "rack",
+          "localPos": {
+            "x": 0,
+            "y": 0.89,
+            "z": 1.15
+          },
+          "localQuat": {
+            "x": 0,
+            "y": 0,
+            "z": 1,
+            "w": 3.061616997868383e-17
+          }
+        },
+        {
+          "id": "tube-spine-rack-20",
+          "kind": "rack",
+          "localPos": {
+            "x": -0.89,
+            "y": 0,
+            "z": -1.15
+          },
+          "localQuat": {
+            "x": 0,
+            "y": 0,
+            "z": -0.7071067811865476,
+            "w": 0.7071067811865475
+          }
+        },
+        {
+          "id": "tube-spine-rack-21",
+          "kind": "rack",
+          "localPos": {
+            "x": -0.89,
+            "y": 0,
+            "z": 1.15
+          },
+          "localQuat": {
+            "x": 0,
+            "y": 0,
+            "z": -0.7071067811865476,
+            "w": 0.7071067811865475
+          }
+        },
+        {
+          "id": "tube-spine-rack-30",
+          "kind": "rack",
+          "localPos": {
+            "x": 0,
+            "y": -0.89,
+            "z": -1.15
+          },
+          "localQuat": {
+            "x": 0,
+            "y": 0,
+            "z": 3.061616997868383e-17,
+            "w": 1
+          }
+        },
+        {
+          "id": "tube-spine-rack-31",
+          "kind": "rack",
+          "localPos": {
+            "x": 0,
+            "y": -0.89,
+            "z": 1.15
+          },
+          "localQuat": {
+            "x": 0,
+            "y": 0,
+            "z": 3.061616997868383e-17,
+            "w": 1
+          }
+        },
+        {
+          "id": "tube-spine-cable-00",
+          "kind": "cable",
+          "localPos": {
+            "x": 0.6505,
+            "y": 0.6505,
+            "z": -1.65
+          },
+          "localQuat": {
+            "x": 0,
+            "y": 0,
+            "z": 0.9238795325112867,
+            "w": 0.3826834323650898
+          }
+        },
+        {
+          "id": "tube-spine-cable-01",
+          "kind": "cable",
+          "localPos": {
+            "x": 0.6505,
+            "y": 0.6505,
+            "z": 0
+          },
+          "localQuat": {
+            "x": 0,
+            "y": 0,
+            "z": 0.9238795325112867,
+            "w": 0.3826834323650898
+          }
+        },
+        {
+          "id": "tube-spine-cable-02",
+          "kind": "cable",
+          "localPos": {
+            "x": 0.6505,
+            "y": 0.6505,
+            "z": 1.65
+          },
+          "localQuat": {
+            "x": 0,
+            "y": 0,
+            "z": 0.9238795325112867,
+            "w": 0.3826834323650898
+          }
+        },
+        {
+          "id": "tube-spine-cable-10",
+          "kind": "cable",
+          "localPos": {
+            "x": -0.6505,
+            "y": 0.6505,
+            "z": -1.65
+          },
+          "localQuat": {
+            "x": 0,
+            "y": 0,
+            "z": 0.9238795325112867,
+            "w": -0.3826834323650897
+          }
+        },
+        {
+          "id": "tube-spine-cable-11",
+          "kind": "cable",
+          "localPos": {
+            "x": -0.6505,
+            "y": 0.6505,
+            "z": 0
+          },
+          "localQuat": {
+            "x": 0,
+            "y": 0,
+            "z": 0.9238795325112867,
+            "w": -0.3826834323650897
+          }
+        },
+        {
+          "id": "tube-spine-cable-12",
+          "kind": "cable",
+          "localPos": {
+            "x": -0.6505,
+            "y": 0.6505,
+            "z": 1.65
+          },
+          "localQuat": {
+            "x": 0,
+            "y": 0,
+            "z": 0.9238795325112867,
+            "w": -0.3826834323650897
+          }
+        },
+        {
+          "id": "tube-spine-bag-0",
+          "kind": "stowage",
+          "localPos": {
+            "x": -0.1106,
+            "y": -0.5999,
+            "z": 0.867
+          },
+          "localQuat": {
+            "x": 0,
+            "y": 0,
+            "z": -0.09105397053067946,
+            "w": 0.995845959197806
+          }
+        },
+        {
+          "id": "tube-spine-bag-1",
+          "kind": "stowage",
+          "localPos": {
+            "x": 0.6048,
+            "y": -0.0794,
+            "z": -0.5716
+          },
+          "localQuat": {
+            "x": 0,
+            "y": 0,
+            "z": 0.6594980557746789,
+            "w": 0.7517062687176547
+          }
+        },
+        {
+          "id": "tube-spine-locker",
+          "kind": "locker",
+          "localPos": {
+            "x": -0.57,
+            "y": 0,
+            "z": -0.7283
+          },
+          "localQuat": {
+            "x": 0,
+            "y": 0,
+            "z": -0.7071067811865476,
+            "w": 0.7071067811865475
+          },
+          "interactable": true
+        },
+        {
+          "id": "tube-spine-cargo-rack",
+          "kind": "cargo-rack",
+          "localPos": {
+            "x": 0.88,
+            "y": 0,
+            "z": 0
+          },
+          "localQuat": {
+            "x": 0,
+            "y": 0,
+            "z": 0.707107,
+            "w": 0.707107
+          }
+        },
+        {
+          "id": "tube-spine-cargo-slot-1",
+          "kind": "slot",
+          "localPos": {
+            "x": 0.73,
+            "y": 0,
+            "z": -1.9
+          },
+          "localQuat": {
+            "x": 0,
+            "y": 0,
+            "z": 0.707107,
+            "w": 0.707107
+          }
+        },
+        {
+          "id": "tube-spine-cargo-bag-1",
+          "kind": "cargo-bag",
+          "localPos": {
+            "x": -0.0007,
+            "y": 0.2454,
+            "z": -1.775
+          },
+          "interactable": true
+        },
+        {
+          "id": "tube-spine-cargo-slot-2",
+          "kind": "slot",
+          "localPos": {
+            "x": 0.73,
+            "y": 0,
+            "z": -0.95
+          },
+          "localQuat": {
+            "x": 0,
+            "y": 0,
+            "z": 0.707107,
+            "w": 0.707107
+          }
+        },
+        {
+          "id": "tube-spine-cargo-bag-2",
+          "kind": "cargo-bag",
+          "localPos": {
+            "x": -0.0648,
+            "y": -0.1345,
+            "z": -1.0782
+          },
+          "interactable": true
+        },
+        {
+          "id": "tube-spine-cargo-slot-3",
+          "kind": "slot",
+          "localPos": {
+            "x": 0.73,
+            "y": 0,
+            "z": 0
+          },
+          "localQuat": {
+            "x": 0,
+            "y": 0,
+            "z": 0.707107,
+            "w": 0.707107
+          }
+        },
+        {
+          "id": "tube-spine-cargo-bag-3",
+          "kind": "cargo-bag",
+          "localPos": {
+            "x": -0.2309,
+            "y": -0.2604,
+            "z": 0.2113
+          },
+          "interactable": true
+        },
+        {
+          "id": "tube-spine-cargo-slot-4",
+          "kind": "slot",
+          "localPos": {
+            "x": 0.73,
+            "y": 0,
+            "z": 0.95
+          },
+          "localQuat": {
+            "x": 0,
+            "y": 0,
+            "z": 0.707107,
+            "w": 0.707107
+          }
+        },
+        {
+          "id": "tube-spine-cargo-bag-4",
+          "kind": "cargo-bag",
+          "localPos": {
+            "x": -0.3097,
+            "y": -0.2472,
+            "z": 0.8761
+          },
+          "interactable": true
+        },
+        {
+          "id": "tube-spine-cargo-slot-5",
+          "kind": "slot",
+          "localPos": {
+            "x": 0.73,
+            "y": 0,
+            "z": 1.9
+          },
+          "localQuat": {
+            "x": 0,
+            "y": 0,
+            "z": 0.707107,
+            "w": 0.707107
+          }
+        },
+        {
+          "id": "tube-spine-cargo-bag-5",
+          "kind": "cargo-bag",
+          "localPos": {
+            "x": -0.3591,
+            "y": 0.0634,
+            "z": 1.9932
+          },
+          "interactable": true
+        }
+      ],
+      "lighting": "emergency",
+      "gravity": "zero",
+      "volume": 15.71,
+      "hideSpots": [
+        {
+          "id": "tube-spine-net",
+          "kind": "equipment-bay",
+          "localPos": {
+            "x": 0.5,
+            "y": 0.1,
+            "z": 1.5
+          },
+          "halfExtents": {
+            "x": 0.32,
+            "y": 0.42,
+            "z": 0.55
+          },
+          "entryPos": {
+            "x": -0.2,
+            "y": 0.1,
+            "z": 1.5
+          },
+          "lookDir": {
+            "x": -1,
+            "y": 0,
+            "z": 0
+          },
+          "usableIn": "zero"
+        }
+      ]
+    },
+    {
+      "id": "node-beta",
+      "kind": "node",
+      "transform": {
+        "pos": {
+          "x": 8,
+          "y": 0,
+          "z": 0
+        },
+        "quat": {
+          "x": 0,
+          "y": 0,
+          "z": 0,
+          "w": 1
+        }
+      },
+      "ports": [
+        {
+          "id": "px",
+          "localPos": {
+            "x": 1.5,
+            "y": 0,
+            "z": 0
+          },
+          "localDir": {
+            "x": 1,
+            "y": 0,
+            "z": 0
+          },
+          "link": {
+            "module": "airlock-eva",
+            "port": "inner"
+          },
+          "hatch": {
+            "open": false,
+            "sealed": false,
+            "attenuationDb": -25
+          }
+        },
+        {
+          "id": "nx",
+          "localPos": {
+            "x": -1.5,
+            "y": 0,
+            "z": 0
+          },
+          "localDir": {
+            "x": -1,
+            "y": 0,
+            "z": 0
+          },
+          "link": {
+            "module": "tube-spine",
+            "port": "fwd"
+          },
+          "hatch": {
+            "open": true,
+            "sealed": false,
+            "attenuationDb": -3
+          }
+        },
+        {
+          "id": "py",
+          "localPos": {
+            "x": 0,
+            "y": 1.5,
+            "z": 0
+          },
+          "localDir": {
+            "x": 0,
+            "y": 1,
+            "z": 0
+          },
+          "link": null,
+          "hatch": {
+            "open": false,
+            "sealed": false,
+            "attenuationDb": -25
+          }
+        },
+        {
+          "id": "ny",
+          "localPos": {
+            "x": 0,
+            "y": -1.5,
+            "z": 0
+          },
+          "localDir": {
+            "x": 0,
+            "y": -1,
+            "z": 0
+          },
+          "link": null,
+          "hatch": {
+            "open": false,
+            "sealed": false,
+            "attenuationDb": -25
+          }
+        },
+        {
+          "id": "pz",
+          "localPos": {
+            "x": 0,
+            "y": 0,
+            "z": 1.5
+          },
+          "localDir": {
+            "x": 0,
+            "y": 0,
+            "z": 1
+          },
+          "link": {
+            "module": "node-gamma",
+            "port": "nz"
+          },
+          "hatch": {
+            "open": true,
+            "sealed": false,
+            "attenuationDb": -3
+          }
+        },
+        {
+          "id": "nz",
+          "localPos": {
+            "x": 0,
+            "y": 0,
+            "z": -1.5
+          },
+          "localDir": {
+            "x": 0,
+            "y": 0,
+            "z": -1
+          },
+          "link": null,
+          "hatch": {
+            "open": false,
+            "sealed": false,
+            "attenuationDb": -25
+          }
+        }
+      ],
+      "rails": [
+        {
+          "id": "rs-px",
+          "a": {
+            "x": 1.5,
+            "y": 0,
+            "z": 0
+          },
+          "b": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "connects": [
+            "rs-nx",
+            "rs-py",
+            "rs-ny",
+            "rs-pz",
+            "rs-nz"
+          ],
+          "portLink": "px"
+        },
+        {
+          "id": "rs-nx",
+          "a": {
+            "x": -1.5,
+            "y": 0,
+            "z": 0
+          },
+          "b": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "connects": [
+            "rs-px",
+            "rs-py",
+            "rs-ny",
+            "rs-pz",
+            "rs-nz"
+          ],
+          "portLink": "nx"
+        },
+        {
+          "id": "rs-py",
+          "a": {
+            "x": 0,
+            "y": 1.5,
+            "z": 0
+          },
+          "b": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "connects": [
+            "rs-px",
+            "rs-nx",
+            "rs-ny",
+            "rs-pz",
+            "rs-nz"
+          ],
+          "portLink": "py"
+        },
+        {
+          "id": "rs-ny",
+          "a": {
+            "x": 0,
+            "y": -1.5,
+            "z": 0
+          },
+          "b": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "connects": [
+            "rs-px",
+            "rs-nx",
+            "rs-py",
+            "rs-pz",
+            "rs-nz"
+          ],
+          "portLink": "ny"
+        },
+        {
+          "id": "rs-pz",
+          "a": {
+            "x": 0,
+            "y": 0,
+            "z": 1.5
+          },
+          "b": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "connects": [
+            "rs-px",
+            "rs-nx",
+            "rs-py",
+            "rs-ny",
+            "rs-nz"
+          ],
+          "portLink": "pz"
+        },
+        {
+          "id": "rs-nz",
+          "a": {
+            "x": 0,
+            "y": 0,
+            "z": -1.5
+          },
+          "b": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "connects": [
+            "rs-px",
+            "rs-nx",
+            "rs-py",
+            "rs-ny",
+            "rs-pz"
+          ],
+          "portLink": "nz"
+        }
+      ],
+      "props": [
+        {
+          "id": "node-beta-hub",
+          "kind": "hub",
+          "localPos": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          }
+        },
+        {
+          "id": "node-beta-rack-0u",
+          "kind": "rack",
+          "localPos": {
+            "x": 1.434,
+            "y": 1.3,
+            "z": 0
+          },
+          "localQuat": {
+            "x": 0,
+            "y": 0,
+            "z": 0.7071067811865475,
+            "w": 0.7071067811865476
+          },
+          "scale": 0.6
+        },
+        {
+          "id": "node-beta-rack-1u",
+          "kind": "rack",
+          "localPos": {
+            "x": -1.434,
+            "y": 1.3,
+            "z": 0
+          },
+          "localQuat": {
+            "x": 0,
+            "y": 0,
+            "z": -0.7071067811865475,
+            "w": 0.7071067811865476
+          },
+          "scale": 0.6
+        },
+        {
+          "id": "node-beta-rack-2u",
+          "kind": "rack",
+          "localPos": {
+            "x": 0,
+            "y": 1.3,
+            "z": 1.434
+          },
+          "localQuat": {
+            "x": 0.5,
+            "y": -0.5,
+            "z": 0.5,
+            "w": -0.5
+          },
+          "scale": 0.6
+        },
+        {
+          "id": "node-beta-rack-3u",
+          "kind": "rack",
+          "localPos": {
+            "x": 0,
+            "y": 1.3,
+            "z": -1.434
+          },
+          "localQuat": {
+            "x": 0.5,
+            "y": 0.5,
+            "z": 0.5,
+            "w": 0.5
+          },
+          "scale": 0.6
+        },
+        {
+          "id": "node-beta-cable-0",
+          "kind": "cable",
+          "localPos": {
+            "x": 0.9051,
+            "y": 0,
+            "z": 0.9051
+          },
+          "localQuat": {
+            "x": -0.6532814824381883,
+            "y": 0.2705980500730985,
+            "z": 0.2705980500730985,
+            "w": 0.6532814824381883
+          }
+        },
+        {
+          "id": "node-beta-cable-1",
+          "kind": "cable",
+          "localPos": {
+            "x": -0.9051,
+            "y": 0,
+            "z": 0.9051
+          },
+          "localQuat": {
+            "x": -0.6532814824381884,
+            "y": -0.2705980500730985,
+            "z": -0.2705980500730985,
+            "w": 0.6532814824381884
+          }
+        },
+        {
+          "id": "node-beta-cable-2",
+          "kind": "cable",
+          "localPos": {
+            "x": -0.9051,
+            "y": 0,
+            "z": -0.9051
+          },
+          "localQuat": {
+            "x": 0.2705980500730985,
+            "y": 0.6532814824381883,
+            "z": 0.6532814824381884,
+            "w": -0.2705980500730985
+          }
+        },
+        {
+          "id": "node-beta-cable-3",
+          "kind": "cable",
+          "localPos": {
+            "x": 0.9051,
+            "y": 0,
+            "z": -0.9051
+          },
+          "localQuat": {
+            "x": -0.27059805007309856,
+            "y": 0.6532814824381883,
+            "z": 0.6532814824381884,
+            "w": 0.27059805007309856
+          }
+        },
+        {
+          "id": "node-beta-laptop",
+          "kind": "laptop",
+          "localPos": {
+            "x": 1.18,
+            "y": -0.55,
+            "z": 0.85
+          },
+          "localQuat": {
+            "x": 0,
+            "y": 0,
+            "z": 0.7071067811865475,
+            "w": 0.7071067811865476
+          }
+        },
+        {
+          "id": "node-beta-locker",
+          "kind": "locker",
+          "localPos": {
+            "x": -1.29,
+            "y": 1.35,
+            "z": -1.05
+          },
+          "localQuat": {
+            "x": 0,
+            "y": 0,
+            "z": -0.7071067811865475,
+            "w": 0.7071067811865476
+          },
+          "interactable": true
+        },
+        {
+          "id": "node-beta-panel-breaker",
+          "kind": "panel",
+          "localPos": {
+            "x": -1.05,
+            "y": 0,
+            "z": -1.445
+          },
+          "localQuat": {
+            "x": 0.5,
+            "y": 0.5,
+            "z": 0.5,
+            "w": 0.5
+          },
+          "interactable": true
+        },
+        {
+          "id": "node-beta-panel-undock-2",
+          "kind": "panel",
+          "localPos": {
+            "x": 1.05,
+            "y": 0,
+            "z": -1.445
+          },
+          "localQuat": {
+            "x": 0.5,
+            "y": 0.5,
+            "z": 0.5,
+            "w": 0.5
+          },
+          "interactable": true
+        }
+      ],
+      "lighting": "emergency",
+      "gravity": "nominal",
+      "volume": 27,
+      "hideSpots": [
+        {
+          "id": "node-beta-console",
+          "kind": "equipment-bay",
+          "localPos": {
+            "x": 0,
+            "y": -0.37,
+            "z": 0
+          },
+          "halfExtents": {
+            "x": 0.42,
+            "y": 0.3,
+            "z": 0.42
+          },
+          "entryPos": {
+            "x": 0,
+            "y": 0.15,
+            "z": 0.95
+          },
+          "lookDir": {
+            "x": 0,
+            "y": 0,
+            "z": 1
+          },
+          "usableIn": "any"
+        }
+      ]
+    },
+    {
+      "id": "node-gamma",
+      "kind": "node",
+      "transform": {
+        "pos": {
+          "x": 8,
+          "y": 0,
+          "z": 3
+        },
+        "quat": {
+          "x": 0,
+          "y": 0,
+          "z": 0,
+          "w": 1
+        }
+      },
+      "ports": [
+        {
+          "id": "px",
+          "localPos": {
+            "x": 1.5,
+            "y": 0,
+            "z": 0
+          },
+          "localDir": {
+            "x": 1,
+            "y": 0,
+            "z": 0
+          },
+          "link": null,
+          "hatch": {
+            "open": false,
+            "sealed": false,
+            "attenuationDb": -25
+          }
+        },
+        {
+          "id": "nx",
+          "localPos": {
+            "x": -1.5,
+            "y": 0,
+            "z": 0
+          },
+          "localDir": {
+            "x": -1,
+            "y": 0,
+            "z": 0
+          },
+          "link": {
+            "module": "lab-atlas",
+            "port": "fwd"
+          },
+          "hatch": {
+            "open": true,
+            "sealed": false,
+            "attenuationDb": -3
+          }
+        },
+        {
+          "id": "py",
+          "localPos": {
+            "x": 0,
+            "y": 1.5,
+            "z": 0
+          },
+          "localDir": {
+            "x": 0,
+            "y": 1,
+            "z": 0
+          },
+          "link": null,
+          "hatch": {
+            "open": false,
+            "sealed": false,
+            "attenuationDb": -25
+          }
+        },
+        {
+          "id": "ny",
+          "localPos": {
+            "x": 0,
+            "y": -1.5,
+            "z": 0
+          },
+          "localDir": {
+            "x": 0,
+            "y": -1,
+            "z": 0
+          },
+          "link": null,
+          "hatch": {
+            "open": false,
+            "sealed": false,
+            "attenuationDb": -25
+          }
+        },
+        {
+          "id": "pz",
+          "localPos": {
+            "x": 0,
+            "y": 0,
+            "z": 1.5
+          },
+          "localDir": {
+            "x": 0,
+            "y": 0,
+            "z": 1
+          },
+          "link": null,
+          "hatch": {
+            "open": false,
+            "sealed": false,
+            "attenuationDb": -25
+          }
+        },
+        {
+          "id": "nz",
+          "localPos": {
+            "x": 0,
+            "y": 0,
+            "z": -1.5
+          },
+          "localDir": {
+            "x": 0,
+            "y": 0,
+            "z": -1
+          },
+          "link": {
+            "module": "node-beta",
+            "port": "pz"
+          },
+          "hatch": {
+            "open": true,
+            "sealed": false,
+            "attenuationDb": -3
+          }
+        }
+      ],
+      "rails": [
+        {
+          "id": "rs-px",
+          "a": {
+            "x": 1.5,
+            "y": 0,
+            "z": 0
+          },
+          "b": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "connects": [
+            "rs-nx",
+            "rs-py",
+            "rs-ny",
+            "rs-pz",
+            "rs-nz"
+          ],
+          "portLink": "px"
+        },
+        {
+          "id": "rs-nx",
+          "a": {
+            "x": -1.5,
+            "y": 0,
+            "z": 0
+          },
+          "b": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "connects": [
+            "rs-px",
+            "rs-py",
+            "rs-ny",
+            "rs-pz",
+            "rs-nz"
+          ],
+          "portLink": "nx"
+        },
+        {
+          "id": "rs-py",
+          "a": {
+            "x": 0,
+            "y": 1.5,
+            "z": 0
+          },
+          "b": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "connects": [
+            "rs-px",
+            "rs-nx",
+            "rs-ny",
+            "rs-pz",
+            "rs-nz"
+          ],
+          "portLink": "py"
+        },
+        {
+          "id": "rs-ny",
+          "a": {
+            "x": 0,
+            "y": -1.5,
+            "z": 0
+          },
+          "b": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "connects": [
+            "rs-px",
+            "rs-nx",
+            "rs-py",
+            "rs-pz",
+            "rs-nz"
+          ],
+          "portLink": "ny"
+        },
+        {
+          "id": "rs-pz",
+          "a": {
+            "x": 0,
+            "y": 0,
+            "z": 1.5
+          },
+          "b": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "connects": [
+            "rs-px",
+            "rs-nx",
+            "rs-py",
+            "rs-ny",
+            "rs-nz"
+          ],
+          "portLink": "pz"
+        },
+        {
+          "id": "rs-nz",
+          "a": {
+            "x": 0,
+            "y": 0,
+            "z": -1.5
+          },
+          "b": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "connects": [
+            "rs-px",
+            "rs-nx",
+            "rs-py",
+            "rs-ny",
+            "rs-pz"
+          ],
+          "portLink": "nz"
+        }
+      ],
+      "props": [
+        {
+          "id": "node-gamma-hub",
+          "kind": "hub",
+          "localPos": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          }
+        },
+        {
+          "id": "node-gamma-rack-0u",
+          "kind": "rack",
+          "localPos": {
+            "x": 1.434,
+            "y": 1.3,
+            "z": 0
+          },
+          "localQuat": {
+            "x": 0,
+            "y": 0,
+            "z": 0.7071067811865475,
+            "w": 0.7071067811865476
+          },
+          "scale": 0.6
+        },
+        {
+          "id": "node-gamma-rack-1u",
+          "kind": "rack",
+          "localPos": {
+            "x": -1.434,
+            "y": 1.3,
+            "z": 0
+          },
+          "localQuat": {
+            "x": 0,
+            "y": 0,
+            "z": -0.7071067811865475,
+            "w": 0.7071067811865476
+          },
+          "scale": 0.6
+        },
+        {
+          "id": "node-gamma-rack-2u",
+          "kind": "rack",
+          "localPos": {
+            "x": 0,
+            "y": 1.3,
+            "z": 1.434
+          },
+          "localQuat": {
+            "x": 0.5,
+            "y": -0.5,
+            "z": 0.5,
+            "w": -0.5
+          },
+          "scale": 0.6
+        },
+        {
+          "id": "node-gamma-rack-3u",
+          "kind": "rack",
+          "localPos": {
+            "x": 0,
+            "y": 1.3,
+            "z": -1.434
+          },
+          "localQuat": {
+            "x": 0.5,
+            "y": 0.5,
+            "z": 0.5,
+            "w": 0.5
+          },
+          "scale": 0.6
+        },
+        {
+          "id": "node-gamma-cable-0",
+          "kind": "cable",
+          "localPos": {
+            "x": 0.9051,
+            "y": 0,
+            "z": 0.9051
+          },
+          "localQuat": {
+            "x": -0.6532814824381883,
+            "y": 0.2705980500730985,
+            "z": 0.2705980500730985,
+            "w": 0.6532814824381883
+          }
+        },
+        {
+          "id": "node-gamma-cable-1",
+          "kind": "cable",
+          "localPos": {
+            "x": -0.9051,
+            "y": 0,
+            "z": 0.9051
+          },
+          "localQuat": {
+            "x": -0.6532814824381884,
+            "y": -0.2705980500730985,
+            "z": -0.2705980500730985,
+            "w": 0.6532814824381884
+          }
+        },
+        {
+          "id": "node-gamma-cable-2",
+          "kind": "cable",
+          "localPos": {
+            "x": -0.9051,
+            "y": 0,
+            "z": -0.9051
+          },
+          "localQuat": {
+            "x": 0.2705980500730985,
+            "y": 0.6532814824381883,
+            "z": 0.6532814824381884,
+            "w": -0.2705980500730985
+          }
+        },
+        {
+          "id": "node-gamma-cable-3",
+          "kind": "cable",
+          "localPos": {
+            "x": 0.9051,
+            "y": 0,
+            "z": -0.9051
+          },
+          "localQuat": {
+            "x": -0.27059805007309856,
+            "y": 0.6532814824381883,
+            "z": 0.6532814824381884,
+            "w": 0.27059805007309856
+          }
+        },
+        {
+          "id": "node-gamma-laptop",
+          "kind": "laptop",
+          "localPos": {
+            "x": 1.18,
+            "y": -0.55,
+            "z": 0.85
+          },
+          "localQuat": {
+            "x": 0,
+            "y": 0,
+            "z": 0.7071067811865475,
+            "w": 0.7071067811865476
+          }
+        },
+        {
+          "id": "node-gamma-locker",
+          "kind": "locker",
+          "localPos": {
+            "x": -1.29,
+            "y": 1.35,
+            "z": -1.05
+          },
+          "localQuat": {
+            "x": 0,
+            "y": 0,
+            "z": -0.7071067811865475,
+            "w": 0.7071067811865476
+          },
+          "interactable": true
+        },
+        {
+          "id": "node-gamma-panel-valve",
+          "kind": "panel",
+          "localPos": {
+            "x": 1.445,
+            "y": 0,
+            "z": 1.05
+          },
+          "localQuat": {
+            "x": 0,
+            "y": 0,
+            "z": 0.707107,
+            "w": 0.707107
+          },
+          "interactable": true
+        }
+      ],
+      "lighting": "emergency",
+      "gravity": "nominal",
+      "volume": 27,
+      "hideSpots": [
+        {
+          "id": "node-gamma-console",
+          "kind": "equipment-bay",
+          "localPos": {
+            "x": 0,
+            "y": -0.37,
+            "z": 0
+          },
+          "halfExtents": {
+            "x": 0.42,
+            "y": 0.3,
+            "z": 0.42
+          },
+          "entryPos": {
+            "x": 0,
+            "y": 0.15,
+            "z": 0.95
+          },
+          "lookDir": {
+            "x": 0,
+            "y": 0,
+            "z": 1
+          },
+          "usableIn": "any"
+        }
+      ]
+    },
+    {
+      "id": "lab-atlas",
+      "kind": "lab",
+      "transform": {
+        "pos": {
+          "x": 4,
+          "y": 0,
+          "z": 3
+        },
+        "quat": {
+          "x": 0,
+          "y": 0.707107,
+          "z": 0,
+          "w": 0.707107
+        }
+      },
+      "ports": [
+        {
+          "id": "aft",
+          "localPos": {
+            "x": 0,
+            "y": 0,
+            "z": -2.5
+          },
+          "localDir": {
+            "x": 0,
+            "y": 0,
+            "z": -1
+          },
+          "link": {
+            "module": "node-delta",
+            "port": "px"
+          },
+          "hatch": {
+            "open": true,
+            "sealed": false,
+            "attenuationDb": -3
+          }
+        },
+        {
+          "id": "fwd",
+          "localPos": {
+            "x": 0,
+            "y": 0,
+            "z": 2.5
+          },
+          "localDir": {
+            "x": 0,
+            "y": 0,
+            "z": 1
+          },
+          "link": {
+            "module": "node-gamma",
+            "port": "nx"
+          },
+          "hatch": {
+            "open": true,
+            "sealed": false,
+            "attenuationDb": -3
+          }
+        }
+      ],
+      "rails": [
+        {
+          "id": "rf-a",
+          "a": {
+            "x": 0,
+            "y": 0,
+            "z": -2.5
+          },
+          "b": {
+            "x": -1.1,
+            "y": 0,
+            "z": -1.55
+          },
+          "connects": [
+            "rf-m",
+            "rc-a"
+          ],
+          "portLink": "aft"
+        },
+        {
+          "id": "rf-m",
+          "a": {
+            "x": -1.1,
+            "y": 0,
+            "z": -1.55
+          },
+          "b": {
+            "x": -1.1,
+            "y": 0,
+            "z": 1.55
+          },
+          "connects": [
+            "rf-a",
+            "rf-b"
+          ]
+        },
+        {
+          "id": "rf-b",
+          "a": {
+            "x": -1.1,
+            "y": 0,
+            "z": 1.55
+          },
+          "b": {
+            "x": 0,
+            "y": 0,
+            "z": 2.5
+          },
+          "connects": [
+            "rf-m",
+            "rc-b"
+          ],
+          "portLink": "fwd"
+        },
+        {
+          "id": "rc-a",
+          "a": {
+            "x": 0,
+            "y": 0,
+            "z": -2.5
+          },
+          "b": {
+            "x": 1.1,
+            "y": 0,
+            "z": -1.55
+          },
+          "connects": [
+            "rc-m",
+            "rf-a"
+          ],
+          "portLink": "aft"
+        },
+        {
+          "id": "rc-m",
+          "a": {
+            "x": 1.1,
+            "y": 0,
+            "z": -1.55
+          },
+          "b": {
+            "x": 1.1,
+            "y": 0,
+            "z": 1.55
+          },
+          "connects": [
+            "rc-a",
+            "rc-b"
+          ]
+        },
+        {
+          "id": "rc-b",
+          "a": {
+            "x": 1.1,
+            "y": 0,
+            "z": 1.55
+          },
+          "b": {
+            "x": 0,
+            "y": 0,
+            "z": 2.5
+          },
+          "connects": [
+            "rc-m",
+            "rf-b"
+          ],
+          "portLink": "fwd"
+        }
+      ],
+      "props": [
+        {
+          "id": "lab-atlas-rack-00",
+          "kind": "rack",
+          "localPos": {
+            "x": 1.29,
+            "y": 0,
+            "z": -1.6
+          },
+          "localQuat": {
+            "x": 0,
+            "y": 0,
+            "z": 0.7071067811865475,
+            "w": 0.7071067811865476
+          }
+        },
+        {
+          "id": "lab-atlas-rack-01",
+          "kind": "rack",
+          "localPos": {
+            "x": 1.29,
+            "y": 0,
+            "z": 0
+          },
+          "localQuat": {
+            "x": 0,
+            "y": 0,
+            "z": 0.7071067811865475,
+            "w": 0.7071067811865476
+          }
+        },
+        {
+          "id": "lab-atlas-rack-02",
+          "kind": "rack",
+          "localPos": {
+            "x": 1.29,
+            "y": 0,
+            "z": 1.6
+          },
+          "localQuat": {
+            "x": 0,
+            "y": 0,
+            "z": 0.7071067811865475,
+            "w": 0.7071067811865476
+          }
+        },
+        {
+          "id": "lab-atlas-cable-00",
+          "kind": "cable",
+          "localPos": {
+            "x": 0.9334,
+            "y": 0.9334,
+            "z": -1.65
+          },
+          "localQuat": {
+            "x": 0,
+            "y": 0,
+            "z": 0.9238795325112867,
+            "w": 0.3826834323650898
+          }
+        },
+        {
+          "id": "lab-atlas-cable-01",
+          "kind": "cable",
+          "localPos": {
+            "x": 0.9334,
+            "y": 0.9334,
+            "z": 0
+          },
+          "localQuat": {
+            "x": 0,
+            "y": 0,
+            "z": 0.9238795325112867,
+            "w": 0.3826834323650898
+          }
+        },
+        {
+          "id": "lab-atlas-cable-02",
+          "kind": "cable",
+          "localPos": {
+            "x": 0.9334,
+            "y": 0.9334,
+            "z": 1.65
+          },
+          "localQuat": {
+            "x": 0,
+            "y": 0,
+            "z": 0.9238795325112867,
+            "w": 0.3826834323650898
+          }
+        },
+        {
+          "id": "lab-atlas-cable-10",
+          "kind": "cable",
+          "localPos": {
+            "x": -0.9334,
+            "y": 0.9334,
+            "z": -1.65
+          },
+          "localQuat": {
+            "x": 0,
+            "y": 0,
+            "z": 0.9238795325112867,
+            "w": -0.3826834323650897
+          }
+        },
+        {
+          "id": "lab-atlas-cable-11",
+          "kind": "cable",
+          "localPos": {
+            "x": -0.9334,
+            "y": 0.9334,
+            "z": 0
+          },
+          "localQuat": {
+            "x": 0,
+            "y": 0,
+            "z": 0.9238795325112867,
+            "w": -0.3826834323650897
+          }
+        },
+        {
+          "id": "lab-atlas-cable-12",
+          "kind": "cable",
+          "localPos": {
+            "x": -0.9334,
+            "y": 0.9334,
+            "z": 1.65
+          },
+          "localQuat": {
+            "x": 0,
+            "y": 0,
+            "z": 0.9238795325112867,
+            "w": -0.3826834323650897
+          }
+        },
+        {
+          "id": "lab-atlas-bag-0",
+          "kind": "stowage",
+          "localPos": {
+            "x": 1.0031,
+            "y": -0.1178,
+            "z": -1.419
+          },
+          "localQuat": {
+            "x": 0,
+            "y": 0,
+            "z": 0.6645796937535486,
+            "w": 0.7472173918281343
+          }
+        },
+        {
+          "id": "lab-atlas-bag-1",
+          "kind": "stowage",
+          "localPos": {
+            "x": 0.9839,
+            "y": 0.228,
+            "z": -0.6205
+          },
+          "localQuat": {
+            "x": 0,
+            "y": 0,
+            "z": 0.7828724294679031,
+            "w": 0.6221822555963993
+          }
+        },
+        {
+          "id": "lab-atlas-bag-2",
+          "kind": "stowage",
+          "localPos": {
+            "x": 1.006,
+            "y": -0.0896,
+            "z": -0.9625
+          },
+          "localQuat": {
+            "x": 0,
+            "y": 0,
+            "z": 0.6750215088661643,
+            "w": 0.7377980499893225
+          }
+        },
+        {
+          "id": "lab-atlas-laptop",
+          "kind": "laptop",
+          "localPos": {
+            "x": 1.13,
+            "y": 0,
+            "z": -0.8
+          },
+          "localQuat": {
+            "x": 0,
+            "y": 0,
+            "z": 0.7071067811865475,
+            "w": 0.7071067811865476
+          }
+        },
+        {
+          "id": "lab-atlas-locker",
+          "kind": "locker",
+          "localPos": {
+            "x": 0.97,
+            "y": 0,
+            "z": -2
+          },
+          "localQuat": {
+            "x": 0,
+            "y": 0,
+            "z": 0.7071067811865475,
+            "w": 0.7071067811865476
+          },
+          "interactable": true
+        },
+        {
+          "id": "lab-atlas-bench-a",
+          "kind": "bench",
+          "localPos": {
+            "x": 0,
+            "y": -0.325,
+            "z": 0
+          }
+        },
+        {
+          "id": "lab-atlas-bank-a",
+          "kind": "bank",
+          "localPos": {
+            "x": -0.8722,
+            "y": -0.1,
+            "z": -2.1
+          }
+        },
+        {
+          "id": "lab-atlas-panel-gauge",
+          "kind": "panel",
+          "localPos": {
+            "x": 1.135,
+            "y": 0,
+            "z": -0.2
+          },
+          "localQuat": {
+            "x": 0,
+            "y": 0,
+            "z": 0.707107,
+            "w": 0.707107
+          },
+          "interactable": true
+        },
+        {
+          "id": "lab-atlas-panel-fuse-1",
+          "kind": "panel",
+          "localPos": {
+            "x": -1.135,
+            "y": 0,
+            "z": 2
+          },
+          "localQuat": {
+            "x": 0,
+            "y": 0,
+            "z": -0.707107,
+            "w": 0.707107
+          },
+          "interactable": true
+        },
+        {
+          "id": "lab-atlas-panel-undock-3",
+          "kind": "panel",
+          "localPos": {
+            "x": -1.135,
+            "y": 0,
+            "z": -2
+          },
+          "localQuat": {
+            "x": 0,
+            "y": 0,
+            "z": -0.707107,
+            "w": 0.707107
+          },
+          "interactable": true
+        }
+      ],
+      "lighting": "emergency",
+      "gravity": "nominal",
+      "volume": 30.79,
+      "hideSpots": [
+        {
+          "id": "lab-atlas-bay",
+          "kind": "equipment-bay",
+          "localPos": {
+            "x": 0.8022,
+            "y": -0.12,
+            "z": 2
+          },
+          "halfExtents": {
+            "x": 0.3,
+            "y": 0.55,
+            "z": 0.32
+          },
+          "entryPos": {
+            "x": 0.0122,
+            "y": 0.15,
+            "z": 2
+          },
+          "lookDir": {
+            "x": -1,
+            "y": 0,
+            "z": 0
+          },
+          "usableIn": "any"
+        }
+      ]
+    },
+    {
+      "id": "node-delta",
+      "kind": "node",
+      "transform": {
+        "pos": {
+          "x": 0,
+          "y": 0,
+          "z": 3
+        },
+        "quat": {
+          "x": 0,
+          "y": 0,
+          "z": 0,
+          "w": 1
+        }
+      },
+      "ports": [
+        {
+          "id": "px",
+          "localPos": {
+            "x": 1.5,
+            "y": 0,
+            "z": 0
+          },
+          "localDir": {
+            "x": 1,
+            "y": 0,
+            "z": 0
+          },
+          "link": {
+            "module": "lab-atlas",
+            "port": "aft"
+          },
+          "hatch": {
+            "open": true,
+            "sealed": false,
+            "attenuationDb": -3
+          }
+        },
+        {
+          "id": "nx",
+          "localPos": {
+            "x": -1.5,
+            "y": 0,
+            "z": 0
+          },
+          "localDir": {
+            "x": -1,
+            "y": 0,
+            "z": 0
+          },
+          "link": {
+            "module": "cupola-nadir",
+            "port": "dock"
+          },
+          "hatch": {
+            "open": true,
+            "sealed": false,
+            "attenuationDb": -3
+          }
+        },
+        {
+          "id": "py",
+          "localPos": {
+            "x": 0,
+            "y": 1.5,
+            "z": 0
+          },
+          "localDir": {
+            "x": 0,
+            "y": 1,
+            "z": 0
+          },
+          "link": null,
+          "hatch": {
+            "open": false,
+            "sealed": false,
+            "attenuationDb": -25
+          }
+        },
+        {
+          "id": "ny",
+          "localPos": {
+            "x": 0,
+            "y": -1.5,
+            "z": 0
+          },
+          "localDir": {
+            "x": 0,
+            "y": -1,
+            "z": 0
+          },
+          "link": null,
+          "hatch": {
+            "open": false,
+            "sealed": false,
+            "attenuationDb": -25
+          }
+        },
+        {
+          "id": "pz",
+          "localPos": {
+            "x": 0,
+            "y": 0,
+            "z": 1.5
+          },
+          "localDir": {
+            "x": 0,
+            "y": 0,
+            "z": 1
+          },
+          "link": null,
+          "hatch": {
+            "open": false,
+            "sealed": false,
+            "attenuationDb": -25
+          }
+        },
+        {
+          "id": "nz",
+          "localPos": {
+            "x": 0,
+            "y": 0,
+            "z": -1.5
+          },
+          "localDir": {
+            "x": 0,
+            "y": 0,
+            "z": -1
+          },
+          "link": {
+            "module": "node-alpha",
+            "port": "pz"
+          },
+          "hatch": {
+            "open": true,
+            "sealed": false,
+            "attenuationDb": -3
+          }
+        }
+      ],
+      "rails": [
+        {
+          "id": "rs-px",
+          "a": {
+            "x": 1.5,
+            "y": 0,
+            "z": 0
+          },
+          "b": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "connects": [
+            "rs-nx",
+            "rs-py",
+            "rs-ny",
+            "rs-pz",
+            "rs-nz"
+          ],
+          "portLink": "px"
+        },
+        {
+          "id": "rs-nx",
+          "a": {
+            "x": -1.5,
+            "y": 0,
+            "z": 0
+          },
+          "b": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "connects": [
+            "rs-px",
+            "rs-py",
+            "rs-ny",
+            "rs-pz",
+            "rs-nz"
+          ],
+          "portLink": "nx"
+        },
+        {
+          "id": "rs-py",
+          "a": {
+            "x": 0,
+            "y": 1.5,
+            "z": 0
+          },
+          "b": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "connects": [
+            "rs-px",
+            "rs-nx",
+            "rs-ny",
+            "rs-pz",
+            "rs-nz"
+          ],
+          "portLink": "py"
+        },
+        {
+          "id": "rs-ny",
+          "a": {
+            "x": 0,
+            "y": -1.5,
+            "z": 0
+          },
+          "b": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "connects": [
+            "rs-px",
+            "rs-nx",
+            "rs-py",
+            "rs-pz",
+            "rs-nz"
+          ],
+          "portLink": "ny"
+        },
+        {
+          "id": "rs-pz",
+          "a": {
+            "x": 0,
+            "y": 0,
+            "z": 1.5
+          },
+          "b": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "connects": [
+            "rs-px",
+            "rs-nx",
+            "rs-py",
+            "rs-ny",
+            "rs-nz"
+          ],
+          "portLink": "pz"
+        },
+        {
+          "id": "rs-nz",
+          "a": {
+            "x": 0,
+            "y": 0,
+            "z": -1.5
+          },
+          "b": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          },
+          "connects": [
+            "rs-px",
+            "rs-nx",
+            "rs-py",
+            "rs-ny",
+            "rs-pz"
+          ],
+          "portLink": "nz"
+        }
+      ],
+      "props": [
+        {
+          "id": "node-delta-hub",
+          "kind": "hub",
+          "localPos": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+          }
+        },
+        {
+          "id": "node-delta-rack-0u",
+          "kind": "rack",
+          "localPos": {
+            "x": 1.434,
+            "y": 1.3,
+            "z": 0
+          },
+          "localQuat": {
+            "x": 0,
+            "y": 0,
+            "z": 0.7071067811865475,
+            "w": 0.7071067811865476
+          },
+          "scale": 0.6
+        },
+        {
+          "id": "node-delta-rack-1u",
+          "kind": "rack",
+          "localPos": {
+            "x": -1.434,
+            "y": 1.3,
+            "z": 0
+          },
+          "localQuat": {
+            "x": 0,
+            "y": 0,
+            "z": -0.7071067811865475,
+            "w": 0.7071067811865476
+          },
+          "scale": 0.6
+        },
+        {
+          "id": "node-delta-rack-2u",
+          "kind": "rack",
+          "localPos": {
+            "x": 0,
+            "y": 1.3,
+            "z": 1.434
+          },
+          "localQuat": {
+            "x": 0.5,
+            "y": -0.5,
+            "z": 0.5,
+            "w": -0.5
+          },
+          "scale": 0.6
+        },
+        {
+          "id": "node-delta-rack-3u",
+          "kind": "rack",
+          "localPos": {
+            "x": 0,
+            "y": 1.3,
+            "z": -1.434
+          },
+          "localQuat": {
+            "x": 0.5,
+            "y": 0.5,
+            "z": 0.5,
+            "w": 0.5
+          },
+          "scale": 0.6
+        },
+        {
+          "id": "node-delta-cable-0",
+          "kind": "cable",
+          "localPos": {
+            "x": 0.9051,
+            "y": 0,
+            "z": 0.9051
+          },
+          "localQuat": {
+            "x": -0.6532814824381883,
+            "y": 0.2705980500730985,
+            "z": 0.2705980500730985,
+            "w": 0.6532814824381883
+          }
+        },
+        {
+          "id": "node-delta-cable-1",
+          "kind": "cable",
+          "localPos": {
+            "x": -0.9051,
+            "y": 0,
+            "z": 0.9051
+          },
+          "localQuat": {
+            "x": -0.6532814824381884,
+            "y": -0.2705980500730985,
+            "z": -0.2705980500730985,
+            "w": 0.6532814824381884
+          }
+        },
+        {
+          "id": "node-delta-cable-2",
+          "kind": "cable",
+          "localPos": {
+            "x": -0.9051,
+            "y": 0,
+            "z": -0.9051
+          },
+          "localQuat": {
+            "x": 0.2705980500730985,
+            "y": 0.6532814824381883,
+            "z": 0.6532814824381884,
+            "w": -0.2705980500730985
+          }
+        },
+        {
+          "id": "node-delta-cable-3",
+          "kind": "cable",
+          "localPos": {
+            "x": 0.9051,
+            "y": 0,
+            "z": -0.9051
+          },
+          "localQuat": {
+            "x": -0.27059805007309856,
+            "y": 0.6532814824381883,
+            "z": 0.6532814824381884,
+            "w": 0.27059805007309856
+          }
+        },
+        {
+          "id": "node-delta-laptop",
+          "kind": "laptop",
+          "localPos": {
+            "x": 1.18,
+            "y": -0.55,
+            "z": 0.85
+          },
+          "localQuat": {
+            "x": 0,
+            "y": 0,
+            "z": 0.7071067811865475,
+            "w": 0.7071067811865476
+          }
+        },
+        {
+          "id": "node-delta-locker",
+          "kind": "locker",
+          "localPos": {
+            "x": -1.29,
+            "y": 1.35,
+            "z": -1.05
+          },
+          "localQuat": {
+            "x": 0,
+            "y": 0,
+            "z": -0.7071067811865475,
+            "w": 0.7071067811865476
+          },
+          "interactable": true
+        },
+        {
+          "id": "node-delta-panel-fuse-2",
+          "kind": "panel",
+          "localPos": {
+            "x": 1.05,
+            "y": 0,
+            "z": -1.445
+          },
+          "localQuat": {
+            "x": 0.5,
+            "y": 0.5,
+            "z": 0.5,
+            "w": 0.5
+          },
+          "interactable": true
+        }
+      ],
+      "lighting": "emergency",
+      "gravity": "nominal",
+      "volume": 27,
+      "hideSpots": [
+        {
+          "id": "node-delta-console",
+          "kind": "equipment-bay",
+          "localPos": {
+            "x": 0,
+            "y": -0.37,
+            "z": 0
+          },
+          "halfExtents": {
+            "x": 0.42,
+            "y": 0.3,
+            "z": 0.42
+          },
+          "entryPos": {
+            "x": 0,
+            "y": 0.15,
+            "z": 0.95
+          },
+          "lookDir": {
+            "x": 0,
+            "y": 0,
+            "z": 1
+          },
+          "usableIn": "any"
+        }
+      ]
+    },
+    {
+      "id": "cupola-nadir",
+      "kind": "cupola",
+      "transform": {
+        "pos": {
+          "x": -2.7,
+          "y": 0,
+          "z": 3
+        },
+        "quat": {
+          "x": 0,
+          "y": -0.707107,
+          "z": 0,
+          "w": 0.707107
+        }
+      },
+      "ports": [
+        {
+          "id": "dock",
+          "localPos": {
+            "x": 0,
+            "y": 0,
+            "z": -1.2
+          },
+          "localDir": {
+            "x": 0,
+            "y": 0,
+            "z": -1
+          },
+          "link": {
+            "module": "node-delta",
+            "port": "nx"
+          },
+          "hatch": {
+            "open": true,
+            "sealed": false,
+            "attenuationDb": -3
+          }
+        }
+      ],
+      "rails": [
+        {
+          "id": "cs",
+          "a": {
+            "x": 0,
+            "y": 0,
+            "z": -1.2
+          },
+          "b": {
+            "x": 0,
+            "y": -0.78,
+            "z": -0.62
+          },
+          "connects": [
+            "cr0",
+            "cr3"
+          ],
+          "portLink": "dock"
+        },
+        {
+          "id": "cr0",
+          "a": {
+            "x": 0,
+            "y": -0.78,
+            "z": -0.62
+          },
+          "b": {
+            "x": 0.78,
+            "y": 0,
+            "z": -0.62
+          },
+          "connects": [
+            "cs",
+            "cr1"
+          ]
+        },
+        {
+          "id": "cr1",
+          "a": {
+            "x": 0.78,
+            "y": 0,
+            "z": -0.62
+          },
+          "b": {
+            "x": 0,
+            "y": 0.78,
+            "z": -0.62
+          },
+          "connects": [
+            "cr0",
+            "cr2"
+          ]
+        },
+        {
+          "id": "cr2",
+          "a": {
+            "x": 0,
+            "y": 0.78,
+            "z": -0.62
+          },
+          "b": {
+            "x": -0.78,
+            "y": 0,
+            "z": -0.62
+          },
+          "connects": [
+            "cr1",
+            "cr3"
+          ]
+        },
+        {
+          "id": "cr3",
+          "a": {
+            "x": -0.78,
+            "y": 0,
+            "z": -0.62
+          },
+          "b": {
+            "x": 0,
+            "y": -0.78,
+            "z": -0.62
+          },
+          "connects": [
+            "cr2",
+            "cs"
+          ]
+        }
+      ],
+      "props": [
+        {
+          "id": "cupola-nadir-laptop",
+          "kind": "laptop",
+          "localPos": {
+            "x": 0.55,
+            "y": -0.7,
+            "z": -0.82
+          },
+          "localQuat": {
+            "x": 0,
+            "y": 0,
+            "z": 0.31622776601683794,
+            "w": 0.9486832980505138
+          }
+        },
+        {
+          "id": "cupola-nadir-bag-0",
+          "kind": "stowage",
+          "localPos": {
+            "x": 0.2862,
+            "y": -0.6,
+            "z": -0.75
+          },
+          "localQuat": {
+            "x": 0,
+            "y": 0,
+            "z": 0,
+            "w": 1
+          }
+        },
+        {
+          "id": "cupola-nadir-locker",
+          "kind": "locker",
+          "localPos": {
+            "x": -0.82,
+            "y": 0,
+            "z": 0.2
+          },
+          "localQuat": {
+            "x": 0,
+            "y": 0,
+            "z": -0.7071067811865476,
+            "w": 0.7071067811865475
+          },
+          "interactable": true
+        },
+        {
+          "id": "cupola-nadir-panel-fuse-3",
+          "kind": "panel",
+          "localPos": {
+            "x": 0.62,
+            "y": 0.42,
+            "z": -0.95
+          },
+          "localQuat": {
+            "x": 0,
+            "y": 0,
+            "z": 0.882978,
+            "w": 0.469414
+          },
+          "interactable": true
+        }
+      ],
+      "lighting": "dark",
+      "gravity": "nominal",
+      "volume": 10.75,
+      "hideSpots": [
+        {
+          "id": "cupola-nadir-bay",
+          "kind": "equipment-bay",
+          "localPos": {
+            "x": 0.71,
+            "y": -0.12,
+            "z": -0.67
+          },
+          "halfExtents": {
+            "x": 0.21,
+            "y": 0.55,
+            "z": 0.45
+          },
+          "entryPos": {
+            "x": 0.01,
+            "y": 0.15,
+            "z": -0.67
+          },
+          "lookDir": {
+            "x": -1,
+            "y": 0,
+            "z": 0
+          },
+          "usableIn": "any"
+        }
+      ]
+    },
+    {
+      "id": "airlock-eva",
+      "kind": "airlock",
+      "transform": {
+        "pos": {
+          "x": 11.5,
+          "y": 0,
+          "z": 0
+        },
+        "quat": {
+          "x": 0,
+          "y": 0.707107,
+          "z": 0,
+          "w": 0.707107
+        }
+      },
+      "ports": [
+        {
+          "id": "inner",
+          "localPos": {
+            "x": 0,
+            "y": 0,
+            "z": -2
+          },
+          "localDir": {
+            "x": 0,
+            "y": 0,
+            "z": -1
+          },
+          "link": {
+            "module": "node-beta",
+            "port": "px"
+          },
+          "hatch": {
+            "open": false,
+            "sealed": false,
+            "attenuationDb": -25
+          }
+        },
+        {
+          "id": "outer",
+          "localPos": {
+            "x": 0,
+            "y": 0,
+            "z": 2
+          },
+          "localDir": {
+            "x": 0,
+            "y": 0,
+            "z": 1
+          },
+          "link": null,
+          "hatch": {
+            "open": false,
+            "sealed": false,
+            "attenuationDb": -25
+          }
+        }
+      ],
+      "rails": [
+        {
+          "id": "rf-a",
+          "a": {
+            "x": 0,
+            "y": 0,
+            "z": -2
+          },
+          "b": {
+            "x": 0,
+            "y": -0.9,
+            "z": -1.15
+          },
+          "connects": [
+            "rf-m",
+            "rc-a"
+          ],
+          "portLink": "inner"
+        },
+        {
+          "id": "rf-m",
+          "a": {
+            "x": 0,
+            "y": -0.9,
+            "z": -1.15
+          },
+          "b": {
+            "x": 0,
+            "y": -0.9,
+            "z": 1.15
+          },
+          "connects": [
+            "rf-a",
+            "rf-b"
+          ]
+        },
+        {
+          "id": "rf-b",
+          "a": {
+            "x": 0,
+            "y": -0.9,
+            "z": 1.15
+          },
+          "b": {
+            "x": 0,
+            "y": 0,
+            "z": 2
+          },
+          "connects": [
+            "rf-m",
+            "rc-b"
+          ],
+          "portLink": "outer"
+        },
+        {
+          "id": "rc-a",
+          "a": {
+            "x": 0,
+            "y": 0,
+            "z": -2
+          },
+          "b": {
+            "x": 0,
+            "y": 0.9,
+            "z": -1.15
+          },
+          "connects": [
+            "rc-m",
+            "rf-a"
+          ],
+          "portLink": "inner"
+        },
+        {
+          "id": "rc-m",
+          "a": {
+            "x": 0,
+            "y": 0.9,
+            "z": -1.15
+          },
+          "b": {
+            "x": 0,
+            "y": 0.9,
+            "z": 1.15
+          },
+          "connects": [
+            "rc-a",
+            "rc-b"
+          ]
+        },
+        {
+          "id": "rc-b",
+          "a": {
+            "x": 0,
+            "y": 0.9,
+            "z": 1.15
+          },
+          "b": {
+            "x": 0,
+            "y": 0,
+            "z": 2
+          },
+          "connects": [
+            "rc-m",
+            "rf-b"
+          ],
+          "portLink": "outer"
+        }
+      ],
+      "props": [
+        {
+          "id": "airlock-eva-rack-00",
+          "kind": "rack",
+          "localPos": {
+            "x": 1.09,
+            "y": 0,
+            "z": 0
+          },
+          "localQuat": {
+            "x": 0,
+            "y": 0,
+            "z": 0.7071067811865475,
+            "w": 0.7071067811865476
+          }
+        },
+        {
+          "id": "airlock-eva-rack-10",
+          "kind": "rack",
+          "localPos": {
+            "x": 0,
+            "y": 1.09,
+            "z": 0
+          },
+          "localQuat": {
+            "x": 0,
+            "y": 0,
+            "z": 1,
+            "w": 3.061616997868383e-17
+          }
+        },
+        {
+          "id": "airlock-eva-rack-20",
+          "kind": "rack",
+          "localPos": {
+            "x": -1.09,
+            "y": 0,
+            "z": 0
+          },
+          "localQuat": {
+            "x": 0,
+            "y": 0,
+            "z": -0.7071067811865476,
+            "w": 0.7071067811865475
+          }
+        },
+        {
+          "id": "airlock-eva-rack-30",
+          "kind": "rack",
+          "localPos": {
+            "x": 0,
+            "y": -1.09,
+            "z": 0
+          },
+          "localQuat": {
+            "x": 0,
+            "y": 0,
+            "z": 3.061616997868383e-17,
+            "w": 1
+          }
+        },
+        {
+          "id": "airlock-eva-cable-00",
+          "kind": "cable",
+          "localPos": {
+            "x": 0.792,
+            "y": 0.792,
+            "z": -1.2
+          },
+          "localQuat": {
+            "x": 0,
+            "y": 0,
+            "z": 0.9238795325112867,
+            "w": 0.3826834323650898
+          }
+        },
+        {
+          "id": "airlock-eva-cable-01",
+          "kind": "cable",
+          "localPos": {
+            "x": 0.792,
+            "y": 0.792,
+            "z": 0.5
+          },
+          "localQuat": {
+            "x": 0,
+            "y": 0,
+            "z": 0.9238795325112867,
+            "w": 0.3826834323650898
+          }
+        },
+        {
+          "id": "airlock-eva-cable-10",
+          "kind": "cable",
+          "localPos": {
+            "x": -0.792,
+            "y": 0.792,
+            "z": -1.2
+          },
+          "localQuat": {
+            "x": 0,
+            "y": 0,
+            "z": 0.9238795325112867,
+            "w": -0.3826834323650897
+          }
+        },
+        {
+          "id": "airlock-eva-cable-11",
+          "kind": "cable",
+          "localPos": {
+            "x": -0.792,
+            "y": 0.792,
+            "z": 0.5
+          },
+          "localQuat": {
+            "x": 0,
+            "y": 0,
+            "z": 0.9238795325112867,
+            "w": -0.3826834323650897
+          }
+        },
+        {
+          "id": "airlock-eva-locker",
+          "kind": "locker",
+          "localPos": {
+            "x": 0,
+            "y": -0.77,
+            "z": 0.8037
+          },
+          "localQuat": {
+            "x": 0,
+            "y": 0,
+            "z": 3.061616997868383e-17,
+            "w": 1
+          },
+          "interactable": true
+        },
+        {
+          "id": "airlock-eva-suit-0",
+          "kind": "stowage",
+          "localPos": {
+            "x": 0,
+            "y": 0.7,
+            "z": 1.1
+          },
+          "localQuat": {
+            "x": 0,
+            "y": 0,
+            "z": 1,
+            "w": 3.061616997868383e-17
+          },
+          "scale": 1.6
+        },
+        {
+          "id": "airlock-eva-suit-1",
+          "kind": "stowage",
+          "localPos": {
+            "x": -0.7,
+            "y": 0,
+            "z": -1.1
+          },
+          "localQuat": {
+            "x": 0,
+            "y": 0,
+            "z": -0.7071067811865476,
+            "w": 0.7071067811865475
+          },
+          "scale": 1.6
+        },
+        {
+          "id": "airlock-eva-panel-keyswitch-a",
+          "kind": "panel",
+          "localPos": {
+            "x": 0.935,
+            "y": 0,
+            "z": -1.7
+          },
+          "localQuat": {
+            "x": 0,
+            "y": 0,
+            "z": 0.707107,
+            "w": 0.707107
+          },
+          "interactable": true
+        },
+        {
+          "id": "airlock-eva-panel-keyswitch-b",
+          "kind": "panel",
+          "localPos": {
+            "x": -0.935,
+            "y": 0,
+            "z": 1.7
+          },
+          "localQuat": {
+            "x": 0,
+            "y": 0,
+            "z": -0.707107,
+            "w": 0.707107
+          },
+          "interactable": true
+        }
+      ],
+      "lighting": "dark",
+      "gravity": "zero",
+      "volume": 18.1,
+      "hideSpots": [
+        {
+          "id": "airlock-eva-suit-bay",
+          "kind": "equipment-bay",
+          "localPos": {
+            "x": -0.55,
+            "y": 0.1,
+            "z": 0
+          },
+          "halfExtents": {
+            "x": 0.32,
+            "y": 0.42,
+            "z": 0.55
+          },
+          "entryPos": {
+            "x": 0.15,
+            "y": 0.1,
+            "z": 0
+          },
+          "lookDir": {
+            "x": 1,
+            "y": 0,
+            "z": 0
+          },
+          "usableIn": "zero"
+        },
+        {
+          "id": "airlock-eva-outer-net",
+          "kind": "equipment-bay",
+          "localPos": {
+            "x": 0.55,
+            "y": 0.1,
+            "z": 1.4
+          },
+          "halfExtents": {
+            "x": 0.32,
+            "y": 0.42,
+            "z": 0.55
+          },
+          "entryPos": {
+            "x": -0.15,
+            "y": 0.1,
+            "z": 1.4
+          },
+          "lookDir": {
+            "x": -1,
+            "y": 0,
+            "z": 0
+          },
+          "usableIn": "zero"
+        }
+      ]
+    },
+    {
+      "id": "escape-soyuz",
+      "kind": "straight",
+      "transform": {
+        "pos": {
+          "x": -4,
+          "y": 0,
+          "z": 0
+        },
+        "quat": {
+          "x": 0,
+          "y": 0.707107,
+          "z": 0,
+          "w": 0.707107
+        }
+      },
+      "ports": [
+        {
+          "id": "aft",
+          "localPos": {
+            "x": 0,
+            "y": 0,
+            "z": -2.5
+          },
+          "localDir": {
+            "x": 0,
+            "y": 0,
+            "z": -1
+          },
+          "link": null,
+          "hatch": {
+            "open": false,
+            "sealed": false,
+            "attenuationDb": -25
+          }
+        },
+        {
+          "id": "fwd",
+          "localPos": {
+            "x": 0,
+            "y": 0,
+            "z": 2.5
+          },
+          "localDir": {
+            "x": 0,
+            "y": 0,
+            "z": 1
+          },
+          "link": {
+            "module": "node-alpha",
+            "port": "nx"
+          },
+          "hatch": {
+            "open": true,
+            "sealed": false,
+            "attenuationDb": -3
+          }
+        }
+      ],
+      "rails": [
+        {
+          "id": "rf-a",
+          "a": {
+            "x": 0,
+            "y": 0,
+            "z": -2.5
+          },
+          "b": {
+            "x": -0.7,
+            "y": 0,
+            "z": -1.6
+          },
+          "connects": [
+            "rf-m",
+            "rc-a"
+          ],
+          "portLink": "aft"
+        },
+        {
+          "id": "rf-m",
+          "a": {
+            "x": -0.7,
+            "y": 0,
+            "z": -1.6
+          },
+          "b": {
+            "x": -0.7,
+            "y": 0,
+            "z": 1.6
+          },
+          "connects": [
+            "rf-a",
+            "rf-b"
+          ]
+        },
+        {
+          "id": "rf-b",
+          "a": {
+            "x": -0.7,
+            "y": 0,
+            "z": 1.6
+          },
+          "b": {
+            "x": 0,
+            "y": 0,
+            "z": 2.5
+          },
+          "connects": [
+            "rf-m",
+            "rc-b"
+          ],
+          "portLink": "fwd"
+        },
+        {
+          "id": "rc-a",
+          "a": {
+            "x": 0,
+            "y": 0,
+            "z": -2.5
+          },
+          "b": {
+            "x": 0.7,
+            "y": 0,
+            "z": -1.6
+          },
+          "connects": [
+            "rc-m",
+            "rf-a"
+          ],
+          "portLink": "aft"
+        },
+        {
+          "id": "rc-m",
+          "a": {
+            "x": 0.7,
+            "y": 0,
+            "z": -1.6
+          },
+          "b": {
+            "x": 0.7,
+            "y": 0,
+            "z": 1.6
+          },
+          "connects": [
+            "rc-a",
+            "rc-b"
+          ]
+        },
+        {
+          "id": "rc-b",
+          "a": {
+            "x": 0.7,
+            "y": 0,
+            "z": 1.6
+          },
+          "b": {
+            "x": 0,
+            "y": 0,
+            "z": 2.5
+          },
+          "connects": [
+            "rc-m",
+            "rf-b"
+          ],
+          "portLink": "fwd"
+        }
+      ],
+      "props": [
+        {
+          "id": "escape-soyuz-rack-00",
+          "kind": "rack",
+          "localPos": {
+            "x": -0.89,
+            "y": 0,
+            "z": -1.15
+          },
+          "localQuat": {
+            "x": 0,
+            "y": 0,
+            "z": -0.7071067811865476,
+            "w": 0.7071067811865475
+          }
+        },
+        {
+          "id": "escape-soyuz-rack-01",
+          "kind": "rack",
+          "localPos": {
+            "x": -0.89,
+            "y": 0,
+            "z": 1.15
+          },
+          "localQuat": {
+            "x": 0,
+            "y": 0,
+            "z": -0.7071067811865476,
+            "w": 0.7071067811865475
+          }
+        },
+        {
+          "id": "escape-soyuz-cable-00",
+          "kind": "cable",
+          "localPos": {
+            "x": 0.6505,
+            "y": 0.6505,
+            "z": -1.65
+          },
+          "localQuat": {
+            "x": 0,
+            "y": 0,
+            "z": 0.9238795325112867,
+            "w": 0.3826834323650898
+          }
+        },
+        {
+          "id": "escape-soyuz-cable-01",
+          "kind": "cable",
+          "localPos": {
+            "x": 0.6505,
+            "y": 0.6505,
+            "z": 0
+          },
+          "localQuat": {
+            "x": 0,
+            "y": 0,
+            "z": 0.9238795325112867,
+            "w": 0.3826834323650898
+          }
+        },
+        {
+          "id": "escape-soyuz-cable-02",
+          "kind": "cable",
+          "localPos": {
+            "x": 0.6505,
+            "y": 0.6505,
+            "z": 1.65
+          },
+          "localQuat": {
+            "x": 0,
+            "y": 0,
+            "z": 0.9238795325112867,
+            "w": 0.3826834323650898
+          }
+        },
+        {
+          "id": "escape-soyuz-cable-10",
+          "kind": "cable",
+          "localPos": {
+            "x": -0.6505,
+            "y": 0.6505,
+            "z": -1.65
+          },
+          "localQuat": {
+            "x": 0,
+            "y": 0,
+            "z": 0.9238795325112867,
+            "w": -0.3826834323650897
+          }
+        },
+        {
+          "id": "escape-soyuz-cable-11",
+          "kind": "cable",
+          "localPos": {
+            "x": -0.6505,
+            "y": 0.6505,
+            "z": 0
+          },
+          "localQuat": {
+            "x": 0,
+            "y": 0,
+            "z": 0.9238795325112867,
+            "w": -0.3826834323650897
+          }
+        },
+        {
+          "id": "escape-soyuz-cable-12",
+          "kind": "cable",
+          "localPos": {
+            "x": -0.6505,
+            "y": 0.6505,
+            "z": 1.65
+          },
+          "localQuat": {
+            "x": 0,
+            "y": 0,
+            "z": 0.9238795325112867,
+            "w": -0.3826834323650897
+          }
+        },
+        {
+          "id": "escape-soyuz-bag-0",
+          "kind": "stowage",
+          "localPos": {
+            "x": -0.6083,
+            "y": -0.0449,
+            "z": -1.5198
+          },
+          "localQuat": {
+            "x": 0,
+            "y": 0,
+            "z": -0.680593034228817,
+            "w": 0.7326616693667086
+          }
+        },
+        {
+          "id": "escape-soyuz-bag-1",
+          "kind": "stowage",
+          "localPos": {
+            "x": -0.609,
+            "y": 0.0347,
+            "z": -0.2235
+          },
+          "localQuat": {
+            "x": 0,
+            "y": 0,
+            "z": -0.7269603960574224,
+            "w": 0.6866793884805596
+          }
+        },
+        {
+          "id": "escape-soyuz-locker",
+          "kind": "locker",
+          "localPos": {
+            "x": -0.57,
+            "y": 0,
+            "z": -2.05
+          },
+          "localQuat": {
+            "x": 0,
+            "y": 0,
+            "z": -0.7071067811865476,
+            "w": 0.7071067811865475
+          },
+          "interactable": true
+        },
+        {
+          "id": "escape-soyuz-bulkhead-a",
+          "kind": "bulkhead",
+          "localPos": {
+            "x": -0.4614,
+            "y": -0.175,
+            "z": -0.9
+          }
+        },
+        {
+          "id": "escape-soyuz-bulkhead-b",
+          "kind": "bulkhead",
+          "localPos": {
+            "x": 0.4614,
+            "y": -0.175,
+            "z": 0.3
+          }
+        },
+        {
+          "id": "escape-soyuz-panel-capsule",
+          "kind": "panel",
+          "localPos": {
+            "x": -0.735,
+            "y": 0,
+            "z": -1.9
+          },
+          "localQuat": {
+            "x": 0,
+            "y": 0,
+            "z": -0.707107,
+            "w": 0.707107
+          },
+          "interactable": true
+        }
+      ],
+      "lighting": "dark",
+      "gravity": "nominal",
+      "volume": 15.71
+    }
+  ],
+  "escapeModule": "escape-soyuz",
+  "finaleModule": "node-alpha",
+  "name": "ISS — Expedition 74"
+}

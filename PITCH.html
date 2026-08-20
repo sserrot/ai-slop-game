@@ -1,0 +1,1218 @@
+<title>ISS Sound Horror</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..900&family=IBM+Plex+Mono:wght@400;500;600&family=Source+Serif+4:opsz,wght@8..60,300..600&display=swap">
+
+<style>
+:root {
+  --void:    #0B1017;
+  --hull:    #141C26;
+  --hull-2:  #1D2733;
+  --edge:    #2A3846;
+  --sodium:  #FFA738;
+  --sodium-d:#B8752150;
+  --signal:  #9FD6E8;
+  --alarm:   #FF4530;
+  --paper:   #E8EDF2;
+  --muted:   #939FAF;
+  --dim:     #77869B;
+
+  --display: "Archivo", "Helvetica Neue", Arial, sans-serif;
+  --prose:   "Source Serif 4", Georgia, "Times New Roman", serif;
+  --mono:    "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+
+  --measure: 68ch;
+  --wide: 1180px;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  background: var(--void);
+  color: var(--paper);
+  font-family: var(--prose);
+  font-size: 17px;
+  line-height: 1.68;
+  margin: 0;
+  -webkit-font-smoothing: antialiased;
+  overflow-x: hidden;
+}
+
+/* ── ambient hull texture ─────────────────────────────────────── */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  background:
+    radial-gradient(1100px 700px at 78% -8%, #FFA73810, transparent 62%),
+    radial-gradient(900px 620px at 6% 42%, #9FD6E80B, transparent 60%);
+}
+
+/* ── typography roles ─────────────────────────────────────────── */
+h1, h2, h3, .display { font-family: var(--display); text-wrap: balance; margin: 0; }
+
+h1 {
+  font-size: clamp(3.1rem, 9.5vw, 7.4rem);
+  font-weight: 800;
+  font-stretch: 112%;
+  line-height: 0.87;
+  letter-spacing: -0.035em;
+}
+
+h2 {
+  font-size: clamp(1.9rem, 4vw, 3.05rem);
+  font-weight: 700;
+  font-stretch: 108%;
+  line-height: 1.02;
+  letter-spacing: -0.022em;
+  margin-bottom: 0.5rem;
+}
+
+h3 {
+  font-size: 1.06rem;
+  font-weight: 700;
+  font-stretch: 105%;
+  letter-spacing: -0.006em;
+  line-height: 1.3;
+}
+
+p { margin: 0 0 1.1em; max-width: var(--measure); }
+p:last-child { margin-bottom: 0; }
+
+a { color: var(--sodium); }
+
+strong { color: #FFFFFF; font-weight: 600; }
+em { color: var(--signal); font-style: italic; }
+
+.eyebrow {
+  font-family: var(--mono);
+  font-size: 0.685rem;
+  font-weight: 500;
+  letter-spacing: 0.19em;
+  text-transform: uppercase;
+  color: var(--sodium);
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  margin: 0 0 1.15rem;
+}
+.eyebrow::after {
+  content: "";
+  height: 1px;
+  flex: 1;
+  max-width: 190px;
+  background: linear-gradient(90deg, var(--sodium-d), transparent);
+}
+
+.lede {
+  font-size: clamp(1.13rem, 1.9vw, 1.36rem);
+  line-height: 1.55;
+  color: #D3DCE6;
+  font-weight: 300;
+  max-width: 62ch;
+}
+
+.note {
+  font-family: var(--mono);
+  font-size: 0.775rem;
+  line-height: 1.65;
+  color: var(--dim);
+  letter-spacing: 0.005em;
+  max-width: 74ch;
+}
+
+.num { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+
+/* ── shell ────────────────────────────────────────────────────── */
+.deck { position: relative; z-index: 1; }
+
+section {
+  padding: clamp(4.2rem, 9vh, 7.4rem) clamp(1.35rem, 5vw, 3.2rem);
+  max-width: var(--wide);
+  margin: 0 auto;
+  position: relative;
+}
+
+section + section { border-top: 1px solid var(--edge); }
+
+/* Reveal is opt-in: the attribute is set by script, so with JS off — or if the
+   observer never fires — every section renders plainly instead of blank. */
+[data-anim] .reveal {
+  opacity: 0;
+  transform: translateY(22px);
+  transition: opacity 0.75s cubic-bezier(.2,.7,.3,1), transform 0.75s cubic-bezier(.2,.7,.3,1);
+}
+[data-anim] .reveal.seen { opacity: 1; transform: none; }
+
+/* ── dB rail ──────────────────────────────────────────────────── */
+.rail {
+  position: fixed;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 74px;
+  z-index: 5;
+  pointer-events: none;
+  display: none;
+}
+.rail-line {
+  position: absolute;
+  left: 46px;
+  top: 16vh;
+  bottom: 16vh;
+  width: 1px;
+  background: linear-gradient(180deg, var(--alarm), var(--sodium) 46%, var(--signal));
+  opacity: 0.42;
+}
+.rail-tick {
+  position: absolute;
+  left: 40px;
+  width: 13px;
+  height: 1px;
+  background: var(--edge);
+}
+.rail-tick span {
+  position: absolute;
+  right: 20px;
+  top: -0.62em;
+  font-family: var(--mono);
+  font-size: 0.6rem;
+  color: var(--dim);
+  font-variant-numeric: tabular-nums;
+}
+.rail-head {
+  position: absolute;
+  left: 34px;
+  transition: top 0.72s cubic-bezier(.3,.8,.25,1);
+  will-change: top;
+}
+.rail-dot {
+  width: 25px;
+  height: 1px;
+  background: var(--sodium);
+  box-shadow: 0 0 9px 1px #FFA73899;
+}
+.rail-dot::after {
+  content: "";
+  position: absolute;
+  left: 22px;
+  top: -2.5px;
+  width: 6px;
+  height: 6px;
+  background: var(--sodium);
+  transform: rotate(45deg);
+}
+.rail-val {
+  position: absolute;
+  left: 0;
+  top: -1.55em;
+  font-family: var(--mono);
+  font-size: 0.66rem;
+  font-weight: 600;
+  color: var(--sodium);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.rail-cap {
+  position: absolute;
+  left: 46px;
+  bottom: 5vh;
+  transform: rotate(180deg);
+  writing-mode: vertical-rl;
+  font-family: var(--mono);
+  font-size: 0.58rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--dim);
+}
+@media (min-width: 1150px) {
+  .rail { display: block; }
+  .deck { padding-left: 34px; }
+}
+
+/* ── hero ─────────────────────────────────────────────────────── */
+.hero {
+  padding-top: clamp(3.2rem, 11vh, 6.5rem);
+  padding-bottom: clamp(2.4rem, 5vh, 3.6rem);
+}
+.hero h1 { margin-bottom: 1.5rem; }
+.hero h1 .quiet { display: block; color: var(--muted); font-stretch: 88%; font-weight: 500; font-size: 0.365em; letter-spacing: 0.02em; line-height: 1.25; margin-bottom: 0.75rem; }
+.hero h1 em { color: var(--sodium); font-style: normal; }
+
+.spec {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 2.3rem;
+  padding-top: 1.6rem;
+  border-top: 1px solid var(--edge);
+}
+.spec span {
+  font-family: var(--mono);
+  font-size: 0.7rem;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--muted);
+  border: 1px solid var(--edge);
+  padding: 0.44rem 0.78rem;
+  background: #141C2680;
+}
+.spec span.live { color: var(--sodium); border-color: #FFA73840; background: #FFA7380C; }
+
+/* ── propagation instrument ───────────────────────────────────── */
+.instrument {
+  margin: 3.1rem 0 0;
+  border: 1px solid var(--edge);
+  background:
+    linear-gradient(180deg, #141C26, #0D141C);
+  position: relative;
+}
+.instrument-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+  padding: 0.72rem 1rem;
+  border-bottom: 1px solid var(--edge);
+  font-family: var(--mono);
+  font-size: 0.665rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--dim);
+}
+.instrument-bar b { color: var(--signal); font-weight: 500; letter-spacing: 0.14em; }
+#prop { display: block; width: 100%; height: 232px; cursor: crosshair; }
+.instrument-foot {
+  padding: 0.66rem 1rem 0.8rem;
+  border-top: 1px solid var(--edge);
+  font-family: var(--mono);
+  font-size: 0.665rem;
+  color: var(--dim);
+  letter-spacing: 0.02em;
+}
+
+/* ── generic grid ─────────────────────────────────────────────── */
+.grid {
+  display: grid;
+  gap: 1px;
+  background: var(--edge);
+  border: 1px solid var(--edge);
+  margin-top: 2.6rem;
+}
+.g3 { grid-template-columns: repeat(auto-fit, minmax(255px, 1fr)); }
+.g2 { grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); }
+
+.cell {
+  background: var(--hull);
+  padding: 1.6rem 1.5rem 1.7rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.72rem;
+}
+.cell p { font-size: 0.935rem; line-height: 1.6; color: #BCC7D2; max-width: none; }
+.cell .idx {
+  font-family: var(--mono);
+  font-size: 0.66rem;
+  letter-spacing: 0.16em;
+  color: var(--sodium);
+  text-transform: uppercase;
+}
+
+/* ── loudness table ───────────────────────────────────────────── */
+.scale {
+  margin-top: 2.6rem;
+  border: 1px solid var(--edge);
+  background: var(--hull);
+}
+.scale-head, .row {
+  display: grid;
+  grid-template-columns: minmax(140px, 1.35fr) 52px minmax(150px, 3fr) minmax(96px, 0.95fr);
+  align-items: center;
+  gap: 0.9rem;
+  padding: 0.5rem 1.15rem;
+}
+.scale-head {
+  border-bottom: 1px solid var(--edge);
+  font-family: var(--mono);
+  font-size: 0.63rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--dim);
+  padding-top: 0.75rem;
+  padding-bottom: 0.75rem;
+}
+.row { border-top: 1px solid #1D2733; }
+.row:first-of-type { border-top: none; }
+.row .label { font-size: 0.925rem; color: #D3DCE6; }
+.row .val {
+  font-family: var(--mono);
+  font-size: 0.86rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+  color: var(--paper);
+}
+.row .carry { font-family: var(--mono); font-size: 0.71rem; color: var(--dim); text-align: right; }
+.row.key { background: #1A232E; }
+.row.key .label { color: #FFFFFF; font-weight: 600; }
+
+.track { height: 9px; background: #0E1620; position: relative; }
+.fill {
+  height: 100%;
+  width: calc(var(--n) * 1%);
+  background-image: linear-gradient(90deg, #6FB6CE 0%, var(--signal) 12%, var(--sodium) 52%, var(--alarm) 100%);
+  background-repeat: no-repeat;
+  background-size: calc(10000% / var(--n)) 100%;
+}
+.track .floor {
+  position: absolute;
+  top: -3px;
+  bottom: -3px;
+  left: 2%;
+  width: 1px;
+  background: var(--dim);
+}
+
+/* ── data table ───────────────────────────────────────────────── */
+.tw { overflow-x: auto; margin-top: 2.5rem; border: 1px solid var(--edge); }
+table { border-collapse: collapse; width: 100%; min-width: 540px; background: var(--hull); }
+th, td { text-align: left; padding: 0.72rem 1.1rem; border-bottom: 1px solid #1D2733; }
+th {
+  font-family: var(--mono);
+  font-size: 0.63rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--dim);
+  font-weight: 500;
+  background: #101822;
+}
+td { font-size: 0.9rem; color: #C6D0DA; }
+td.n { font-family: var(--mono); font-variant-numeric: tabular-nums; color: var(--paper); }
+tr:last-child td { border-bottom: none; }
+tr.hot td { color: var(--paper); }
+tr.hot td.n { color: var(--sodium); font-weight: 600; }
+
+/* ── state chain ──────────────────────────────────────────────── */
+.chain {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.44rem;
+  margin-top: 2.4rem;
+}
+.state {
+  font-family: var(--mono);
+  font-size: 0.715rem;
+  letter-spacing: 0.11em;
+  padding: 0.5rem 0.82rem;
+  border: 1px solid var(--edge);
+  color: var(--muted);
+  background: #141C26;
+  white-space: nowrap;
+}
+.state.s3 { color: var(--signal); border-color: #9FD6E840; }
+.state.s4 { color: var(--sodium); border-color: #FFA73845; background: #FFA7380A; }
+.state.s5 { color: var(--alarm); border-color: #FF453045; background: #FF45300C; }
+.arrow { color: var(--dim); font-family: var(--mono); font-size: 0.78rem; }
+
+/* ── arc ──────────────────────────────────────────────────────── */
+.arc { display: grid; grid-template-columns: repeat(auto-fit, minmax(178px, 1fr)); gap: 1px; margin-top: 2.6rem; background: var(--edge); border: 1px solid var(--edge); }
+.phase { background: var(--hull); padding: 1.5rem 1.35rem 1.6rem; display: flex; flex-direction: column; gap: 0.6rem; position: relative; }
+.phase::before { content: ""; position: absolute; top: 0; left: 0; right: 0; height: 2px; background: var(--bar); }
+.phase h3 { font-size: 1.24rem; font-stretch: 112%; letter-spacing: 0.01em; text-transform: uppercase; }
+.phase .t { font-family: var(--mono); font-size: 0.66rem; letter-spacing: 0.13em; color: var(--dim); text-transform: uppercase; }
+.phase p { font-size: 0.885rem; line-height: 1.58; color: #B4C0CC; max-width: none; margin: 0; }
+
+/* ── status ───────────────────────────────────────────────────── */
+.ms { display: flex; flex-direction: column; border: 1px solid var(--edge); margin-top: 2.5rem; }
+.m {
+  display: grid;
+  grid-template-columns: 54px 1fr auto;
+  gap: 1.1rem;
+  align-items: center;
+  padding: 0.82rem 1.15rem;
+  border-bottom: 1px solid #1D2733;
+  background: var(--hull);
+}
+.m:last-child { border-bottom: none; }
+.m .id { font-family: var(--mono); font-size: 0.79rem; font-weight: 600; color: var(--dim); }
+.m .what { font-size: 0.925rem; color: #C6D0DA; }
+.m .what b { color: var(--paper); font-weight: 600; }
+.chip {
+  font-family: var(--mono);
+  font-size: 0.63rem;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+  padding: 0.3rem 0.6rem;
+  border: 1px solid;
+  white-space: nowrap;
+}
+.chip.done { color: var(--signal); border-color: #9FD6E838; background: #9FD6E80A; }
+.chip.grey { color: var(--sodium); border-color: #FFA73838; background: #FFA7380A; }
+.chip.todo { color: var(--dim); border-color: var(--edge); }
+.m.done .id { color: var(--signal); }
+.m.todo { background: #0F1620; }
+
+/* ── risk ─────────────────────────────────────────────────────── */
+.risk { border-left: 2px solid var(--alarm); padding: 0.1rem 0 0.1rem 1.35rem; }
+.risk h3 { color: var(--paper); margin-bottom: 0.35rem; }
+.risk p { font-size: 0.925rem; color: #B4C0CC; max-width: none; }
+.risks { display: flex; flex-direction: column; gap: 1.9rem; margin-top: 2.6rem; }
+
+/* ── closing ──────────────────────────────────────────────────── */
+.close { text-align: left; }
+.close h2 { font-size: clamp(2.2rem, 5.5vw, 4rem); }
+.stamp {
+  font-family: var(--mono);
+  font-size: 0.65rem;
+  letter-spacing: 0.19em;
+  text-transform: uppercase;
+  color: var(--dim);
+  margin-top: 3.4rem;
+  padding-top: 1.3rem;
+  border-top: 1px solid var(--edge);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1.6rem;
+}
+
+.pull {
+  font-family: var(--display);
+  font-stretch: 96%;
+  font-weight: 500;
+  font-size: clamp(1.35rem, 3.1vw, 2.1rem);
+  line-height: 1.28;
+  letter-spacing: -0.018em;
+  color: var(--paper);
+  border-left: 2px solid var(--sodium);
+  padding-left: 1.5rem;
+  margin: 2.9rem 0 0;
+  max-width: 30ch;
+}
+
+:focus-visible { outline: 2px solid var(--sodium); outline-offset: 3px; }
+
+@media (prefers-reduced-motion: reduce) {
+  .reveal { opacity: 1; transform: none; transition: none; }
+  .rail-head { transition: none; }
+}
+@media (max-width: 620px) {
+  .scale-head, .row { grid-template-columns: 1fr 46px; row-gap: 0.35rem; }
+  .scale-head .h-bar, .scale-head .h-carry { display: none; }
+  .row .track { grid-column: 1 / -1; }
+  .row .carry { grid-column: 1 / -1; text-align: left; }
+}
+</style>
+
+<div class="rail" aria-hidden="true">
+  <div class="rail-line"></div>
+  <div id="ticks"></div>
+  <div class="rail-head" id="railhead" style="top:60vh">
+    <div class="rail-val" id="railval">00</div>
+    <div class="rail-dot"></div>
+  </div>
+  <div class="rail-cap">loudness</div>
+</div>
+
+<main class="deck">
+
+<!-- ══ HERO ══════════════════════════════════════════════════ -->
+<section class="hero">
+  <p class="eyebrow">Working title · ISS · Co-op first-person horror</p>
+  <h1>
+    <span class="quiet">It has no eyes.</span>
+    It hunts by <em>sound</em>.
+  </h1>
+  <p class="lede">
+    Six people wake alone and scattered aboard a dead International Space Station.
+    No gravity. No lights. Something aboard that hears everything.
+    You have to find each other, bring four systems back online and reach the capsule —
+    and every single thing you do is a decision about how loud to be.
+  </p>
+
+  <div class="spec">
+    <span class="live">Playable greybox today</span>
+    <span>6 players</span>
+    <span>20–25 min rounds</span>
+    <span>Browser · WebGL</span>
+    <span>Proximity voice is a mechanic</span>
+  </div>
+
+  <div class="instrument">
+    <div class="instrument-bar">
+      <span>Fig. 01 — sound propagation, live</span>
+      <span><b>Click the tube</b> to make a noise</span>
+    </div>
+    <canvas id="prop" aria-label="Diagram: a noise propagating along five station modules, losing volume with distance and at each hatch"></canvas>
+    <div class="instrument-foot">
+      falloff 1.0 / metre · open hatch −3 dB · audibility floor 2 · numbers above each module are the arrival level
+    </div>
+  </div>
+</section>
+
+<!-- ══ THESIS ════════════════════════════════════════════════ -->
+<section class="reveal" data-db="20">
+  <p class="eyebrow">The pitch</p>
+  <h2>Every other co-op horror game is about not&nbsp;being&nbsp;seen.</h2>
+  <p class="lede" style="margin-bottom:1.9rem">
+    That is a solved problem. Players learn the sight-lines, crouch in the dark and stop being afraid.
+  </p>
+  <p>
+    ISS takes sight off the table entirely. The alien has <strong>no vision cone</strong> — not a
+    hard one, not a soft one, none — and we tell the player that on the main menu. It knows only what
+    it hears. So the map is not a set of hiding places; it's an <em>acoustic graph</em>. Sound
+    spreads module to module, loses a fixed amount per metre, and loses more at every hatch it has to
+    get through. A closed hatch is worth 25 points of silence. A sealed one is worth 40.
+  </p>
+  <p>
+    Which means the thing players are actually managing is a budget. Sliding along a handrail costs
+    4. Cycling a hatch costs 45. Prying a jammed panel costs 60 and takes three seconds instead of
+    twenty-five. And your own voice — real proximity voice chat, sampled from your real microphone —
+    costs anywhere from 10 to 55 depending on how badly you need to be heard.
+  </p>
+  <p class="pull">Nobody has to be told to whisper. They just start whispering.</p>
+</section>
+
+<!-- ══ PILLARS ═══════════════════════════════════════════════ -->
+<section class="reveal" data-db="12">
+  <p class="eyebrow">Three pillars · everything else gets cut</p>
+  <h2>What the whole game is made of</h2>
+  <p class="note">If a feature doesn't serve one of these, it doesn't ship. That rule has already removed a rollback netcode layer, a server-side physics engine, a sanity meter and a stamina bar.</p>
+
+  <div class="grid g3">
+    <div class="cell">
+      <span class="idx">Pillar 01</span>
+      <h3>Sound is the only currency</h3>
+      <p>Movement, puzzles, voice chat, even the proximity tracker on your wrist — every one is a
+      noise decision with a printed price. The player must always be able to answer one question:
+      <em>was that loud?</em></p>
+    </div>
+    <div class="cell">
+      <span class="idx">Pillar 02</span>
+      <h3>Zero-G is the risk system</h3>
+      <p>Nobody walks. You haul along handrails — slow and quiet — or push off and fly, and you'd
+      better catch something at the far end. Traversal is already a gamble, so we don't need a second
+      meter to make it tense.</p>
+    </div>
+    <div class="cell">
+      <span class="idx">Pillar 03</span>
+      <h3>Legible, not realistic</h3>
+      <p>A player should build a correct mental model of the alien's hearing inside one round.
+      Sound falls off linearly, not by inverse-square, because realism here makes the mechanic
+      unreadable. Fairness is what makes it frightening instead of infuriating.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ══ LOUDNESS ══════════════════════════════════════════════ -->
+<section class="reveal" data-db="70">
+  <p class="eyebrow">The economy</p>
+  <h2>The price list</h2>
+  <p class="lede">
+    This table is the difficulty curve. It is also, in practice, the entire tutorial — a ring around
+    the crosshair expands after every noise you make, scaled to how far it really carried, and
+    players read the economy off it in about ninety seconds.
+  </p>
+
+  <div class="scale">
+    <div class="scale-head">
+      <span>Action</span><span style="text-align:right">Loud</span><span class="h-bar">0 &nbsp;————————&nbsp; 100</span><span class="h-carry" style="text-align:right">Carries</span>
+    </div>
+    <div class="row"><span class="label">Rail pull</span><span class="val">4</span><span class="track"><span class="fill" style="--n:4"></span><span class="floor"></span></span><span class="carry">2 m</span></div>
+    <div class="row"><span class="label">Spectator headset</span><span class="val">5</span><span class="track"><span class="fill" style="--n:5"></span><span class="floor"></span></span><span class="carry">3 m</span></div>
+    <div class="row"><span class="label">Hand pump / manual override</span><span class="val">6</span><span class="track"><span class="fill" style="--n:6"></span><span class="floor"></span></span><span class="carry">4 m</span></div>
+    <div class="row"><span class="label">Panicked breathing</span><span class="val">6–14</span><span class="track"><span class="fill" style="--n:14"></span><span class="floor"></span></span><span class="carry">scales w/ heart rate</span></div>
+    <div class="row"><span class="label">Gentle push-off</span><span class="val">8</span><span class="track"><span class="fill" style="--n:8"></span><span class="floor"></span></span><span class="carry">6 m</span></div>
+    <div class="row key"><span class="label">Clean rail catch</span><span class="val">26</span><span class="track"><span class="fill" style="--n:26"></span><span class="floor"></span></span><span class="carry">8 + 3v · at 6 m/s</span></div>
+    <div class="row"><span class="label">Handrail knock</span><span class="val">15</span><span class="track"><span class="fill" style="--n:15"></span><span class="floor"></span></span><span class="carry">~2 modules</span></div>
+    <div class="row"><span class="label">Wrist tracker beep</span><span class="val">20</span><span class="track"><span class="fill" style="--n:20"></span><span class="floor"></span></span><span class="carry">~1 module</span></div>
+    <div class="row"><span class="label">Cargo bag bounce</span><span class="val">30</span><span class="track"><span class="fill" style="--n:30"></span><span class="floor"></span></span><span class="carry">~1 module</span></div>
+    <div class="row"><span class="label">Breaker toggle</span><span class="val">35</span><span class="track"><span class="fill" style="--n:35"></span><span class="floor"></span></span><span class="carry">~2 modules</span></div>
+    <div class="row"><span class="label">Hatch cycle</span><span class="val">45</span><span class="track"><span class="fill" style="--n:45"></span><span class="floor"></span></span><span class="carry">~3 modules</span></div>
+    <div class="row key"><span class="label">Uncontrolled impact</span><span class="val">51</span><span class="track"><span class="fill" style="--n:51"></span><span class="floor"></span></span><span class="carry">15 + 6v · at 6 m/s</span></div>
+    <div class="row"><span class="label">Your voice</span><span class="val">10–55</span><span class="track"><span class="fill" style="--n:55"></span><span class="floor"></span></span><span class="carry">~5 modules at a shout</span></div>
+    <div class="row"><span class="label">Pry bar / power tool</span><span class="val">60</span><span class="track"><span class="fill" style="--n:60"></span><span class="floor"></span></span><span class="carry">~4 modules</span></div>
+    <div class="row"><span class="label">Fire extinguisher burst</span><span class="val">65</span><span class="track"><span class="fill" style="--n:65"></span><span class="floor"></span></span><span class="carry">~4 modules</span></div>
+    <div class="row"><span class="label">Decoy impact</span><span class="val">70</span><span class="track"><span class="fill" style="--n:70"></span><span class="floor"></span></span><span class="carry">~5 modules</span></div>
+  </div>
+  <p class="note" style="margin-top:1.2rem">
+    Thin vertical mark = the audibility floor at 2. Every action in the game is above it, so nothing
+    is ever <em>free</em> — what changes with the situation is whether the alien is bothering to listen.
+  </p>
+</section>
+
+<!-- ══ RISK LADDER ═══════════════════════════════════════════ -->
+<section class="reveal" data-db="51">
+  <p class="eyebrow">Movement</p>
+  <h2>Three ways across a room, three ways to die</h2>
+  <p>
+    You can slide along the rails at 1.2 m/s and stay almost silent. You can charge a push-off and
+    fly across at up to 6 m/s. Or you can miss.
+  </p>
+  <p>
+    The critical detail — the one that turns this from a movement system into a skill ceiling — is
+    that a <strong>clean catch and a crash are two different sounds</strong>. Catching a handrail at
+    full speed costs 26. Hitting a bulkhead at full speed costs 51. Skill buys you roughly a module
+    and a half of silence, every single time you cross a room, and that is what makes going fast a
+    real choice instead of a mistake.
+  </p>
+
+  <div class="tw">
+    <table>
+      <thead><tr><th>Who</th><th>Speed</th><th>What it means at the table</th></tr></thead>
+      <tbody>
+        <tr><td>You, sliding on a rail</td><td class="n">1.2 m/s</td><td>Quiet, and slower than the alien's patrol</td></tr>
+        <tr><td>Alien, sweeping a module</td><td class="n">1.2 m/s</td><td>It searches at the speed you hide at</td></tr>
+        <tr class="hot"><td>Alien, patrolling</td><td class="n">1.5 m/s</td><td><strong>You cannot out-slide it.</strong> Deliberate</td></tr>
+        <tr><td>Alien, hunting</td><td class="n">3.0 m/s</td><td>Beats everything except a full push-off</td></tr>
+        <tr class="hot"><td>You, pushing off</td><td class="n">6.0 m/s</td><td>The only thing that outruns a hunt — briefly</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <p class="note" style="margin-top:1.35rem">
+    A chase in a five-metre cylinder has no flanking, so we designed the loop explicitly:
+    it closes at 3.0 → you push off and gain ground → you must catch (26, it keeps its fix on you)
+    or crash (51, it definitely does) → you close a hatch behind you for 45, which buys three seconds,
+    and it opens that hatch for 45 too, so <em>you hear it coming</em>.
+  </p>
+</section>
+
+<!-- ══ ALIEN ═════════════════════════════════════════════════ -->
+<section class="reveal" data-db="35">
+  <p class="eyebrow">The antagonist</p>
+  <h2>A monster you can be right about</h2>
+  <p class="lede">
+    It moves the way you move — pulling itself along the same handrails, through the same hatches.
+    It perceives sound and physical contact. That is the complete list.
+  </p>
+
+  <div class="chain">
+    <span class="state">Dormant</span><span class="arrow">→</span>
+    <span class="state">Patrol</span><span class="arrow">→</span>
+    <span class="state s3">Investigate</span><span class="arrow">→</span>
+    <span class="state s3">Search</span><span class="arrow">→</span>
+    <span class="state s4">Hunt</span><span class="arrow">→</span>
+    <span class="state s5">Attack</span>
+  </div>
+
+  <div class="grid g3">
+    <div class="cell">
+      <span class="idx">Fairness</span>
+      <h3>It never knows exactly where you are</h3>
+      <p>Every noise it hears resolves to a point offset by up to 12 metres, tightening as the noise
+      gets louder — and never, ever below 2 metres. A pry bar next door pins you to about three
+      metres. A whisper across the station buys you twelve. <strong>The floor is the guarantee: it
+      cannot teleport onto your exact position.</strong></p>
+    </div>
+    <div class="cell">
+      <span class="idx">Attention</span>
+      <h3>It hears better when it's already looking</h3>
+      <p>On patrol it ignores anything arriving under 12. Once it's searching, that drops to 4 — so
+      a rail pull, the quietest thing you own, is completely safe at distance and <em>fatal</em> when
+      it's sweeping your module and you shift your grip. One sentence to explain, and it is the whole
+      tension of the game.</p>
+    </div>
+    <div class="cell">
+      <span class="idx">Honesty</span>
+      <h3>It is loud when it charges</h3>
+      <p>A silent charge reads as a bug and feels like cheating, so hunting makes noise, opening a
+      hatch makes noise, and we state the rules on the menu. A legible monster is scarier than a
+      mysterious one, because when it kills you, you know it was your fault.</p>
+    </div>
+  </div>
+
+  <p class="note" style="margin-top:1.4rem">
+    Two anti-degenerate systems sit underneath: a rolling one-second window keeps it from thrashing
+    between six players' noises, and a repeat penalty means it stops falling for the same decoy in
+    the same place twice. If it has been near a living player for a fuzzed 60–150 seconds without a
+    kill, it leaves — long enough that camping is a gamble, not a proof.
+  </p>
+</section>
+
+<!-- ══ ROUND ARC ═════════════════════════════════════════════ -->
+<section class="reveal" data-db="45">
+  <p class="eyebrow">The round</p>
+  <h2>Scatter, reunite, split, converge</h2>
+  <p>
+    Everyone wakes in a different module on emergency lighting with no idea where anybody else is.
+    The only tool you have for finding your crew is your voice — and your voice is the loudest thing
+    you own. Shouting "where is everyone" works, and it is exactly as stupid as it sounds.
+  </p>
+
+  <div class="arc">
+    <div class="phase" style="--bar:#9FD6E8">
+      <span class="t">Minute 0–4</span>
+      <h3>Scatter</h3>
+      <p>Alone, in the dark. Players tap handrails — a knock costs 15 and carries two modules — and
+      invent their own codes for <em>here</em>, <em>safe</em>, <em>run</em>. We did not design that
+      protocol. They do, every round.</p>
+    </div>
+    <div class="phase" style="--bar:#9FD6E8">
+      <span class="t">Minute 4–8</span>
+      <h3>Reunite</h3>
+      <p>The most reliably terrifying stretch of the game, and it costs almost nothing to build:
+      random spawns, one hop apart minimum, and a monster that starts at least three hops from the
+      crowd.</p>
+    </div>
+    <div class="phase" style="--bar:#FFA738">
+      <span class="t">Minute 8–18</span>
+      <h3>Split</h3>
+      <p>Four puzzles run in parallel, so six players break into groups — and every group is
+      generating noise that endangers the others. Bringing a system online pushes the station one
+      stage more dangerous.</p>
+    </div>
+    <div class="phase" style="--bar:#FF4530">
+      <span class="t">Minute 18–25</span>
+      <h3>Converge</h3>
+      <p>Three players in three modules hold three release levers for five seconds, counting each
+      other down over voice at loudness 60. The alien is coming and everybody knows it.</p>
+    </div>
+  </div>
+
+  <h3 style="margin-top:3.2rem">The station gets more dangerous as you fix it</h3>
+  <p style="margin-top:0.6rem">
+    Without pressure, the optimal play in a game like this is to move slowly and silently forever, and
+    a group of friends finds that out by round three. So progress itself is the escalation: every
+    system you bring online makes the thing hunting you faster and sharper, and a stalling team
+    escalates anyway on an eight-minute timer. That caps a round at 20–25 minutes and gives every run
+    an arc.
+  </p>
+
+  <div class="tw">
+    <table>
+      <thead><tr><th>Stage</th><th>Trigger</th><th>Patrol speed</th><th>Notices noise at</th><th>Also</th></tr></thead>
+      <tbody>
+        <tr><td class="n">0</td><td>Round start</td><td class="n">1.5</td><td class="n">12</td><td>—</td></tr>
+        <tr><td class="n">1</td><td>1 system online</td><td class="n">1.6</td><td class="n">10</td><td>—</td></tr>
+        <tr><td class="n">2</td><td>2 systems online</td><td class="n">1.8</td><td class="n">8</td><td>Hunts toward the biggest group</td></tr>
+        <tr><td class="n">3</td><td>3 systems online</td><td class="n">2.0</td><td class="n">6</td><td>Searches for 25 s instead of 15</td></tr>
+        <tr class="hot"><td class="n">4</td><td>Undock is live</td><td class="n">2.2</td><td class="n">4</td><td>Charges at 35 instead of 50</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- ══ PUZZLES ═══════════════════════════════════════════════ -->
+<section class="reveal" data-db="40">
+  <p class="eyebrow">Objectives</p>
+  <h2>The puzzles are easy. Doing them is not.</h2>
+  <p class="lede">
+    Six of them, deliberately simple. Nothing here should make a player feel stuck — it should make
+    them feel <em>exposed</em>. And every one has a loud-fast path and a quiet-slow path, which is
+    the rule that keeps the noise system relevant long after the map is learned.
+  </p>
+
+  <div class="grid g2">
+    <div class="cell">
+      <span class="idx">The thesis puzzle · 2 players · 2 modules</span>
+      <h3>Coolant valve</h3>
+      <p>One module has a pressure gauge and no valve. Another has the valve wheel and no gauge. One
+      player turns; the other reads the needle and talks them into the green band. Turning gently
+      costs 8. Spinning the wheel costs 40. So the reader has to stay patient while their partner
+      sits alone in the dark being told to keep going.</p>
+      <p class="note" style="margin-top:0.3rem">Thirty lines of code. It is the entire design in one interaction.</p>
+    </div>
+    <div class="cell">
+      <span class="idx">Teaches everything · 1 player</span>
+      <h3>Breaker sequence</h3>
+      <p>Six breakers in the right order. Each throw is a CLACK at 35; a wrong order resets the panel
+      with a buzz at 50. The order is written on a card stowed in a locker somewhere else on the
+      station. Or there's a manual override under the panel — hold a lever for twenty seconds at
+      loudness 6, anchored to a rail, unable to look around.</p>
+    </div>
+    <div class="cell">
+      <span class="idx">Commitment · 2 players</span>
+      <h3>Airlock keyswitch</h3>
+      <p>Two keyswitches four metres apart, turned within a second of each other. Trivial on the
+      ground. In zero-G, both players have to anchor to rails and count down over voice — and it is
+      loud at 45 no matter how carefully you do it.</p>
+    </div>
+    <div class="cell">
+      <span class="idx">Pacing · any number</span>
+      <h3>Fuse hunt</h3>
+      <p>Three blown fuses, three replacements in randomised lockers, zero logic. Its entire job is
+      to force people to travel while the alien is awake. It is what spaces out the thinky ones.</p>
+    </div>
+  </div>
+
+  <p class="note" style="margin-top:1.5rem">
+    Two players who work out knock codes can solve the coolant valve through a bulkhead in near
+    silence. We know. We left it in — the group that discovers that will tell the story for years.
+  </p>
+</section>
+
+<!-- ══ SIX PLAYERS ═══════════════════════════════════════════ -->
+<section class="reveal" data-db="55">
+  <p class="eyebrow">Six players</p>
+  <h2>Somebody dies in the first four minutes. Every round.</h2>
+  <p>
+    At six players that is not a risk, it is a certainty, and a friend watching a black screen for
+    twenty minutes is how a group stops playing a game. So attrition is designed, not patched.
+  </p>
+
+  <div class="grid g3">
+    <div class="cell">
+      <span class="idx">01</span>
+      <h3>The dead get a job</h3>
+      <p>Spectators speak to the living over a headset channel at loudness 5 — the team's eyes for
+      almost no noise cost. It keeps the group inside the game's own voice channel, which is the
+      whole ballgame.</p>
+    </div>
+    <div class="cell">
+      <span class="idx">02</span>
+      <h3>Revival is a destination</h3>
+      <p>Carry a medkit to the body, not the body to medical. You keep all the tension — loud travel,
+      exposed anchoring, a downed friend as a fixed point on the map — for a fraction of the work.</p>
+    </div>
+    <div class="cell">
+      <span class="idx">03</span>
+      <h3>Escaping with three of six is a win</h3>
+      <p>Said out loud on the results screen, and ranked: <span class="num">crew recovered 3/6</span>.
+      A binary win condition at six players means most rounds end in failure, and the group quietly
+      stops showing up.</p>
+    </div>
+  </div>
+
+  <h3 style="margin-top:3.2rem">The known threat, stated plainly</h3>
+  <p style="margin-top:0.6rem">
+    Your friends will be in a Discord call before the game launches, and that defeats
+    voice-as-noise, the reunion phase, knock codes and the coolant valve's entire premise. It cannot
+    be detected and cannot be engineered around. What we do instead: state the contract on the menu
+    the same way we state the alien's rules, and give the dead a legitimate in-game reason to keep
+    talking. It is a social problem, and it is the single biggest threat to this being the game we
+    designed.
+  </p>
+</section>
+
+<!-- ══ STATUS ════════════════════════════════════════════════ -->
+<section class="reveal" data-db="26">
+  <p class="eyebrow">Status · this is not a concept document</p>
+  <h2>Eight of nine milestones are playable</h2>
+  <p class="lede">
+    Everything below is greyboxed — boxes, cylinders and capsules — and wired end to end against a
+    live server. The station is nine authored modules. The audio is fully graph-resolved per
+    listener.
+  </p>
+
+  <div class="ms">
+    <div class="m done"><span class="id">M0</span><span class="what"><b>Zero-G feel.</b> Hand-rolled kinematic controller, swept-sphere collision, comfort options shipped up front</span><span class="chip done">Playable</span></div>
+    <div class="m done"><span class="id">M1</span><span class="what"><b>The risk ladder.</b> Rail graph, buffered grip, charged push-off, catch-vs-crash as two different sounds</span><span class="chip done">Playable</span></div>
+    <div class="m done"><span class="id">M2</span><span class="what"><b>The station.</b> Nine modules, hatches that open, close and seal, two-hop portal culling</span><span class="chip done">Playable</span></div>
+    <div class="m done"><span class="id">M3</span><span class="what"><b>Noise.</b> Graph propagation, coalescing, the noise ring, wrist tracker, heart rate and breathing</span><span class="chip done">Playable</span></div>
+    <div class="m done"><span class="id">M4</span><span class="what"><b>The alien.</b> Full state machine, pathfinding, rail-following, decoys, the escalation director</span><span class="chip done">Playable</span></div>
+    <div class="m done"><span class="id">M5</span><span class="what"><b>Six players.</b> 20 Hz authoritative server, client-owned movement, the constrained spawn roll</span><span class="chip done">Playable</span></div>
+    <div class="m done"><span class="id">M6</span><span class="what"><b>Voice.</b> WebRTC mesh, mandatory mic calibration, gain gated by the same propagation the alien uses</span><span class="chip done">Playable</span></div>
+    <div class="m"><span class="id">M7</span><span class="what"><b>Puzzles and attrition.</b> All six puzzles, the escape, death, medkit revival, headset channel — <em>cargo bags and spectator cameras outstanding</em></span><span class="chip grey">Mostly there</span></div>
+    <div class="m todo"><span class="id">M8</span><span class="what"><b>Art, animation, sound design.</b> The alien is a capsule. Every noise is a synthesised oscillator. Nothing is dressed</span><span class="chip todo">Not started</span></div>
+  </div>
+
+  <p class="note" style="margin-top:1.5rem">
+    M8 is deliberately last and deliberately unstarted. Horror lives in lighting, audio and frame
+    pacing, not polygon count — and alien locomotion and animation is the largest single line item in
+    the project. It stays a capsule until the game underneath it is proven fun.
+  </p>
+</section>
+
+<!-- ══ RISKS ═════════════════════════════════════════════════ -->
+<section class="reveal" data-db="60">
+  <p class="eyebrow">What could kill this</p>
+  <h2>The honest list</h2>
+
+  <div class="risks">
+    <div class="risk">
+      <h3>Zero-G is sublime or nauseating, with very little in between</h3>
+      <p>Which is exactly why it was milestone zero and why comfort options — roll-lock, snap-turn,
+      FOV slider, a vignette that tightens with angular velocity — shipped before anything else. It
+      feels good. But motion sickness costs players, permanently, and no amount of design fixes it
+      after the fact.</p>
+    </div>
+    <div class="risk">
+      <h3>Discord defeats the central mechanic</h3>
+      <p>Social, not technical, and therefore the one we cannot solve with code. Mitigated by
+      contract and by giving the dead a reason to stay in-channel. Needs to be watched in the first
+      real six-player test, not after.</p>
+    </div>
+    <div class="risk">
+      <h3>Six people is a crowd, and crowds are boring</h3>
+      <p>The actual failure mode at six players is not bandwidth — it's six people bunched around one
+      panel while nothing happens. Parallel puzzles have to be in before the first six-player test,
+      or that test tells us nothing.</p>
+    </div>
+    <div class="risk">
+      <h3>Silent-slow play dominating</h3>
+      <p>If quiet is always optimal, the game becomes a forty-five-minute stealth chore. The
+      escalation director exists solely to prevent this. If playtests still drag, we escalate harder
+      before we add a single piece of content.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ══ CLOSE ═════════════════════════════════════════════════ -->
+<section class="reveal close" data-db="4">
+  <p class="eyebrow">Where it goes next</p>
+  <h2>The systems are proven. Now it needs a room full of&nbsp;friends.</h2>
+  <p class="lede" style="margin-bottom:1.9rem">
+    The engineering risk is behind us. What's left is the two things you cannot desk-check: whether
+    six real people in one real session play it the way the model says they will, and whether the
+    art pass makes a capsule into a monster.
+  </p>
+  <p>
+    Immediate priorities, in order: <strong>a full six-player playtest over real network conditions
+    with TURN configured</strong>, because one friend behind a bad NAT costs an entire evening;
+    <strong>the cargo bag physics puzzle</strong>, the designated cut if the schedule turns;
+    <strong>spectator module cameras</strong>, so the dead have something to look at as well as
+    something to say; and then <strong>M8</strong> — animation, art, and a real sound designer, which
+    is where this stops being a prototype and starts being a game.
+  </p>
+  <p class="pull">Sound is the only currency. Everything else was negotiable.</p>
+
+  <div class="stamp">
+    <span>ISS · working title</span>
+    <span>Design revision 2</span>
+    <span>Greybox playable · M0–M7</span>
+    <span>Full specification in DESIGN.md</span>
+  </div>
+</section>
+
+</main>
+
+<script>
+(function () {
+  "use strict";
+
+  var reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  /* ── reveal on scroll ─────────────────────────────────────── */
+  var reveals = Array.prototype.slice.call(document.querySelectorAll(".reveal"));
+  function revealAll() { reveals.forEach(function (el) { el.classList.add("seen"); }); }
+
+  if ("IntersectionObserver" in window && !reduced) {
+    document.documentElement.setAttribute("data-anim", "");
+    var ro = new IntersectionObserver(function (entries) {
+      entries.forEach(function (e) {
+        if (e.isIntersecting) { e.target.classList.add("seen"); ro.unobserve(e.target); }
+      });
+    }, { rootMargin: "0px 0px -12% 0px", threshold: 0.04 });
+    reveals.forEach(function (el) { ro.observe(el); });
+    // Belt and braces: if the observer never reports (hidden document, odd
+    // embed), show everything rather than leaving the page blank.
+    setTimeout(revealAll, 3000);
+  }
+
+  /* ── dB rail ──────────────────────────────────────────────── */
+  var TOP = 16, BOT = 16; // vh
+  function dbToVh(db) { return (100 - BOT) - (db / 100) * (100 - TOP - BOT); }
+
+  var ticks = document.getElementById("ticks");
+  [0, 20, 40, 60, 80, 100].forEach(function (v) {
+    var t = document.createElement("div");
+    t.className = "rail-tick";
+    t.style.top = dbToVh(v) + "vh";
+    t.innerHTML = "<span>" + v + "</span>";
+    ticks.appendChild(t);
+  });
+
+  var head = document.getElementById("railhead");
+  var val = document.getElementById("railval");
+  var sections = Array.prototype.slice.call(document.querySelectorAll("section[data-db]"));
+  var currentDb = -1;
+
+  function setDb(db) {
+    if (db === currentDb) return;
+    currentDb = db;
+    head.style.top = dbToVh(db) + "vh";
+    val.textContent = db < 10 ? "0" + db : String(db);
+  }
+
+  // Driven by scroll position, not by an observer: whichever tagged section
+  // straddles the middle of the viewport owns the readout.
+  function syncRail() {
+    var mid = window.innerHeight * 0.42;
+    var best = null, bestD = Infinity;
+    for (var i = 0; i < sections.length; i++) {
+      var r = sections[i].getBoundingClientRect();
+      var d = (r.top <= mid && r.bottom >= mid) ? 0 : Math.min(Math.abs(r.top - mid), Math.abs(r.bottom - mid));
+      if (d < bestD) { bestD = d; best = sections[i]; }
+    }
+    setDb(best ? parseInt(best.getAttribute("data-db"), 10) : 0);
+  }
+
+  var queued = false;
+  function onScroll() {
+    if (queued) return;
+    queued = true;
+    requestAnimationFrame(function () { queued = false; syncRail(); });
+  }
+  window.addEventListener("scroll", onScroll, { passive: true });
+  window.addEventListener("resize", onScroll);
+  syncRail();
+
+  /* ── propagation instrument ───────────────────────────────── */
+  var cv = document.getElementById("prop");
+  var ctx = cv.getContext("2d");
+
+  var MODULES = 5;
+  var MOD_M = 5;                 // metres per module (DESIGN §2)
+  var TOTAL_M = MODULES * MOD_M;
+  var FALLOFF = 1.0;             // §14 ATTENUATION_PER_M
+  var HATCH = -3;                // §14 HATCH_OPEN
+  var FLOOR = 2;                 // §14 FLOOR
+
+  var W = 0, H = 0, PAD = 26, tubeTop = 0, tubeH = 0, pxPerM = 1;
+
+  function fit() {
+    var r = cv.getBoundingClientRect();
+    var dpr = Math.min(window.devicePixelRatio || 1, 2);
+    W = Math.max(320, r.width);
+    H = r.height || 232;
+    cv.width = Math.round(W * dpr);
+    cv.height = Math.round(H * dpr);
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    pxPerM = (W - PAD * 2) / TOTAL_M;
+    tubeH = Math.min(86, H * 0.42);
+    tubeTop = H * 0.53 - tubeH / 2;
+  }
+
+  function mToX(m) { return PAD + m * pxPerM; }
+  function hatchesBetween(a, b) {
+    var lo = Math.min(a, b), hi = Math.max(a, b);
+    return Math.max(0, Math.floor(hi / MOD_M) - Math.floor(lo / MOD_M));
+  }
+  function levelAt(srcM, tgtM, L0) {
+    return L0 - FALLOFF * Math.abs(tgtM - srcM) + HATCH * hatchesBetween(srcM, tgtM);
+  }
+
+  var pulses = [];
+  function emit(m, L0) { pulses.push({ m: m, L0: L0, r: 0, life: 0 }); if (pulses.length > 5) pulses.shift(); }
+
+  function colourFor(level, L0) {
+    var t = Math.max(0, Math.min(1, level / 70));
+    // signal cyan → sodium → alarm
+    var c;
+    if (t < 0.5) {
+      var k = t / 0.5;
+      c = [Math.round(159 + (255 - 159) * k), Math.round(214 + (167 - 214) * k), Math.round(232 + (56 - 232) * k)];
+    } else {
+      var k2 = (t - 0.5) / 0.5;
+      c = [255, Math.round(167 + (69 - 167) * k2), Math.round(56 + (48 - 56) * k2)];
+    }
+    return c;
+  }
+
+  function frame(ts) {
+    ctx.clearRect(0, 0, W, H);
+
+    // module shells
+    for (var i = 0; i < MODULES; i++) {
+      var x0 = mToX(i * MOD_M), x1 = mToX((i + 1) * MOD_M);
+      ctx.fillStyle = "#0E1620";
+      ctx.fillRect(x0, tubeTop, x1 - x0, tubeH);
+      ctx.strokeStyle = "#2A3846";
+      ctx.lineWidth = 1;
+      ctx.strokeRect(x0 + 0.5, tubeTop + 0.5, x1 - x0 - 1, tubeH - 1);
+
+      // handrail
+      ctx.strokeStyle = "#33455699";
+      ctx.beginPath();
+      ctx.moveTo(x0 + 6, tubeTop + tubeH - 13);
+      ctx.lineTo(x1 - 6, tubeTop + tubeH - 13);
+      ctx.stroke();
+
+      // hatch marker
+      if (i > 0) {
+        ctx.strokeStyle = "#3F5266";
+        ctx.setLineDash([3, 3]);
+        ctx.beginPath();
+        ctx.moveTo(x0, tubeTop - 5);
+        ctx.lineTo(x0, tubeTop + tubeH + 5);
+        ctx.stroke();
+        ctx.setLineDash([]);
+      }
+    }
+
+    // pulses
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(PAD - 1, tubeTop, W - PAD * 2 + 2, tubeH);
+    ctx.clip();
+
+    for (var p = pulses.length - 1; p >= 0; p--) {
+      var pu = pulses[p];
+      pu.r += 0.135;                                  // metres per frame
+      var lvl = pu.L0 - FALLOFF * pu.r;
+      if (lvl < FLOOR - 4) { pulses.splice(p, 1); continue; }
+
+      var c = colourFor(Math.max(lvl, 0), pu.L0);
+      var alpha = Math.max(0, Math.min(0.85, lvl / pu.L0));
+      var cx = mToX(pu.m), cy = tubeTop + tubeH / 2;
+
+      for (var d = 0; d < 3; d++) {
+        var rr = (pu.r - d * 0.55) * pxPerM;
+        if (rr <= 0) continue;
+        ctx.strokeStyle = "rgba(" + c[0] + "," + c[1] + "," + c[2] + "," + (alpha * (1 - d * 0.3)).toFixed(3) + ")";
+        ctx.lineWidth = d === 0 ? 1.6 : 1;
+        ctx.beginPath();
+        ctx.ellipse(cx, cy, rr, rr * 0.82, 0, 0, Math.PI * 2);
+        ctx.stroke();
+      }
+
+      // origin
+      ctx.fillStyle = "rgba(255,167,56," + (alpha * 0.9).toFixed(3) + ")";
+      ctx.beginPath();
+      ctx.arc(cx, cy, 3, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.restore();
+
+    // arrival readouts
+    var newest = pulses.length ? pulses[pulses.length - 1] : null;
+    ctx.font = "600 11px 'IBM Plex Mono', monospace";
+    ctx.textAlign = "center";
+    for (var j = 0; j < MODULES; j++) {
+      var mid = j * MOD_M + MOD_M / 2;
+      var lv = newest ? levelAt(newest.m, mid, newest.L0) : -99;
+      var txt, col;
+      if (lv >= FLOOR) { txt = lv.toFixed(0); col = "rgb(" + colourFor(lv).join(",") + ")"; }
+      else { txt = "—"; col = "#3F5266"; }
+      ctx.fillStyle = col;
+      ctx.fillText(txt, mToX(mid), tubeTop - 14);
+
+      ctx.font = "500 9px 'IBM Plex Mono', monospace";
+      ctx.fillStyle = "#59677A";
+      ctx.fillText("MOD " + (j + 1), mToX(mid), tubeTop + tubeH + 20);
+      ctx.font = "600 11px 'IBM Plex Mono', monospace";
+    }
+
+    ctx.textAlign = "left";
+    requestAnimationFrame(frame);
+  }
+
+  fit();
+  window.addEventListener("resize", fit);
+  if (window.ResizeObserver) new ResizeObserver(fit).observe(cv);
+
+  cv.addEventListener("click", function (ev) {
+    var r = cv.getBoundingClientRect();
+    var m = Math.max(0, Math.min(TOTAL_M, (ev.clientX - r.left - PAD) / pxPerM));
+    emit(m, 45);
+  });
+
+  // ambient: a hatch cycle, then a knock, on a loop
+  emit(TOTAL_M / 2, 45);
+  if (!reduced) {
+    var seq = 0;
+    setInterval(function () {
+      seq++;
+      if (seq % 3 === 0) emit(TOTAL_M * 0.18, 15);
+      else if (seq % 3 === 1) emit(TOTAL_M * 0.72, 60);
+      else emit(TOTAL_M * 0.5, 45);
+    }, 4200);
+  }
+
+  requestAnimationFrame(frame);
+})();
+</script>

@@ -1,0 +1,808 @@
+/* =========================================================================
+   ISS — UI stylesheet (DESIGN.md §6).
+   Cold emergency-lit instrumentation: monospace, phosphor green and amber on
+   near-black, scanlines, low opacity. Diegetic by default; four HUD elements.
+
+   Everything here is a DOM/CSS overlay. There is no second WebGL scene (§6).
+   Class prefix `iss-` so nothing collides with a puzzle panel or a debug tool.
+   ========================================================================= */
+
+:root {
+  --iss-black: #040605;
+  --iss-panel: rgba(5, 12, 9, 0.78);
+  --iss-panel-solid: #060d0a;
+
+  --iss-green: #4dff9b;
+  --iss-green-mid: #2fbf72;
+  --iss-green-dim: #1c6b41;
+  --iss-green-ghost: rgba(77, 255, 155, 0.14);
+
+  --iss-amber: #ffb03a;
+  --iss-amber-dim: #8a5c1c;
+
+  --iss-red: #ff4a3d;
+  --iss-red-dim: #7a231c;
+
+  --iss-text: #9fe8c4;
+  --iss-text-dim: #5c8f76;
+  --iss-line: rgba(77, 255, 155, 0.22);
+  --iss-line-strong: rgba(77, 255, 155, 0.45);
+
+  --iss-font: ui-monospace, "SF Mono", "JetBrains Mono", Menlo, Consolas, monospace;
+  --iss-glow: 0 0 6px rgba(77, 255, 155, 0.35);
+  --iss-glow-amber: 0 0 6px rgba(255, 176, 58, 0.35);
+}
+
+/* ---------------------------------------------------------------- shared -- */
+
+.iss-hud,
+.iss-overlay {
+  font-family: var(--iss-font);
+  color: var(--iss-text);
+  font-variant-ligatures: none;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  -webkit-font-smoothing: antialiased;
+}
+
+.iss-hud {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+/* Scanline wash. Applied as a pseudo-element so it never eats pointer events. */
+.iss-scan::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: repeating-linear-gradient(
+    to bottom,
+    rgba(0, 0, 0, 0) 0px,
+    rgba(0, 0, 0, 0) 2px,
+    rgba(0, 0, 0, 0.28) 3px,
+    rgba(0, 0, 0, 0.28) 4px
+  );
+  opacity: 0.55;
+  mix-blend-mode: multiply;
+}
+
+.iss-flicker {
+  animation: iss-flicker 5.5s steps(1, end) infinite;
+}
+
+@keyframes iss-flicker {
+  0%,
+  96%,
+  100% {
+    opacity: 1;
+  }
+  97% {
+    opacity: 0.82;
+  }
+  98% {
+    opacity: 1;
+  }
+  99% {
+    opacity: 0.9;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .iss-flicker {
+    animation: none;
+  }
+}
+
+/* ============================================================ crosshair == */
+
+.iss-crosshair {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 56px;
+  height: 56px;
+  margin: -28px 0 0 -28px;
+  pointer-events: none;
+  overflow: visible;
+  opacity: 0.92;
+}
+
+.iss-crosshair[data-visible="false"] {
+  display: none;
+}
+
+.iss-crosshair .ch-dot {
+  fill: var(--iss-green);
+}
+
+.iss-crosshair .ch-stroke {
+  fill: none;
+  stroke: var(--iss-green);
+  stroke-width: 1.4;
+  stroke-linecap: round;
+  vector-effect: non-scaling-stroke;
+}
+
+.iss-crosshair .ch-group {
+  opacity: 0;
+  transition: opacity 90ms linear;
+}
+
+.iss-crosshair[data-state="dot"] .ch-dot-group,
+.iss-crosshair[data-state="hand"] .ch-hand-group,
+.iss-crosshair[data-state="rail"] .ch-rail-group {
+  opacity: 1;
+}
+
+/* The interactable / grabbable states get the amber "you may act" tint. */
+.iss-crosshair[data-state="hand"] .ch-stroke,
+.iss-crosshair[data-state="hand"] .ch-dot {
+  stroke: var(--iss-amber);
+  fill: var(--iss-amber);
+}
+
+.iss-crosshair[data-state="rail"] .ch-stroke {
+  stroke: var(--iss-green);
+}
+
+/* Charge arc — the one non-diegetic element, and it lives on the crosshair (§4). */
+.iss-crosshair .ch-arc-track {
+  fill: none;
+  stroke: rgba(77, 255, 155, 0.18);
+  stroke-width: 2;
+}
+
+.iss-crosshair .ch-arc {
+  fill: none;
+  stroke: var(--iss-green);
+  stroke-width: 2.4;
+  stroke-linecap: round;
+  transition: stroke 120ms linear;
+}
+
+.iss-crosshair[data-charging="false"] .ch-arc-group {
+  opacity: 0;
+}
+
+.iss-crosshair[data-charging="true"] .ch-arc-group {
+  opacity: 1;
+}
+
+.iss-crosshair[data-charge-level="high"] .ch-arc {
+  stroke: var(--iss-amber);
+}
+
+.iss-crosshair[data-charge-level="full"] .ch-arc {
+  stroke: var(--iss-red);
+}
+
+/* =========================================================== noise ring == */
+
+.iss-noise-ring {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 340px;
+  height: 340px;
+  margin: -170px 0 0 -170px;
+  pointer-events: none;
+}
+
+/* ======================================================== wrist tracker == */
+
+.iss-tracker {
+  position: absolute;
+  left: 26px;
+  bottom: 26px;
+  width: 244px;
+  padding: 7px 8px 8px;
+  background: var(--iss-panel);
+  border: 1px solid var(--iss-line);
+  border-radius: 3px;
+  box-shadow:
+    inset 0 0 22px rgba(0, 0, 0, 0.85),
+    0 0 18px rgba(0, 0, 0, 0.6);
+  font-size: 10px;
+  line-height: 1.35;
+  /* Wrist-cam framing: the device is strapped to the forearm, so it hangs at
+     an angle rather than square to the screen. */
+  transform: perspective(600px) rotateY(7deg) rotateZ(-1.4deg);
+  transform-origin: left bottom;
+  overflow: hidden;
+  isolation: isolate;
+}
+
+.iss-tracker::before {
+  /* corner brackets */
+  content: "";
+  position: absolute;
+  inset: 3px;
+  pointer-events: none;
+  border: 1px solid rgba(77, 255, 155, 0.1);
+  clip-path: polygon(
+    0 0,
+    14px 0,
+    14px 1px,
+    1px 1px,
+    1px 14px,
+    0 14px,
+    0 100%,
+    14px 100%,
+    14px calc(100% - 1px),
+    1px calc(100% - 1px),
+    1px calc(100% - 14px),
+    0 calc(100% - 14px)
+  );
+}
+
+.iss-tracker__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  color: var(--iss-text-dim);
+  font-size: 9px;
+  padding-bottom: 4px;
+  border-bottom: 1px solid var(--iss-line);
+}
+
+.iss-tracker__rec {
+  color: var(--iss-red);
+  letter-spacing: 0.12em;
+  animation: iss-rec 2s steps(1, end) infinite;
+}
+
+@keyframes iss-rec {
+  0%,
+  60% {
+    opacity: 1;
+  }
+  61%,
+  100% {
+    opacity: 0.25;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .iss-tracker__rec {
+    animation: none;
+  }
+}
+
+.iss-tracker__scope {
+  display: block;
+  width: 228px;
+  height: 108px;
+  margin: 5px 0 4px;
+  background: #020504;
+  border: 1px solid rgba(77, 255, 155, 0.12);
+  border-radius: 2px;
+}
+
+.iss-tracker__rows {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 2px 8px;
+  padding-top: 4px;
+  border-top: 1px solid var(--iss-line);
+}
+
+.iss-tracker__row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 6px;
+}
+
+.iss-tracker__k {
+  color: var(--iss-text-dim);
+  font-size: 9px;
+}
+
+.iss-tracker__v {
+  color: var(--iss-green);
+  text-shadow: var(--iss-glow);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+
+.iss-tracker__v[data-alarm="true"] {
+  color: var(--iss-red);
+  text-shadow: 0 0 6px rgba(255, 74, 61, 0.5);
+}
+
+.iss-tracker__v[data-warn="true"] {
+  color: var(--iss-amber);
+  text-shadow: var(--iss-glow-amber);
+}
+
+.iss-tracker__mute {
+  grid-column: 1 / -1;
+  margin-top: 5px;
+  padding: 4px 6px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  font: inherit;
+  font-size: 9px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--iss-text-dim);
+  background: rgba(77, 255, 155, 0.05);
+  border: 1px solid var(--iss-line);
+  border-radius: 2px;
+  cursor: pointer;
+  pointer-events: auto; /* the one clickable thing inside #hud */
+}
+
+.iss-tracker__mute:hover {
+  background: rgba(77, 255, 155, 0.1);
+  color: var(--iss-text);
+}
+
+.iss-tracker__mute:focus-visible {
+  outline: 1px solid var(--iss-green);
+  outline-offset: 1px;
+}
+
+.iss-tracker__lamp {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--iss-green);
+  box-shadow: 0 0 6px var(--iss-green);
+  flex: none;
+}
+
+.iss-tracker[data-muted="true"] {
+  border-color: rgba(255, 74, 61, 0.35);
+}
+
+.iss-tracker[data-muted="true"] .iss-tracker__lamp {
+  background: var(--iss-red);
+  box-shadow: 0 0 6px var(--iss-red);
+}
+
+.iss-tracker[data-muted="true"] .iss-tracker__mute {
+  color: var(--iss-red);
+  border-color: rgba(255, 74, 61, 0.35);
+  background: rgba(255, 74, 61, 0.07);
+}
+
+/* ============================================================== toasts === */
+
+.iss-toasts {
+  position: absolute;
+  left: 50%;
+  bottom: 88px;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  pointer-events: none;
+  max-width: 60vw;
+}
+
+.iss-toast {
+  padding: 3px 10px;
+  font-size: 11px;
+  color: var(--iss-text);
+  background: rgba(4, 8, 6, 0.7);
+  border-left: 2px solid var(--iss-green-dim);
+  opacity: 0.9;
+  animation: iss-toast-in 160ms ease-out;
+}
+
+@keyframes iss-toast-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 0.9;
+    transform: none;
+  }
+}
+
+/* ============================================================ overlays === */
+
+.iss-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  /* `safe center` centres a screen that fits and TOP-ALIGNS one that does not.
+     With plain `center` an overflowing panel is centred out of the scroll range,
+     so its first rows sit above scrollTop 0 and cannot be reached at all —
+     measured at a 415px-tall viewport, the comfort panel's title and first row
+     were 77px past the top with the overlay already scrolled home. */
+  align-items: safe center;
+  justify-content: center;
+  padding: 24px;
+  background:
+    radial-gradient(ellipse at 50% 40%, rgba(12, 26, 20, 0.9) 0%, rgba(2, 4, 3, 0.97) 62%, #000 100%);
+  overflow: auto;
+  z-index: 1;
+}
+
+.iss-overlay[hidden] {
+  display: none;
+}
+
+.iss-overlay::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  background: repeating-linear-gradient(
+    to bottom,
+    rgba(0, 0, 0, 0) 0px,
+    rgba(0, 0, 0, 0) 2px,
+    rgba(0, 0, 0, 0.22) 3px,
+    rgba(0, 0, 0, 0.22) 4px
+  );
+  opacity: 0.6;
+}
+
+.iss-screen {
+  position: relative;
+  width: min(880px, 100%);
+  border: 1px solid var(--iss-line);
+  background: linear-gradient(180deg, rgba(6, 14, 11, 0.94), rgba(3, 7, 6, 0.96));
+  box-shadow:
+    inset 0 0 60px rgba(0, 0, 0, 0.9),
+    0 0 40px rgba(0, 0, 0, 0.8);
+  padding: 22px 26px 24px;
+}
+
+.iss-screen__eyebrow {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 10px;
+  color: var(--iss-text-dim);
+  border-bottom: 1px solid var(--iss-line);
+  padding-bottom: 6px;
+}
+
+.iss-screen__title {
+  margin: 14px 0 2px;
+  font-size: 44px;
+  line-height: 1;
+  letter-spacing: 0.34em;
+  color: var(--iss-green);
+  text-shadow: 0 0 14px rgba(77, 255, 155, 0.28);
+  font-weight: 400;
+}
+
+.iss-screen__sub {
+  margin: 0 0 16px;
+  font-size: 11px;
+  color: var(--iss-text-dim);
+  letter-spacing: 0.16em;
+}
+
+.iss-cols {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+@media (max-width: 720px) {
+  .iss-cols {
+    grid-template-columns: 1fr;
+  }
+  .iss-screen__title {
+    font-size: 30px;
+  }
+}
+
+.iss-block {
+  border: 1px solid var(--iss-line);
+  border-left-width: 2px;
+  padding: 10px 12px 12px;
+  background: rgba(77, 255, 155, 0.02);
+}
+
+.iss-block--warn {
+  border-color: rgba(255, 176, 58, 0.34);
+  background: rgba(255, 176, 58, 0.04);
+}
+
+.iss-block__h {
+  margin: 0 0 8px;
+  font-size: 11px;
+  letter-spacing: 0.22em;
+  color: var(--iss-amber);
+  font-weight: 400;
+}
+
+.iss-block--plain .iss-block__h {
+  color: var(--iss-green);
+}
+
+.iss-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: 12px;
+  line-height: 1.7;
+  text-transform: none;
+  letter-spacing: 0.03em;
+  color: var(--iss-text);
+}
+
+.iss-list li {
+  padding-left: 14px;
+  position: relative;
+}
+
+.iss-list li::before {
+  content: "\203A";
+  position: absolute;
+  left: 0;
+  color: var(--iss-green-dim);
+}
+
+.iss-list strong {
+  color: var(--iss-green);
+  font-weight: 400;
+}
+
+.iss-list em {
+  color: var(--iss-amber);
+  font-style: normal;
+}
+
+.iss-note {
+  margin: 8px 0 0;
+  font-size: 11px;
+  line-height: 1.65;
+  color: var(--iss-text-dim);
+  text-transform: none;
+  letter-spacing: 0.03em;
+}
+
+.iss-keys {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 2px 10px;
+  font-size: 11px;
+  text-transform: none;
+  letter-spacing: 0.03em;
+}
+
+.iss-keys dt {
+  color: var(--iss-amber);
+  white-space: nowrap;
+}
+
+.iss-keys dd {
+  margin: 0;
+  color: var(--iss-text-dim);
+}
+
+.iss-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 18px;
+  align-items: center;
+}
+
+.iss-btn {
+  font: inherit;
+  font-size: 12px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--iss-green);
+  background: rgba(77, 255, 155, 0.06);
+  border: 1px solid var(--iss-line-strong);
+  padding: 9px 20px;
+  cursor: pointer;
+  transition:
+    background 120ms linear,
+    color 120ms linear;
+}
+
+.iss-btn:hover {
+  background: rgba(77, 255, 155, 0.14);
+  color: #ffffff;
+}
+
+.iss-btn:focus-visible {
+  outline: 1px solid var(--iss-green);
+  outline-offset: 2px;
+}
+
+.iss-btn--primary {
+  border-color: var(--iss-green);
+  background: rgba(77, 255, 155, 0.16);
+  text-shadow: var(--iss-glow);
+}
+
+.iss-btn--ghost {
+  color: var(--iss-text-dim);
+  border-color: var(--iss-line);
+  background: transparent;
+}
+
+.iss-status {
+  font-size: 10px;
+  color: var(--iss-text-dim);
+  margin-left: auto;
+}
+
+/* ============================================================ settings === */
+
+.iss-settings {
+  width: min(560px, 100%);
+}
+
+.iss-field {
+  display: grid;
+  grid-template-columns: 150px 1fr 62px;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 0;
+  border-bottom: 1px dashed rgba(77, 255, 155, 0.12);
+}
+
+.iss-field:last-of-type {
+  border-bottom: 0;
+}
+
+.iss-field__label {
+  font-size: 11px;
+  color: var(--iss-text);
+}
+
+.iss-field__hint {
+  grid-column: 1 / -1;
+  font-size: 10px;
+  color: var(--iss-text-dim);
+  text-transform: none;
+  letter-spacing: 0.03em;
+  margin-top: -4px;
+}
+
+.iss-field__value {
+  font-size: 12px;
+  color: var(--iss-amber);
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.iss-field input[type="range"] {
+  width: 100%;
+  accent-color: #4dff9b;
+  background: transparent;
+  cursor: pointer;
+}
+
+.iss-field select {
+  font: inherit;
+  font-size: 11px;
+  color: var(--iss-green);
+  background: var(--iss-panel-solid);
+  border: 1px solid var(--iss-line);
+  padding: 4px 6px;
+  cursor: pointer;
+}
+
+.iss-switch {
+  justify-self: start;
+  font: inherit;
+  font-size: 10px;
+  letter-spacing: 0.16em;
+  color: var(--iss-text-dim);
+  background: transparent;
+  border: 1px solid var(--iss-line);
+  padding: 5px 12px;
+  cursor: pointer;
+  min-width: 92px;
+}
+
+.iss-switch[data-on="true"] {
+  color: var(--iss-green);
+  border-color: var(--iss-line-strong);
+  background: rgba(77, 255, 155, 0.12);
+}
+
+/* ============================================================= results === */
+
+.iss-result__verdict {
+  font-size: 13px;
+  letter-spacing: 0.3em;
+  margin: 0 0 4px;
+}
+
+.iss-result__verdict[data-win="true"] {
+  color: var(--iss-green);
+}
+
+.iss-result__verdict[data-win="false"] {
+  color: var(--iss-red);
+}
+
+.iss-result__crew {
+  font-size: 60px;
+  line-height: 1;
+  letter-spacing: 0.08em;
+  color: var(--iss-green);
+  text-shadow: 0 0 18px rgba(77, 255, 155, 0.25);
+  font-variant-numeric: tabular-nums;
+  margin: 6px 0 2px;
+}
+
+.iss-result__crew[data-win="false"] {
+  color: var(--iss-red);
+  text-shadow: 0 0 18px rgba(255, 74, 61, 0.25);
+}
+
+.iss-result__crewlabel {
+  font-size: 10px;
+  color: var(--iss-text-dim);
+  letter-spacing: 0.24em;
+  margin-bottom: 14px;
+}
+
+.iss-result__rank {
+  font-size: 20px;
+  letter-spacing: 0.24em;
+  color: var(--iss-amber);
+  margin: 0 0 6px;
+}
+
+.iss-roster {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: 12px;
+  line-height: 1.8;
+  letter-spacing: 0.05em;
+}
+
+.iss-roster li {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  border-bottom: 1px dashed rgba(77, 255, 155, 0.1);
+}
+
+.iss-roster li[data-escaped="true"] {
+  color: var(--iss-green);
+}
+
+.iss-roster li[data-escaped="false"] {
+  color: var(--iss-red-dim);
+}
+
+.iss-roster__tag {
+  font-size: 10px;
+  letter-spacing: 0.16em;
+  opacity: 0.85;
+}
+
+.iss-stats {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px 14px;
+  font-size: 11px;
+  margin-top: 10px;
+}
+
+.iss-stats div {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  border-bottom: 1px dashed rgba(77, 255, 155, 0.1);
+  padding-bottom: 3px;
+}
+
+.iss-stats span:last-child {
+  color: var(--iss-amber);
+  font-variant-numeric: tabular-nums;
+}
