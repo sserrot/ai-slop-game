@@ -6,11 +6,30 @@
  * animates it into the gait the server's state implies, and swells the hunt bed
  * when the server says HUNT.
  *
- * The body is `AlienView` (ISS-CHR-01) — 972 triangles in six instanced draw
+ * The body is `AlienView` (ISS-CHR-01) — 972 triangles in eight instanced draw
  * calls, with a walk cycle for `nominal` modules and a rail-pull for `zero`
  * ones. Read that file before touching this one: the gait is the state readout
  * the player's life depends on, and it is the only readout, because the asset
  * carries no emissive at all.
+ *
+ * Four files, and it is worth knowing which does what before you go looking:
+ *
+ *   • `alienView.ts` — the body, the posture table, and the secondary motion
+ *     (sprung tail and head, hold-and-snap scan, breath) that is most of the
+ *     difference between an articulated prop and something you do not want to
+ *     be in a room with.
+ *   • `ik.ts` — analytic two-bone IK. All four limbs are solved to authored
+ *     CONTACTS rather than posed by hand, which is what makes it impossible for
+ *     the feet to slide at any speed.
+ *   • `flesh.ts` — the one material in the game that is not a palette row.
+ *     Subsurface wrap, a grazing rim, procedural skin detail. Nothing glows.
+ *   • `skin.ts` — the seam for a sculpted GLB, when the art pass happens.
+ *     Nothing requires it and everything degrades without it.
+ *
+ * The two extra draw calls over r3's six are the TAIL, which used to be baked
+ * into the abdomen and now hangs off its own sprung joint, and the SHIN, which
+ * used to be baked into the thigh and now has a knee the IK can solve. Neither
+ * added a triangle: 972 before, 972 after.
  *
  *     const alien = new AlienProxy({
  *       materials: station.materials,
@@ -29,11 +48,16 @@ import type { AlienSnapshot, GravityMode, ModuleId, Vec3 } from '@shared/types';
 import { AlienView } from './alienView';
 import type { AlienViewOptions } from './alienView';
 import { AlienHuntEmitter } from './alienAudio';
+import type { AlienSkin } from './skin';
 import type { AlienAudioSink } from './alienAudio';
 import { bus } from '../core/eventBus';
 
 export * from './alienView';
 export * from './alienAudio';
+export * from './flesh';
+export * from './skin';
+export { solveTwoBone, twoBoneOut, twoBoneTip, BONE_REST } from './ik';
+export type { TwoBoneOut } from './ik';
 
 export interface AlienProxyOptions extends AlienViewOptions {
   /** Hunt-bed sink from `src/audio/`. Optional — the view works without audio. */
@@ -86,7 +110,7 @@ export class AlienProxy {
     return this.view.object3D;
   }
 
-  /** Six, and constant. Worth knowing when you are counting §9's budget. */
+  /** Eight, and constant. Worth knowing when you are counting §9's budget. */
   get drawCalls(): number {
     return this.view.drawCalls;
   }
@@ -104,6 +128,19 @@ export class AlienProxy {
   /** Feed the networked alien record (§7). */
   applySnapshot(snapshot: AlienSnapshot): void {
     this.view.applySnapshot(snapshot);
+  }
+
+  /**
+   * Swap the procedural body for a sculpted one, or `null` to swap back
+   * (BACKLOG B-08). See `./skin.ts` for the authoring contract.
+   *
+   * Everything else about the creature is unchanged by this: the same state
+   * machine feeds it, the same measured speed keeps its feet from sliding, the
+   * same hunt bed plays over it. A sculpt is a different BODY, not a different
+   * animal, and the contract exists to keep it that way.
+   */
+  adoptSkin(skin: AlienSkin | null): void {
+    this.view.adoptSkin(skin);
   }
 
   /**

@@ -19,8 +19,8 @@ Priority — `P0` blocks the next release · `P1` wanted for it · `P2` after ·
 | B-04 | **Deploy coturn and verify against a hostile NAT.** Server already reads `STUN_URLS` / `TURN_URLS` / credentials and ships them in `welcome` | §7 | 1–2 | P0 | Non-optional. One symmetric NAT costs a whole playtest night |
 | B-05 | **Run the first real six-player session.** Six humans, six networks, one round | §10, §13 | 1 | P0 | Blocked on B-04. Protocol in `PLAYTEST.md` |
 | B-06 | **Validate mic calibration across real hardware.** Calibration ships; it has only met this machine's microphone | §7 | 1 | P0 | Raw RMS variance is the failure mode — one hot mic sits at loudness 55 while breathing |
-| B-07 | **Alien locomotion and animation.** Rail-following with IK | §5, M8 | 15+ | P2 | The hidden giant. Capsule until the game is proven fun, and mean it |
-| B-08 | **Art pass.** Everything is currently boxes, cylinders and capsules | §9, M8 | 20+ | P2 | Kenney / Quaternius (CC0), Poly Haven, NASA ISS models as reference — decimate hard |
+| B-07 | **Alien rail-FOLLOWING.** The IK itself is done (`src/alien/ik.ts`): all four limbs solve to authored contacts, and the stance travel is derived from the measured speed so contacts cannot slide at any speed. What is left is the server choosing a path along the §2 rail graph for the hands to follow, instead of the fixed handhold line the view assumes | §5, M8 | 4–6 | P2 | Re-sized down from 15+. Most of that estimate was the IK, and the IK was a triangle |
+| B-08 | **Art pass.** The station is still boxes and cylinders. The ALIEN is no longer a debt: 972 tris, eight instanced draw calls, IK, morph targets, its own skin shader | §9, M8 | 16+ | P2 | The GLB seam exists — `src/alien/skin.ts` documents the authoring contract (one skinned mesh, `iss/*` clip names, root motion baked out, a declared stride per clip) and `AlienView.adoptSkin()` swaps it in. Nothing requires it; a broken export logs why and stays procedural. Kenney / Quaternius (CC0), Poly Haven, NASA ISS models as reference — decimate hard |
 | B-09 | **Sound design pass.** Every noise is currently synthesised from oscillators and filtered noise | §8, M8 | 8+ | P2 | It reads correctly; it is not *scored*. The routing underneath it is done |
 | B-10 | **Rebinding UI.** `KEYMAP` in `src/player/keymap.ts` is one object; mutate it and call `player.input.refreshBindings()` | — | 1 | P2 | Cut candidate #4 |
 
@@ -42,6 +42,7 @@ Priority — `P0` blocks the next release · `P1` wanted for it · `P2` after ·
 | B-N3 | Prediction / reconciliation / rollback | Clients own their movement outright. Momentum-based zero-G is the easy case for client authority (§7) |
 | B-N4 | A second alien | Two would make the tracker pulse ambiguous and destroy the shared mental model (§10) |
 | B-N5 | A full ECS | Not earned at this scale (§1) |
+| B-N6 | Physics ragdoll for the alien's tail (Rapier is already a dependency) | Tempting, and wrong for this creature specifically. A physics tail is **not deterministic across clients** — it integrates against each machine's frame timing — so two players looking at the same monster would see different tails. That is the exact property `scanBearing()` gives up randomness to preserve, and §10's shared mental model depends on it: people call out what the thing is doing over proximity voice. The spring in `alienView.ts` is deterministic, costs no solver, and already overshoots. Revisit only if the tail ever needs to collide with the station, which it does not |
 
 ---
 

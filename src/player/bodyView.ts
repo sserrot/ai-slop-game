@@ -89,6 +89,9 @@ export class PartInstances {
   readonly capacity: number;
   private n = 0;
   private readonly tinted: boolean;
+  /** Number of morph targets on the geometry; 0 for every part except the
+   *  alien's head. See {@link PartInstances.setMorph}. */
+  private readonly morphs: number;
 
   constructor(
     geometry: THREE.BufferGeometry,
@@ -108,6 +111,26 @@ export class PartInstances {
     this.mesh.receiveShadow = false;
     this.mesh.count = 0;
     this.mesh.visible = false;
+
+    // Per-instance morph influences ride in a DataTexture, one row per
+    // instance. `InstancedMesh.setMorphAt` will create that texture lazily —
+    // and size it from `this.count`, which is ZERO here and stays zero until
+    // the first `end()`. So it is allocated up front at full capacity instead;
+    // letting three do it would give the alien's head a one-pixel-tall texture
+    // and a morph that silently never applies.
+    const morphAttr = geometry.morphAttributes.position;
+    this.morphs = morphAttr ? morphAttr.length : 0;
+    if (this.morphs > 0) {
+      const len = this.morphs + 1; // base influence, then one per target
+      this.mesh.morphTexture = new THREE.DataTexture(
+        new Float32Array(len * this.capacity),
+        len,
+        this.capacity,
+        THREE.RedFormat,
+        THREE.FloatType,
+      );
+      this.mesh.morphTexture.needsUpdate = true;
+    }
     if (this.tinted) {
       this.mesh.instanceColor = new THREE.InstancedBufferAttribute(
         new Float32Array(this.capacity * 3).fill(1),
@@ -125,6 +148,26 @@ export class PartInstances {
   /** Instances written since the last `begin()`. */
   get count(): number {
     return this.n;
+  }
+
+  /** Morph targets this part carries. */
+  get morphCount(): number {
+    return this.morphs;
+  }
+
+  /**
+   * Set one instance's morph influences.
+   *
+   * Silently does nothing when the geometry carries no morph targets, which
+   * keeps callers from having to know: a body part either deforms or it does
+   * not, and only one of them in this game does.
+   */
+  setMorph(index: number, influences: readonly number[]): void {
+    if (this.morphs === 0 || index < 0 || index >= this.capacity) return;
+    MORPH_PROXY.morphTargetInfluences = influences as number[];
+    this.mesh.setMorphAt(index, MORPH_PROXY);
+    const tex = this.mesh.morphTexture;
+    if (tex) tex.needsUpdate = true;
   }
 
   begin(): void {
@@ -165,6 +208,13 @@ export class PartInstances {
     this.mesh.dispose();
   }
 }
+
+/**
+ * A stand-in for `setMorphAt`, which wants a `Mesh` and reads exactly one field
+ * off it. Module-level and reused: building an Object3D per call, sixty times a
+ * second, to carry two floats would be absurd.
+ */
+const MORPH_PROXY = new THREE.Mesh();
 
 // ===========================================================================
 // Dimensions — every one of them derived from the collider, not from taste

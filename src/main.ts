@@ -81,7 +81,7 @@ import type { CrewBodyInput } from './player';
 import { createUI, type Panel } from './ui';
 import { NoiseEmitter, NoiseRuntime } from './noise';
 import { createAudioSystem, type VoiceSignalling } from './audio';
-import { AlienProxy } from './alien';
+import { AlienProxy, tryLoadAlienSkin } from './alien';
 import { NetClient } from './net';
 import type { WelcomeMessage } from './net';
 import {
@@ -324,6 +324,9 @@ async function boot(): Promise<void> {
   // Rapier's wasm loads here, behind the menu, and before the pre-warm below.
   await buildCargo(layout);
   buildAlien();
+  // Before `buildCrew`/`prewarm`: see `buildAlienSkin`. Costs one `if` and no
+  // network traffic at all until somebody actually points it at a file.
+  await buildAlienSkin();
   buildCrew();
   wireNetwork();
   wireLoop();
@@ -907,14 +910,33 @@ let alien: AlienProxy | null = null;
 
 function buildAlien(): void {
   alien = new AlienProxy({
-    // ONE owner per material (§9): the creature rides the station's `organic`
-    // rather than minting a second copy of the same program.
+    // Kept for the `flesh: false` fallback only. The creature normally builds
+    // its OWN material (`src/alien/flesh.ts`) from this same palette row — same
+    // colour, same roughness, same zero emissive, so every contrast promise
+    // `assertPaletteCoherent()` made still holds — because it is the one thing
+    // in the game that is not made of metal and wants a different BRDF for it.
+    // That costs one extra WebGLProgram link at boot and nothing else.
     materials: station?.materials ?? null,
     // §4/§5: walk on a deck, rail-pull in vacuum. This is the gait readout the
     // player's life depends on and it is the ONLY readout, because ISS-CHR-01
     // carries no emissive at all — so it is resolved from the live module
     // gravity, which a §5 director floor drop mutates in place.
     gravityOf: (module) => station?.moduleGravity(module) ?? 'nominal',
+    // §9's one shadow map, spent on the thing that is hunting you.
+    //
+    // `alienView.ts` argued the other way for the whole of r3 — a 1024² map
+    // spent on the monster is a map not spent on the doorway you are about to
+    // walk through — and `buildCrew()` below had already broken the tie without
+    // noticing: it spends the same map on other players because "another
+    // player's shadow sliding across a bulkhead is the cheapest 'you are not
+    // alone' signal in the game". Every word of that is more true here.
+    //
+    // It is also the ONLY way this creature can be seen without being looked
+    // at. It carries no emissive (§9, and `assertInert` enforces it), so with
+    // the torch off it is invisible — but a shadow crossing a bulkhead ahead of
+    // the body arrives before you have decided to look, which is the difference
+    // between being startled and being frightened.
+    castShadow: true,
     listener: () => camera.position,
     cullByModule: true,
     // `NetClient` already publishes `alien:proximity`; two publishers would
@@ -923,6 +945,56 @@ function buildAlien(): void {
   });
   scene.add(alien.object3D);
   console.log(`[main] alien: ${alien.drawCalls} draw calls, ${alien.triangles} triangles`);
+}
+
+/**
+ * URL of a sculpted alien (BACKLOG B-08), or null for the procedural body.
+ *
+ * NULL BY DEFAULT, and that is a decision rather than a placeholder. No asset
+ * exists yet, and a loader pointed at a file that is not there costs every
+ * player a 404 and a console warning on every boot to gain exactly nothing.
+ * Set this when a GLB lands in `public/`.
+ *
+ * `?skin=/models/alien.glb` overrides it, so an artist can try an export
+ * against the running game without touching this file or rebuilding — which is
+ * the whole point of `src/alien/skin.ts` having a contract that reports every
+ * violation at once instead of the first.
+ */
+const ALIEN_SKIN_URL: string | null = null;
+
+function alienSkinUrl(): string | null {
+  try {
+    const q = new URLSearchParams(location.search).get('skin');
+    if (q) return q;
+  } catch {
+    /* no `location` — not a browser. Fall through to the constant. */
+  }
+  return ALIEN_SKIN_URL;
+}
+
+/**
+ * Load the sculpted body, if there is one, and shrug if not.
+ *
+ * AWAITED DURING BOOT, before the pre-warm, and both halves of that matter.
+ * Before, so a skinned mesh's program and buffers are paid for behind the menu
+ * with everything else rather than on the first frame the monster is visible —
+ * which is the single worst moment in the game to drop 20 ms. Awaited, so the
+ * creature cannot pop from cylinders to sculpt in front of a player mid-round.
+ *
+ * A missing, broken or contract-violating GLB costs a less interesting monster
+ * and nothing else: `tryLoadAlienSkin` logs why and returns null, and the
+ * procedural body it was going to replace is still standing there.
+ */
+async function buildAlienSkin(): Promise<void> {
+  const url = alienSkinUrl();
+  if (!url || !alien) return;
+  const skin = await tryLoadAlienSkin(url, { castShadow: true });
+  if (!skin) return;
+  alien.adoptSkin(skin);
+  console.log(
+    `[main] alien skin: ${skin.triangles} triangles, ` +
+      `clips [${skin.clipNames.join(', ') || 'none'}]`,
+  );
 }
 
 // ---------------------------------------------------------------------------

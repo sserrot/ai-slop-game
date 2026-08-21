@@ -84,10 +84,16 @@ export function castsShadowByDefault(mesh: THREE.Mesh): boolean {
  *
  * SUBTRACTIVE ON PURPOSE. It only ever clears `castShadow`, never sets it. §9's
  * rule is that geometry opts IN to the one shadow map, so a subsystem that
- * decided its mesh should not cast — `src/alien/alienView.ts` and the invisible
- * collider both do — keeps that decision, and this pass can never resurrect it.
- * What it does undo is the opposite mistake: a blanket
- * `traverse(o => o.castShadow = true)` sweeping up light strips and screens.
+ * decided its mesh should not cast — the invisible collision hull does — keeps
+ * that decision, and this pass can never resurrect it. What it does undo is the
+ * opposite mistake: a blanket `traverse(o => o.castShadow = true)` sweeping up
+ * light strips and screens.
+ *
+ * The two subsystems that opt IN are `RemoteCrewViews` and `AlienView`: a
+ * character is a moving occluder, and a shadow arriving through a hatchway
+ * before the body does is the cheapest scare in the project. Both ride opaque
+ * `MeshStandardMaterial`s, so `castsShadowByDefault` keeps them and this pass
+ * leaves them alone.
  */
 export function applyShadowPolicy(
   root: THREE.Object3D,

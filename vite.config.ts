@@ -8,6 +8,22 @@ export default defineConfig({
   root: '.',
   publicDir: 'public',
   resolve: {
+    /**
+     * One `three`, whatever asks for it.
+     *
+     * `three-mesh-bvh` declares three as a PEER dependency, and a peer resolved
+     * to a second copy is not a wasted download — it silently breaks
+     * `instanceof`. `src/station/collision.ts` installs that package's
+     * `acceleratedRaycast` onto `THREE.Mesh.prototype`, and the function
+     * branches on `this instanceof Mesh` against the `Mesh` IT imported; two
+     * copies makes that false for every mesh the app ever created, and the §4
+     * interaction raycast throws `BVH: Fallback raycast function not found`
+     * inside the render tick.
+     *
+     * This is the build-side guarantee. `optimizeDeps.include` below is the
+     * dev-server side of the same promise.
+     */
+    dedupe: ['three'],
     alias: {
       '@shared': fileURLToPath(new URL('./shared', import.meta.url)),
       // simple-peer (§1 voice mesh) drags in readable-stream, which imports
@@ -35,7 +51,55 @@ export default defineConfig({
     chunkSizeWarningLimit: 4000,
   },
   optimizeDeps: {
-    // rapier3d-compat ships wasm inlined as base64; let Vite prebundle it.
-    include: ['@dimforge/rapier3d-compat'],
+    /**
+     * EVERY three entry point the app touches, declared up front.
+     *
+     * ─────────────────────────────────────────────────────────────────────────
+     * WHAT WAS ACTUALLY OBSERVED, because the honest version is less tidy than
+     * the story this list suggests.
+     *
+     * A long-running dev session — many edits, at least one forced
+     * re-optimisation — ended up serving TWO distinct copies of three's core
+     * (`three.module-BAp-O8l5.js?v=...` alongside a bare, unversioned
+     * `three.module-BEvS_7fE.js`). three's own "Multiple instances of Three.js
+     * being imported" warning fired, and the render tick threw
+     * `BVH: Fallback raycast function not found` for the reason described on
+     * `resolve.dedupe` above.
+     *
+     * It could NOT be reproduced from a cold `node_modules/.vite`: not with
+     * this list removed, not with the pre-existing import specifiers, and not
+     * by loading both HTML entry points in either order. The unversioned chunk
+     * name is the tell — that is a stale artefact of a re-optimisation landing
+     * while a page still referenced the previous bundle, which is a dev-server
+     * cache problem and never affects `vite build`.
+     *
+     * So this list is HARDENING, not a proven cure, and it is worth having on
+     * those terms: vite re-optimises when it discovers a dependency the initial
+     * crawl missed, and every re-optimisation is another chance to hit that
+     * window. Naming all seven entries — including the dynamic one the crawler
+     * cannot see — makes the first pass complete, so there is nothing left to
+     * discover and no reason to re-optimise.
+     *
+     * IF IT COMES BACK: delete `node_modules/.vite` and restart. That clears it
+     * every time. Add any new `three/addons/*` import to this list when you
+     * write it, and spell it `three/addons/*` rather than
+     * `three/examples/jsm/*` — they resolve to the same file, but the optimiser
+     * keys on the specifier string, so two spellings are two entries.
+     */
+    include: [
+      // rapier3d-compat ships wasm inlined as base64; let Vite prebundle it.
+      '@dimforge/rapier3d-compat',
+      'three',
+      'three-mesh-bvh',
+      'three/addons/postprocessing/EffectComposer.js',
+      'three/addons/postprocessing/Pass.js',
+      'three/addons/postprocessing/RenderPass.js',
+      'three/addons/postprocessing/ShaderPass.js',
+      'three/addons/utils/BufferGeometryUtils.js',
+      // Dynamic, and therefore invisible to the initial crawl — see
+      // `src/alien/skin.ts`. Exactly the shape of import that forces a second
+      // optimise pass if it is not declared here.
+      'three/addons/loaders/GLTFLoader.js',
+    ],
   },
 });
