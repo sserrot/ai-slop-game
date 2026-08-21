@@ -1,0 +1,1578 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Greybox Audio — Audition Deck</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;600;700&family=IBM+Plex+Mono:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0c0e;
+    --panel: #12161a;
+    --panel-2: #171c21;
+    --line: #232b32;
+    --ink: #cfd8de;
+    --dim: #7c8a94;
+    --amber: #ffb454;      /* current / caution */
+    --green: #5ee8b5;      /* proposed */
+    --red: #ff5d5d;        /* alien */
+    --mono: 'IBM Plex Mono', ui-monospace, Consolas, monospace;
+    --disp: 'Chakra Petch', var(--mono);
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    background: var(--bg);
+    color: var(--ink);
+    font-family: var(--mono);
+    font-size: 14px;
+    line-height: 1.55;
+    background-image:
+      radial-gradient(1200px 500px at 70% -10%, rgba(94,232,181,.045), transparent 60%),
+      radial-gradient(900px 400px at 10% 110%, rgba(255,93,93,.05), transparent 60%);
+  }
+  body::after { /* scanlines */
+    content: ""; position: fixed; inset: 0; pointer-events: none; z-index: 5;
+    background: repeating-linear-gradient(0deg, rgba(255,255,255,.014) 0 1px, transparent 1px 3px);
+  }
+  header {
+    position: sticky; top: 0; z-index: 10;
+    background: rgba(10,12,14,.92); backdrop-filter: blur(6px);
+    border-bottom: 1px solid var(--line);
+    padding: 12px 22px;
+    display: flex; align-items: center; gap: 18px; flex-wrap: wrap;
+  }
+  header h1 {
+    font-family: var(--disp); font-size: 17px; letter-spacing: .14em;
+    margin: 0; text-transform: uppercase; color: var(--ink); white-space: nowrap;
+  }
+  header h1 b { color: var(--green); font-weight: 700; }
+  #scope {
+    height: 34px; width: 220px; background: #0d1114; border: 1px solid var(--line);
+    border-radius: 3px; flex: 0 0 auto;
+  }
+  .hctrl { display: flex; align-items: center; gap: 8px; color: var(--dim); font-size: 12px; }
+  input[type=range] { accent-color: var(--green); width: 120px; }
+  .stopall {
+    background: #1c1414; color: var(--red); border: 1px solid #3a2222;
+    font-family: var(--mono); font-size: 12px; letter-spacing: .08em;
+    padding: 6px 12px; border-radius: 3px; cursor: pointer; text-transform: uppercase;
+  }
+  .stopall:hover { background: #2a1717; }
+  main { max-width: 1180px; margin: 0 auto; padding: 26px 22px 120px; }
+  .intro { color: var(--dim); max-width: 76ch; margin: 6px 0 8px; }
+  .intro b { color: var(--ink); }
+  nav.toc { display: flex; gap: 10px; flex-wrap: wrap; margin: 18px 0 8px; }
+  nav.toc a {
+    color: var(--dim); text-decoration: none; font-size: 12px; letter-spacing: .06em;
+    border: 1px solid var(--line); padding: 4px 10px; border-radius: 999px; text-transform: uppercase;
+  }
+  nav.toc a:hover { color: var(--green); border-color: var(--green); }
+  section { margin-top: 54px; }
+  h2 {
+    font-family: var(--disp); font-size: 15px; letter-spacing: .18em; text-transform: uppercase;
+    color: var(--ink); border-bottom: 1px solid var(--line); padding-bottom: 8px; margin: 0 0 6px;
+  }
+  h2 .idx { color: var(--dim); margin-right: 10px; }
+  .blurb { color: var(--dim); max-width: 80ch; margin: 8px 0 20px; }
+  .blurb code { color: var(--amber); background: #1a1610; padding: 0 4px; border-radius: 3px; }
+  h3.grp {
+    font-family: var(--disp); font-size: 12px; letter-spacing: .2em; text-transform: uppercase;
+    color: var(--dim); margin: 26px 0 10px;
+  }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(255px, 1fr)); gap: 12px; }
+  .card {
+    background: var(--panel); border: 1px solid var(--line); border-radius: 5px;
+    padding: 12px 14px 13px; display: flex; flex-direction: column; gap: 7px;
+    position: relative;
+  }
+  .card h4 { margin: 0; font-family: var(--disp); font-size: 13.5px; letter-spacing: .05em; font-weight: 600; }
+  .card p { margin: 0; color: var(--dim); font-size: 12px; flex: 1; }
+  .lv {
+    position: absolute; top: 10px; right: 12px; font-size: 10.5px; color: var(--amber);
+    border: 1px solid #3a2f1c; border-radius: 3px; padding: 0 5px; letter-spacing: .08em;
+  }
+  .btns { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 3px; }
+  button.play {
+    font-family: var(--mono); font-size: 12px; cursor: pointer;
+    background: var(--panel-2); color: var(--ink);
+    border: 1px solid #2c3640; border-radius: 3px; padding: 5px 11px;
+    transition: border-color .12s, color .12s, background .12s;
+  }
+  button.play:hover { border-color: var(--amber); color: var(--amber); }
+  button.play.prop:hover { border-color: var(--green); color: var(--green); }
+  button.play.on {
+    background: #10231c; color: var(--green); border-color: var(--green);
+    box-shadow: 0 0 10px rgba(94,232,181,.25);
+  }
+  button.play.on::before { content: "■ "; }
+  button.play.sus::before { content: "▶ "; color: inherit; }
+  button.play.on.sus::before { content: "■ "; }
+  /* A/B rows */
+  .ab {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 0;
+    border: 1px solid var(--line); border-radius: 6px; overflow: hidden;
+    margin-bottom: 14px; background: var(--panel);
+  }
+  .ab .half { padding: 14px 16px; }
+  .ab .half.cur { border-right: 1px dashed var(--line); }
+  .ab .half.pro { background: linear-gradient(180deg, rgba(94,232,181,.045), transparent 70%); }
+  .ab .who {
+    font-size: 10.5px; letter-spacing: .22em; text-transform: uppercase; margin-bottom: 6px;
+  }
+  .ab .cur .who { color: var(--amber); }
+  .ab .pro .who { color: var(--green); }
+  .ab h4 { margin: 0 0 5px; font-family: var(--disp); font-size: 14px; letter-spacing: .04em; }
+  .ab p { margin: 0 0 9px; color: var(--dim); font-size: 12px; }
+  .ab .why {
+    grid-column: 1 / -1; border-top: 1px solid var(--line);
+    padding: 9px 16px; font-size: 12px; color: var(--dim); background: #0e1215;
+  }
+  .ab .why b { color: var(--green); font-weight: 600; }
+  .alien-h2 { border-color: #3a2222; }
+  .alien-h2, .alien-h2 .idx { color: var(--red); }
+  .scene {
+    display: flex; gap: 10px; flex-wrap: wrap; align-items: center;
+    border: 1px solid var(--line); border-radius: 6px; padding: 14px 16px; background: var(--panel);
+  }
+  .scene .lbl { color: var(--dim); font-size: 12px; letter-spacing: .1em; text-transform: uppercase; margin-right: 6px; }
+  footer { color: #3d4750; font-size: 11px; text-align: center; margin-top: 70px; }
+  @media (max-width: 720px) {
+    .ab { grid-template-columns: 1fr; }
+    .ab .half.cur { border-right: none; border-bottom: 1px dashed var(--line); }
+    #scope { display: none; }
+  }
+</style>
+</head>
+<body>
+<header>
+  <h1>Greybox Audio <b>// Audition Deck</b></h1>
+  <canvas id="scope" width="440" height="68"></canvas>
+  <div class="hctrl">VOL <input type="range" id="vol" min="0" max="100" value="70"></div>
+  <button class="stopall" id="stopall">Stop all</button>
+</header>
+<main>
+  <p class="intro">Every sound below is synthesized live with the same Web&nbsp;Audio primitives the game
+  uses — <b>CURRENT</b> entries are 1:1 ports from <b>src/audio/synth.ts</b>, <b>PROPOSED</b> entries are
+  candidate replacements written in the same style so they can be dropped straight back in.
+  Sustained sounds toggle (▶&nbsp;/&nbsp;■). A limiter is on the master bus; still, mind the alien.</p>
+  <nav class="toc">
+    <a href="#catalog">1 · Existing catalog</a>
+    <a href="#dealarm">2 · De-alarming pass</a>
+    <a href="#alien">3 · The alien, rebuilt</a>
+    <a href="#ambience">4 · Spooky ambience</a>
+    <a href="#scenes">5 · Scenes</a>
+  </nav>
+
+  <!-- ============================ 1 · CATALOG ============================ -->
+  <section id="catalog">
+    <h2><span class="idx">01</span>Existing catalog</h2>
+    <p class="blurb">Everything currently audible, grouped roughly as the design doc groups them.
+    The badge is the §3 arrival loudness.</p>
+
+    <h3 class="grp">Movement &amp; body</h3>
+    <div class="grid" id="g-move"></div>
+    <h3 class="grp">Impacts &amp; objects</h3>
+    <div class="grid" id="g-impact"></div>
+    <h3 class="grp">Puzzles &amp; fixtures</h3>
+    <div class="grid" id="g-puzzle"></div>
+    <h3 class="grp">Tracker &amp; alarms</h3>
+    <div class="grid" id="g-alarm"></div>
+    <h3 class="grp">Hiding</h3>
+    <div class="grid" id="g-hide"></div>
+    <h3 class="grp">Alien &amp; ambience</h3>
+    <div class="grid" id="g-alien"></div>
+  </section>
+
+  <!-- ============================ 2 · DE-ALARM ============================ -->
+  <section id="dealarm">
+    <h2><span class="idx">02</span>De-alarming pass</h2>
+    <p class="blurb">The offenders that read as <code>smoke detector</code>: piercing mid-band tones with
+    hard attacks. The proposals keep every gameplay job (countdown rhythm, urgency axis, audibility)
+    but move the information into <b>pitch-register, pulse and pressure</b> instead of shriek.</p>
+    <div id="ab-dealarm"></div>
+  </section>
+
+  <!-- ============================ 3 · ALIEN ============================ -->
+  <section id="alien">
+    <h2 class="alien-h2"><span class="idx">03</span>The alien, rebuilt</h2>
+    <p class="blurb">It looks like an alligator, so it should sound like one: a <b>pulse-train larynx</b>
+    (a 25–45&nbsp;Hz glottal buzz pushed through throat formant filters) instead of detuned synth saws,
+    wet crackle in the breath, and vocabulary borrowed from real gators — the bellow with its
+    infrasonic “water-dance” tremor, the open-mouth hiss, the chuff. Same growl core everywhere,
+    so every call is recognisably one animal.</p>
+    <div id="ab-alien"></div>
+    <h3 class="grp" style="color:var(--red)">New vocabulary (proposed additions)</h3>
+    <div class="grid" id="g-vocab"></div>
+  </section>
+
+  <!-- ============================ 4 · AMBIENCE ============================ -->
+  <section id="ambience">
+    <h2><span class="idx">04</span>Spooky ambience</h2>
+    <p class="blurb">The current bed is honest machinery — fans, mains, a pump. The proposal keeps it and
+    adds a <b>dread layer</b> underneath: a beating sub-drone, a barely-tonal detuned pad, and scheduled
+    far-off events (hull groans, stress pings, distant thumps, skitters) that keep the station feeling
+    inhabited by something. Quiet on purpose — it must never mask a footstep.</p>
+    <div id="ab-amb"></div>
+  </section>
+
+  <!-- ============================ 5 · SCENES ============================ -->
+  <section id="scenes">
+    <h2><span class="idx">05</span>Scenes</h2>
+    <p class="blurb">Proposed layers combined, to judge the mix the way a player would hear it.</p>
+    <div class="scene">
+      <span class="lbl">Mix check</span>
+      <button class="play sus prop" data-sus="sceneCalm">Calm — hum + dread layer</button>
+      <button class="play sus prop" data-sus="sceneHunt">Hunted — hum + dread + hunt loop</button>
+      <button class="play sus prop" data-sus="sceneHide">Hiding — shell + breathing + distant hunt</button>
+    </div>
+  </section>
+
+  <footer>synthesized in-page · no assets · port targets: src/audio/synth.ts</footer>
+</main>
+
+<script>
+'use strict';
+/* =========================================================================
+   Engine — faithful ports of src/audio/buffers.ts + synth.ts primitives
+   ========================================================================= */
+const SILENCE = 1e-4;
+let ctx = null, master, analyser, convolver, susHandles = new Map();
+
+function mulberry32(seed) {
+  let a = seed >>> 0;
+  return () => {
+    a = (a + 0x6d2b79f5) >>> 0;
+    let t = a;
+    t = Math.imul(t ^ (t >>> 15), t | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+const noiseCache = new Map();
+function noiseBuffer(colour = 'white', seconds = 2, seed = 1337) {
+  const key = colour + ':' + seconds + ':' + seed;
+  if (noiseCache.has(key)) return noiseCache.get(key);
+  const rate = ctx.sampleRate;
+  const frames = Math.max(1, Math.floor(seconds * rate));
+  const buffer = ctx.createBuffer(1, frames, rate);
+  const data = buffer.getChannelData(0);
+  const rng = mulberry32(seed);
+  if (colour === 'white') {
+    for (let i = 0; i < frames; i++) data[i] = rng() * 2 - 1;
+  } else if (colour === 'pink') {
+    let b0=0,b1=0,b2=0,b3=0,b4=0,b5=0,b6=0;
+    for (let i = 0; i < frames; i++) {
+      const w = rng() * 2 - 1;
+      b0 = 0.99886*b0 + w*0.0555179; b1 = 0.99332*b1 + w*0.0750759;
+      b2 = 0.969*b2 + w*0.153852;    b3 = 0.8665*b3 + w*0.3104856;
+      b4 = 0.55*b4 + w*0.5329522;    b5 = -0.7616*b5 - w*0.016898;
+      const out = b0+b1+b2+b3+b4+b5+b6 + w*0.5362;
+      b6 = w*0.115926;
+      data[i] = out * 0.11;
+    }
+  } else if (colour === 'brown') {
+    let last = 0;
+    for (let i = 0; i < frames; i++) {
+      const w = rng() * 2 - 1;
+      last = (last + 0.02 * w) / 1.02;
+      data[i] = last * 3.5;
+    }
+  } else { // velvet
+    data.fill(0);
+    const density = Math.floor(rate / 900);
+    for (let i = 0; i < frames; i += density) {
+      const at = i + Math.floor(rng() * density);
+      if (at < frames) data[at] = rng() < 0.5 ? -1 : 1;
+    }
+  }
+  noiseCache.set(key, buffer);
+  return buffer;
+}
+
+function impulseResponse(opts) {
+  const rate = ctx.sampleRate;
+  const frames = Math.max(8, Math.floor(opts.seconds * rate));
+  const buffer = ctx.createBuffer(2, frames, rate);
+  const predelay = Math.floor(((opts.predelayMs ?? 4) / 1000) * rate);
+  const reflections = opts.reflections ?? 6;
+  const spread = opts.spread ?? 0.6;
+  const rng = mulberry32(opts.seed ?? 7);
+  const lpBase = 0.25 + 0.7 * Math.min(Math.max(opts.brightness, 0), 1);
+  for (let channel = 0; channel < 2; channel++) {
+    const data = buffer.getChannelData(channel);
+    const jit = channel === 0 ? 1 : 1 + spread * 0.35;
+    let lp = 0;
+    for (let i = 0; i < frames; i++) {
+      if (i < predelay) { data[i] = 0; continue; }
+      const t = (i - predelay) / (frames - predelay);
+      const env = Math.pow(1 - t, opts.decay * jit);
+      const w = rng() * 2 - 1;
+      const coeff = lpBase * (0.35 + 0.65 * (1 - t));
+      lp = lp + coeff * (w - lp);
+      data[i] = lp * env;
+    }
+    for (let r = 0; r < reflections; r++) {
+      const at = predelay + Math.floor((0.004 + rng() * 0.06) * rate * (1 + r * 0.5));
+      if (at >= frames) break;
+      const amp = (0.9 - r * 0.11) * (channel === 0 ? 1 : 0.82 + spread * 0.2);
+      data[at] += (rng() < 0.5 ? -1 : 1) * Math.max(amp, 0.05);
+    }
+  }
+  // normalise
+  let max = 0;
+  for (let c = 0; c < 2; c++) { const d = buffer.getChannelData(c); for (let i = 0; i < d.length; i++) max = Math.max(max, Math.abs(d[i])); }
+  if (max > 0) for (let c = 0; c < 2; c++) { const d = buffer.getChannelData(c); for (let i = 0; i < d.length; i++) d[i] *= 0.9 / max; }
+  return buffer;
+}
+
+function ensureCtx() {
+  if (ctx) { if (ctx.state === 'suspended') ctx.resume(); return; }
+  ctx = new (window.AudioContext || window.webkitAudioContext)();
+  master = ctx.createGain();
+  master.gain.value = Number(document.getElementById('vol').value) / 100 * 0.9;
+  const comp = ctx.createDynamicsCompressor();
+  comp.threshold.value = -14; comp.knee.value = 10; comp.ratio.value = 14;
+  comp.attack.value = 0.002; comp.release.value = 0.24;
+  analyser = ctx.createAnalyser();
+  analyser.fftSize = 2048;
+  master.connect(comp); comp.connect(analyser); analyser.connect(ctx.destination);
+  convolver = ctx.createConvolver();
+  convolver.buffer = impulseResponse({ seconds: 1.7, decay: 3.1, brightness: 0.45, predelayMs: 14, reflections: 8, spread: 0.85, seed: 7 });
+  const wet = ctx.createGain(); wet.gain.value = 0.9;
+  convolver.connect(wet); wet.connect(master);
+  drawScope();
+}
+
+/** A destination with an optional reverb send, optional pan. */
+function bus(rev = 0, pan = 0) {
+  const n = ctx.createGain();
+  let tail = n;
+  if (pan !== 0 && ctx.createStereoPanner) {
+    const p = ctx.createStereoPanner(); p.pan.value = pan; n.connect(p); tail = p;
+  }
+  tail.connect(master);
+  if (rev > 0) { const s = ctx.createGain(); s.gain.value = rev; tail.connect(s); s.connect(convolver); }
+  return n;
+}
+
+const clamp = (v, lo, hi) => Math.min(Math.max(v, lo), hi);
+const lerp = (a, b, t) => a + (b - a) * t;
+const geomLerp = (a, b, t) => a * Math.pow(b / a, t);
+function expRamp(param, value, at) { param.exponentialRampToValueAtTime(Math.max(value, SILENCE), at); }
+
+function envelope(when, spec) {
+  const attack = spec.attack ?? 0.002, hold = spec.hold ?? 0;
+  const gain = ctx.createGain();
+  gain.gain.setValueAtTime(SILENCE, when);
+  expRamp(gain.gain, spec.peak, when + attack);
+  if (hold > 0) gain.gain.setValueAtTime(Math.max(spec.peak, SILENCE), when + attack + hold);
+  expRamp(gain.gain, SILENCE, when + attack + hold + spec.decay);
+  gain.gain.setValueAtTime(0, when + attack + hold + spec.decay + 0.001);
+  return { gain, end: when + attack + hold + spec.decay + 0.002 };
+}
+
+function noiseBurst(dest, when, spec) {
+  const src = ctx.createBufferSource();
+  src.buffer = noiseBuffer(spec.colour ?? 'white', 2, spec.seed ?? 1337);
+  src.loop = true;
+  const offset = ((spec.seed ?? 1337) % 977) / 1000;
+  const filter = ctx.createBiquadFilter();
+  filter.type = spec.type ?? 'bandpass';
+  filter.frequency.setValueAtTime(Math.max(spec.freq ?? 1000, 20), when);
+  if (spec.freqTo !== undefined) expRamp(filter.frequency, Math.max(spec.freqTo, 20), when + (spec.attack ?? 0.002) + spec.decay);
+  filter.Q.value = spec.q ?? 1;
+  const { gain, end } = envelope(when, spec);
+  src.connect(filter); filter.connect(gain); gain.connect(dest);
+  src.start(when, offset); src.stop(end);
+  return end;
+}
+
+function tone(dest, when, spec) {
+  const osc = ctx.createOscillator();
+  osc.type = spec.type ?? 'sine';
+  osc.frequency.setValueAtTime(Math.max(spec.freq, 1), when);
+  if (spec.detune) osc.detune.value = spec.detune;
+  const { gain, end } = envelope(when, spec);
+  if (spec.freqTo !== undefined) expRamp(osc.frequency, Math.max(spec.freqTo, 1), end);
+  osc.connect(gain); gain.connect(dest);
+  osc.start(when); osc.stop(end);
+  return end;
+}
+
+function metalRing(dest, when, partials, spec) {
+  let end = when;
+  partials.forEach((freq, i) => {
+    const decay = spec.decay * Math.pow(0.62, i);
+    const peak = spec.peak * Math.pow(0.68, i);
+    const at = tone(dest, when, { type: 'sine', freq, decay, peak, attack: spec.attack ?? 0.001 });
+    if (at > end) end = at;
+  });
+  return end;
+}
+
+function sustainedNoise(dest, when, spec) {
+  const src = ctx.createBufferSource();
+  src.buffer = noiseBuffer(spec.colour ?? 'white', 2, spec.seed ?? 4242);
+  src.loop = true;
+  const filter = ctx.createBiquadFilter();
+  filter.type = spec.type ?? 'bandpass';
+  filter.frequency.value = spec.freq;
+  filter.Q.value = spec.q ?? 1;
+  const gain = ctx.createGain();
+  gain.gain.setValueAtTime(SILENCE, when);
+  expRamp(gain.gain, spec.peak, when + (spec.attack ?? 0.05));
+  src.connect(filter); filter.connect(gain); gain.connect(dest);
+  src.start(when);
+  return {
+    gain, filter, source: src,
+    stop(at, fade) {
+      const t = Math.max(at, ctx.currentTime);
+      gain.gain.cancelScheduledValues(t);
+      gain.gain.setValueAtTime(Math.max(gain.gain.value, SILENCE), t);
+      expRamp(gain.gain, SILENCE, t + fade);
+      try { src.stop(t + fade + 0.02); } catch (e) {}
+    },
+  };
+}
+
+function varier(seed) {
+  const rng = mulberry32(seed >>> 0);
+  return (amount) => 1 + (rng() * 2 - 1) * amount;
+}
+/** Fresh-ish seed per click so repeats vary like in-game. */
+let clickSeed = 1;
+function fseed() { clickSeed = (clickSeed * 16807) % 2147483647; return clickSeed; }
+
+/* =========================================================================
+   CURRENT sounds — 1:1 ports of synth.ts (constants inlined)
+   ========================================================================= */
+const PUSH_MAX = 6, TERMINAL = 6, GRAVITY_WARNING_S = 2.5;
+const TR = { FAR_HZ: 440, NEAR_HZ: 880, LP_FAR: 850, LP_NEAR: 3000,
+  ATK_FAR: 0.018, ATK_NEAR: 0.006, DEC_FAR: 0.16, DEC_NEAR: 0.07,
+  PEAK_FAR: 0.075, PEAK_NEAR: 0.2, SOLID_PEAK: 0.115, TREM_HZ: 5.5, TREM_DEPTH: 0.28 };
+
+const CUR = {};
+
+CUR.railPull = (d, w, seed) => {
+  noiseBurst(d, w, { colour:'white', type:'bandpass', freq:2400, freqTo:900, q:2.5, attack:0.006, decay:0.09, peak:0.32, seed });
+  tone(d, w, { type:'triangle', freq:240, decay:0.05, peak:0.08 });
+};
+CUR.pushOff = (d, w, seed) => {
+  noiseBurst(d, w, { colour:'pink', type:'lowpass', freq:700, freqTo:260, attack:0.004, decay:0.16, peak:0.42, seed });
+  tone(d, w, { type:'sine', freq:96, freqTo:62, decay:0.14, peak:0.3 });
+};
+CUR.railCatch = (d, w, seed, speed = 4) => {
+  const h = clamp(speed / PUSH_MAX, 0, 1);
+  metalRing(d, w, [560 + 120*h, 1290, 2380], { decay: 0.09 + 0.1*h, peak: 0.3 + 0.28*h });
+  noiseBurst(d, w, { colour:'white', type:'bandpass', freq:1400 + 1700*h, q:1.6, attack:0.002, decay:0.05 + 0.05*h, peak:0.26 + 0.3*h, seed });
+  noiseBurst(d, w + 0.004, { colour:'pink', type:'lowpass', freq:900, attack:0.003, decay:0.07, peak:0.18, seed: seed + 1 });
+};
+CUR.impact = (d, w, seed, speed = 5) => {
+  const h = clamp(speed / PUSH_MAX, 0, 1);
+  metalRing(d, w, [128, 331, 742, 1180], { decay: 0.55 + 0.65*h, peak: 0.34 + 0.3*h, attack: 0.001 });
+  tone(d, w, { type:'sine', freq:74, freqTo:41, decay:0.3 + 0.25*h, peak:0.5 });
+  noiseBurst(d, w, { colour:'brown', type:'lowpass', freq:900, freqTo:220, attack:0.001, decay:0.28 + 0.2*h, peak:0.42, seed });
+  if (h > 0.35) noiseBurst(d, w, { colour:'white', type:'highpass', freq:2600, attack:0.001, decay:0.05 + 0.06*h, peak:0.2*h, seed: seed + 3 });
+};
+CUR.bodyCollision = (d, w, seed) => {
+  noiseBurst(d, w, { colour:'brown', type:'lowpass', freq:420, freqTo:160, attack:0.002, decay:0.26, peak:0.5, seed });
+  tone(d, w, { type:'sine', freq:88, freqTo:54, decay:0.22, peak:0.42 });
+  noiseBurst(d, w + 0.02, { colour:'pink', type:'bandpass', freq:1600, q:0.9, attack:0.01, decay:0.2, peak:0.12, seed: seed + 1 });
+};
+CUR.cargoBounce = (d, w, seed) => {
+  noiseBurst(d, w, { colour:'brown', type:'lowpass', freq:300, attack:0.002, decay:0.2, peak:0.5 });
+  tone(d, w, { type:'sine', freq:118, freqTo:72, decay:0.18, peak:0.4 });
+  noiseBurst(d, w + 0.03, { colour:'velvet', type:'bandpass', freq:2400, q:2, attack:0.005, decay:0.32, peak:0.16, seed });
+};
+CUR.knock = (d, w, seed) => {
+  metalRing(d, w, [523, 1470, 2830, 4100], { decay: 0.19, peak: 0.5 });
+  noiseBurst(d, w, { colour:'white', type:'highpass', freq:2200, attack:0.0008, decay:0.02, peak:0.3, seed });
+};
+CUR.trackerBeep = (d, w, u) => {
+  u = clamp(u, 0, 1);
+  const root = geomLerp(TR.FAR_HZ, TR.NEAR_HZ, u);
+  const attack = lerp(TR.ATK_FAR, TR.ATK_NEAR, u);
+  const decay = lerp(TR.DEC_FAR, TR.DEC_NEAR, u);
+  const peak = lerp(TR.PEAK_FAR, TR.PEAK_NEAR, u) * 2.4; // demo trim: audible solo
+  const cutoff = geomLerp(TR.LP_FAR, TR.LP_NEAR, u);
+  const shaper = ctx.createBiquadFilter();
+  shaper.type = 'lowpass'; shaper.Q.value = 0.9;
+  shaper.frequency.setValueAtTime(cutoff, w);
+  expRamp(shaper.frequency, cutoff * 0.42, w + attack + decay);
+  shaper.connect(d);
+  tone(shaper, w, { type:'sine', freq: root*0.5, attack, decay: decay*1.25, peak: peak * lerp(0.55, 0.4, u) });
+  tone(shaper, w, { type:'triangle', freq: root, attack, decay, peak });
+  tone(shaper, w, { type:'sine', freq: root*3, attack, decay: decay*0.45, peak: peak * lerp(0.04, 0.3, u) });
+};
+CUR.trackerTone = (d, w) => {
+  const root = TR.NEAR_HZ;
+  const gain = ctx.createGain();
+  gain.gain.setValueAtTime(SILENCE, w);
+  expRamp(gain.gain, TR.SOLID_PEAK * 2.4, w + 0.06);
+  gain.connect(d);
+  const shaper = ctx.createBiquadFilter();
+  shaper.type = 'lowpass'; shaper.frequency.value = TR.LP_NEAR; shaper.Q.value = 0.7;
+  shaper.connect(gain);
+  const depth = clamp(TR.TREM_DEPTH, 0, 1) * 0.5;
+  const trem = ctx.createGain(); trem.gain.value = 1 - depth; trem.connect(shaper);
+  const lfo = ctx.createOscillator(); lfo.type = 'sine'; lfo.frequency.value = TR.TREM_HZ;
+  const lfoDepth = ctx.createGain(); lfoDepth.gain.value = depth;
+  lfo.connect(lfoDepth); lfoDepth.connect(trem.gain);
+  const oscs = [['triangle', root, 0.62], ['sine', root*0.5, 0.3], ['sine', root*1.5, 0.1]].map(([type, freq, level]) => {
+    const osc = ctx.createOscillator(); osc.type = type; osc.frequency.value = freq;
+    const trim = ctx.createGain(); trim.gain.value = level;
+    osc.connect(trim); trim.connect(trem); osc.start(w); return osc;
+  });
+  lfo.start(w);
+  return { stop(at, fade = 0.06) {
+    const t = Math.max(at, ctx.currentTime);
+    gain.gain.cancelScheduledValues(t);
+    gain.gain.setValueAtTime(Math.max(gain.gain.value, SILENCE), t);
+    expRamp(gain.gain, SILENCE, t + fade);
+    try { oscs.forEach(o => o.stop(t + fade + 0.02)); lfo.stop(t + fade + 0.02); } catch (e) {}
+  } };
+};
+CUR.breaker = (d, w, seed) => {
+  noiseBurst(d, w, { colour:'white', type:'highpass', freq:3000, attack:0.0005, decay:0.018, peak:0.55, seed });
+  metalRing(d, w + 0.002, [820, 1640, 2950], { decay: 0.07, peak: 0.34 });
+  tone(d, w, { type:'triangle', freq:150, freqTo:96, decay:0.09, peak:0.3 });
+};
+CUR.breakerReset = (d, w, seed) => {
+  const duration = 0.55;
+  const osc = ctx.createOscillator(); osc.type = 'sawtooth'; osc.frequency.value = 108;
+  const filter = ctx.createBiquadFilter(); filter.type = 'bandpass'; filter.frequency.value = 900; filter.Q.value = 1.4;
+  const gate = ctx.createGain(); gate.gain.value = 0.5;
+  const lfo = ctx.createOscillator(); lfo.type = 'square'; lfo.frequency.value = 27;
+  const lfoDepth = ctx.createGain(); lfoDepth.gain.value = 0.45;
+  lfo.connect(lfoDepth); lfoDepth.connect(gate.gain);
+  const { gain, end } = envelope(w, { attack: 0.006, hold: duration - 0.1, decay: 0.09, peak: 0.5 });
+  osc.connect(filter); filter.connect(gate); gate.connect(gain); gain.connect(d);
+  osc.start(w); lfo.start(w); osc.stop(end); lfo.stop(end);
+  noiseBurst(d, w, { colour:'white', type:'highpass', freq:2400, attack:0.001, decay:0.03, peak:0.3, seed });
+};
+CUR.valveSlow = (d, w, seed) => {
+  const duration = 0.8;
+  const src = ctx.createBufferSource(); src.buffer = noiseBuffer('white', 2, seed); src.loop = true;
+  const filter = ctx.createBiquadFilter(); filter.type = 'bandpass';
+  filter.frequency.setValueAtTime(1250, w);
+  filter.frequency.linearRampToValueAtTime(1600, w + duration);
+  filter.Q.value = 14;
+  const wobble = ctx.createOscillator(); wobble.type = 'sine'; wobble.frequency.value = 5.5;
+  const wd = ctx.createGain(); wd.gain.value = 220;
+  wobble.connect(wd); wd.connect(filter.frequency);
+  const { gain, end } = envelope(w, { attack: 0.08, hold: duration - 0.25, decay: 0.17, peak: 0.22 });
+  src.connect(filter); filter.connect(gain); gain.connect(d);
+  src.start(w); wobble.start(w); src.stop(end); wobble.stop(end);
+};
+CUR.valveFast = (d, w, seed) => {
+  const duration = 0.7;
+  noiseBurst(d, w, { colour:'white', type:'bandpass', freq:500, freqTo:2600, q:1.2, attack:0.02, hold:duration*0.5, decay:0.2, peak:0.34, seed });
+  for (let i = 0; i < 11; i++) {
+    noiseBurst(d, w + (i/11)*duration, { colour:'white', type:'highpass', freq:3200, attack:0.0005, decay:0.012, peak:0.22, seed: seed + i });
+  }
+  metalRing(d, w + duration, [640, 1320], { decay: 0.18, peak: 0.24 });
+};
+CUR.hatchCycle = (d, w, seed) => {
+  const motorStart = w + 0.12, motorLength = 1.15;
+  metalRing(d, w, [190, 410, 860], { decay: 0.16, peak: 0.45 });
+  noiseBurst(d, w, { colour:'white', type:'highpass', freq:2000, attack:0.001, decay:0.04, peak:0.3, seed });
+  const motor = ctx.createOscillator(); motor.type = 'sawtooth';
+  motor.frequency.setValueAtTime(58, motorStart);
+  motor.frequency.linearRampToValueAtTime(71, motorStart + motorLength*0.7);
+  motor.frequency.linearRampToValueAtTime(54, motorStart + motorLength);
+  const mf = ctx.createBiquadFilter(); mf.type = 'lowpass'; mf.frequency.value = 780; mf.Q.value = 3;
+  const { gain: mg, end: motorEnd } = envelope(motorStart, { attack: 0.06, hold: motorLength - 0.2, decay: 0.14, peak: 0.3 });
+  motor.connect(mf); mf.connect(mg); mg.connect(d);
+  motor.start(motorStart); motor.stop(motorEnd);
+  noiseBurst(d, motorStart, { colour:'pink', type:'bandpass', freq:1400, q:0.8, attack:0.08, hold:motorLength - 0.2, decay:0.12, peak:0.12, seed: seed + 5 });
+  metalRing(d, motorStart + motorLength, [150, 330, 690], { decay: 0.35, peak: 0.5 });
+};
+CUR.keyswitch = (d, w, seed) => {
+  metalRing(d, w, [740, 1580], { decay: 0.06, peak: 0.34 });
+  noiseBurst(d, w, { colour:'white', type:'highpass', freq:2800, attack:0.0006, decay:0.02, peak:0.4, seed });
+  tone(d, w + 0.03, { type:'triangle', freq:128, freqTo:84, decay:0.16, peak:0.4 });
+  noiseBurst(d, w + 0.05, { colour:'white', type:'bandpass', freq:1200, q:6, attack:0.01, hold:0.12, decay:0.14, peak:0.18, seed: seed + 2 });
+};
+CUR.pryBar = (d, w, seed) => {
+  const groan = 0.95;
+  const src = ctx.createBufferSource(); src.buffer = noiseBuffer('white', 2, seed); src.loop = true;
+  const filter = ctx.createBiquadFilter(); filter.type = 'bandpass';
+  filter.frequency.setValueAtTime(320, w);
+  filter.frequency.exponentialRampToValueAtTime(1500, w + groan);
+  filter.Q.value = 11;
+  const wobble = ctx.createOscillator(); wobble.type = 'triangle'; wobble.frequency.value = 8.5;
+  const wd = ctx.createGain(); wd.gain.value = 120;
+  wobble.connect(wd); wd.connect(filter.frequency);
+  const { gain, end } = envelope(w, { attack: 0.12, hold: groan - 0.25, decay: 0.16, peak: 0.42 });
+  src.connect(filter); filter.connect(gain); gain.connect(d);
+  src.start(w); wobble.start(w); src.stop(end); wobble.stop(end);
+  const snapAt = w + groan;
+  metalRing(d, snapAt, [420, 980, 2100, 3300], { decay: 0.3, peak: 0.55 });
+  noiseBurst(d, snapAt, { colour:'white', type:'highpass', freq:1800, attack:0.001, decay:0.09, peak:0.42, seed: seed + 1 });
+};
+CUR.handPump = (d, w, seed) => {
+  noiseBurst(d, w, { colour:'pink', type:'bandpass', freq:900, freqTo:620, q:3.5, attack:0.05, hold:0.16, decay:0.2, peak:0.22, seed });
+  tone(d, w + 0.24, { type:'sine', freq:132, freqTo:88, decay:0.14, peak:0.16 });
+};
+CUR.undockLever = (d, w, seed) => {
+  metalRing(d, w, [96, 214, 480], { decay: 0.4, peak: 0.5 });
+  noiseBurst(d, w + 0.05, { colour:'white', type:'bandpass', freq:1500, freqTo:900, q:0.7, attack:0.03, hold:0.45, decay:0.25, peak:0.3, seed });
+  metalRing(d, w + 0.72, [130, 290, 610], { decay: 0.45, peak: 0.45 });
+};
+CUR.extinguisher = (d, w, seed) => {
+  noiseBurst(d, w, { colour:'white', type:'bandpass', freq:2800, freqTo:1800, q:0.6, attack:0.02, hold:0.4, decay:0.3, peak:0.55, seed });
+  noiseBurst(d, w, { colour:'pink', type:'highpass', freq:600, attack:0.03, hold:0.35, decay:0.3, peak:0.28, seed: seed + 1 });
+};
+CUR.decoy = (d, w, seed) => {
+  tone(d, w, { type:'sine', freq:96, freqTo:38, decay:0.55, peak:0.6 });
+  metalRing(d, w, [210, 495, 1120, 2340], { decay: 0.7, peak: 0.5 });
+  noiseBurst(d, w, { colour:'white', type:'highpass', freq:1500, attack:0.001, decay:0.12, peak:0.5, seed });
+  for (let i = 1; i <= 4; i++) {
+    metalRing(d, w + 0.18*i + i*i*0.02, [380 + i*90, 1180 + i*140], { decay: 0.22/i, peak: 0.3/i });
+  }
+};
+CUR.headset = (d, w, seed) => {
+  noiseBurst(d, w, { colour:'white', type:'bandpass', freq:1900, q:7, attack:0.01, hold:0.08, decay:0.12, peak:0.18, seed });
+};
+CUR.breath = (d, w, seed, intensity = 0.6, exhale = false) => {
+  const i = clamp(intensity, 0, 1);
+  const duration = (exhale ? 0.5 : 0.42) * (1 - 0.3*i);
+  noiseBurst(d, w, { colour:'pink', type:'bandpass',
+    freq: exhale ? 620 + 260*i : 420 + 200*i, freqTo: exhale ? 300 : 1000 + 400*i,
+    q: exhale ? 1.1 : 1.6, attack: exhale ? 0.05 : 0.12,
+    hold: duration*0.25, decay: duration*0.7, peak: 0.18 + 0.4*i, seed });
+  if (i > 0.45) tone(d, w + duration*0.15, { type:'triangle', freq: exhale ? 150 : 210, freqTo: exhale ? 110 : 260, decay: duration*0.5, peak: 0.06*i });
+};
+const FOOTSTEP_SHAPES = {
+  crouch: { thumpHz:78, thumpTo:56, thumpPeak:0.36, thumpDecay:0.075, bodyHz:240, bodyTo:128, bodyPeak:0.42, bodyDecay:0.09,
+    tickHz:0, tickPeak:0, ring:[], ringPeak:0, ringDecay:0, scuffDelay:0.045, scuffHz:1500, scuffPeak:0.17, scuffDecay:0.1 },
+  walk: { thumpHz:118, thumpTo:72, thumpPeak:0.41, thumpDecay:0.12, bodyHz:430, bodyTo:185, bodyPeak:0.41, bodyDecay:0.13,
+    tickHz:2600, tickPeak:0.19, ring:[560,1290], ringPeak:0.09, ringDecay:0.085, scuffDelay:0.075, scuffHz:2100, scuffPeak:0.13, scuffDecay:0.075 },
+  sprint: { thumpHz:96, thumpTo:54, thumpPeak:0.49, thumpDecay:0.2, bodyHz:620, bodyTo:215, bodyPeak:0.44, bodyDecay:0.2,
+    tickHz:3000, tickPeak:0.26, ring:[430,980,2100], ringPeak:0.15, ringDecay:0.16, scuffDelay:0.055, scuffHz:2600, scuffPeak:0.17, scuffDecay:0.1 },
+};
+CUR.footstep = (d, w, seed, gait = 'walk', scale = 1) => {
+  const s = FOOTSTEP_SHAPES[gait];
+  const vary = varier(seed);
+  const pitch = vary(0.07), loud = vary(0.1) * scale, time = vary(0.12);
+  tone(d, w, { type:'sine', freq: s.thumpHz*pitch, freqTo: s.thumpTo*pitch, decay: s.thumpDecay*time, peak: s.thumpPeak*loud, attack: 0.0015 });
+  noiseBurst(d, w, { colour:'brown', type:'lowpass', freq: s.bodyHz*pitch, freqTo: s.bodyTo*pitch, attack:0.0015, decay: s.bodyDecay*time, peak: s.bodyPeak*loud, seed });
+  if (s.tickPeak > 0) noiseBurst(d, w, { colour:'white', type:'highpass', freq: s.tickHz*vary(0.05), attack:0.0006, decay:0.014*time, peak:s.tickPeak*loud, seed: seed + 1 });
+  if (s.ring.length > 0) metalRing(d, w + 0.002, s.ring.map(f => f*pitch), { decay: s.ringDecay*time, peak: s.ringPeak*loud, attack: 0.001 });
+  noiseBurst(d, w + s.scuffDelay*time, { colour:'pink', type:'bandpass', freq: s.scuffHz*vary(0.09), freqTo: s.scuffHz*0.55, q:1.1, attack:0.008, decay:s.scuffDecay*time, peak:s.scuffPeak*loud, seed: seed + 2 });
+};
+CUR.landingSoft = (d, w, seed) => {
+  CUR.footstep(d, w, seed, 'crouch', 1.3);
+  noiseBurst(d, w + 0.02, { colour:'pink', type:'bandpass', freq:900, freqTo:420, q:1.4, attack:0.02, decay:0.16, peak:0.1, seed: seed + 3 });
+};
+CUR.landingHard = (d, w, seed) => {
+  CUR.impact(d, w, seed, 6);
+  CUR.footstep(d, w, seed + 5, 'walk', 0.9);
+};
+CUR.launchWhoosh = (d, w, seed, speed = 4) => {
+  const h = clamp(speed / PUSH_MAX, 0, 1);
+  noiseBurst(d, w, { colour:'pink', type:'bandpass', freq:300, freqTo:1600 + 900*h, q:0.7, attack:0.05, hold:0.09, decay:0.34 + 0.2*h, peak:0.16 + 0.24*h, seed });
+  tone(d, w, { type:'sine', freq:118, freqTo:196, decay:0.42, peak:0.1 + 0.12*h, attack:0.03 });
+};
+CUR.settleFall = (d, w, seed) => {
+  noiseBurst(d, w, { colour:'brown', type:'lowpass', freq:520, freqTo:150, attack:0.09, hold:0.1, decay:0.42, peak:0.28, seed });
+  tone(d, w, { type:'sine', freq:152, freqTo:62, decay:0.55, peak:0.22, attack:0.05 });
+};
+CUR.liftoffRelease = (d, w, seed) => {
+  noiseBurst(d, w, { colour:'pink', type:'bandpass', freq:700, freqTo:1500, q:1.2, attack:0.06, hold:0.06, decay:0.3, peak:0.16, seed });
+  noiseBurst(d, w, { colour:'brown', type:'lowpass', freq:260, freqTo:120, attack:0.01, decay:0.14, peak:0.14, seed: seed + 1 });
+  tone(d, w + 0.03, { type:'sine', freq:74, freqTo:132, decay:0.4, peak:0.09, attack:0.05 });
+};
+CUR.jumpEffort = (d, w, seed) => {
+  noiseBurst(d, w, { colour:'pink', type:'bandpass', freq:520, freqTo:820, q:1.3, attack:0.012, decay:0.19, peak:0.2, seed });
+  noiseBurst(d, w, { colour:'brown', type:'lowpass', freq:300, freqTo:150, attack:0.002, decay:0.09, peak:0.22, seed: seed + 1 });
+};
+CUR.gravityShift = (d, w, seed) => {
+  metalRing(d, w, [138, 296, 615, 1180], { decay: 0.36, peak: 0.5 });
+  noiseBurst(d, w, { colour:'white', type:'highpass', freq:2400, attack:0.0008, decay:0.035, peak:0.34, seed });
+  const spin = ctx.createBiquadFilter();
+  spin.type = 'lowpass'; spin.Q.value = 1.1;
+  spin.frequency.setValueAtTime(2600, w);
+  expRamp(spin.frequency, 300, w + 1.15);
+  spin.connect(d);
+  tone(spin, w, { type:'sawtooth', freq:460, freqTo:68, attack:0.01, hold:0.06, decay:1.0, peak:0.3 });
+  tone(spin, w, { type:'triangle', freq:232, freqTo:34, attack:0.01, hold:0.06, decay:1.05, peak:0.22 });
+  noiseBurst(d, w + 0.05, { colour:'brown', type:'lowpass', freq:900, freqTo:180, attack:0.12, hold:0.2, decay:0.75, peak:0.34, seed: seed + 2 });
+  for (let i = 0; i < 3; i++) {
+    metalRing(d, w + 0.42 + i*0.19, [420 + i*130, 1080 + i*210], { decay: 0.16, peak: 0.12 - i*0.03 });
+  }
+};
+CUR.gravityWarning = (d, w, seed, span = GRAVITY_WARNING_S) => {
+  const out = ctx.createGain(); out.gain.setValueAtTime(1, w); out.connect(d);
+  const shaper = ctx.createBiquadFilter();
+  shaper.type = 'lowpass'; shaper.Q.value = 2.2;
+  shaper.frequency.setValueAtTime(1800, w);
+  expRamp(shaper.frequency, 620, w + span);
+  shaper.connect(out);
+  const sag = ctx.createOscillator(); sag.type = 'sawtooth';
+  sag.frequency.setValueAtTime(196, w); expRamp(sag.frequency, 132, w + span);
+  const sagGain = ctx.createGain();
+  sagGain.gain.setValueAtTime(SILENCE, w);
+  expRamp(sagGain.gain, 0.2, w + 0.15);
+  expRamp(sagGain.gain, 0.3, w + span*0.85);
+  expRamp(sagGain.gain, SILENCE, w + span);
+  sag.connect(sagGain); sagGain.connect(shaper);
+  sag.start(w); sag.stop(w + span + 0.05);
+  const wobble = ctx.createOscillator(); wobble.type = 'sine';
+  wobble.frequency.setValueAtTime(3.2, w);
+  wobble.frequency.linearRampToValueAtTime(9.5, w + span);
+  const wd = ctx.createGain();
+  wd.gain.setValueAtTime(4, w); wd.gain.linearRampToValueAtTime(22, w + span);
+  wobble.connect(wd); wd.connect(sag.frequency);
+  wobble.start(w); wobble.stop(w + span + 0.05);
+  const period = 0.8, chirps = Math.max(1, Math.floor(span / period));
+  for (let i = 0; i < chirps; i++) {
+    const at = w + i*period;
+    const urgency = chirps > 1 ? i/(chirps-1) : 1;
+    const peak = 0.26 + 0.16*urgency;
+    tone(out, at, { type:'triangle', freq:622, attack:0.006, hold:0.05, decay:0.1, peak });
+    tone(out, at + 0.15, { type:'triangle', freq:466, attack:0.006, hold:0.05, decay:0.13, peak: peak*0.9 });
+    noiseBurst(out, at, { colour:'white', type:'bandpass', freq:1900, q:5, attack:0.004, decay:0.05, peak:0.06, seed: seed + i });
+  }
+};
+CUR.hideEnter = (d, w, seed, haste = 0) => {
+  const h = clamp(haste, 0, 1);
+  const vary = varier(seed);
+  noiseBurst(d, w, { colour:'pink', type:'bandpass', freq: lerp(760,1180,h)*vary(0.06), freqTo: lerp(340,620,h), q:1.2,
+    attack: lerp(0.09,0.006,h), hold: lerp(0.42,0.05,h), decay: lerp(0.5,0.14,h), peak: lerp(0.16,0.44,h), seed });
+  const doorAt = w + lerp(0.85, 0.16, h);
+  metalRing(d, doorAt, [318, 742, 1560], { decay: lerp(0.1,0.42,h), peak: lerp(0.12,0.5,h), attack: lerp(0.01,0.001,h) });
+  if (h > 0.4) {
+    tone(d, doorAt, { type:'sine', freq:96*vary(0.05), freqTo:58, decay:0.2, peak:0.34*h });
+    noiseBurst(d, doorAt, { colour:'brown', type:'lowpass', freq:380, freqTo:150, attack:0.002, decay:0.22, peak:0.4*h, seed: seed + 1 });
+  }
+  noiseBurst(d, doorAt + 0.05, { colour:'white', type:'highpass', freq:2900, attack:0.0006, decay:0.02, peak: lerp(0.1,0.34,h), seed: seed + 2 });
+};
+CUR.hideExit = (d, w, seed, haste = 1) => {
+  const h = clamp(haste, 0, 1);
+  const vary = varier(seed);
+  noiseBurst(d, w, { colour:'white', type:'highpass', freq:3100*vary(0.04), attack:0.0006, decay:0.022, peak:lerp(0.12,0.36,h), seed });
+  metalRing(d, w + 0.03, [364, 810, 1720], { decay: lerp(0.12,0.34,h), peak: lerp(0.12,0.44,h) });
+  noiseBurst(d, w + lerp(0.18,0.05,h), { colour:'pink', type:'bandpass', freq:lerp(820,1320,h), freqTo:lerp(420,700,h), q:1.1,
+    attack:lerp(0.05,0.005,h), hold:lerp(0.24,0.05,h), decay:lerp(0.34,0.16,h), peak:lerp(0.16,0.42,h), seed: seed + 1 });
+};
+CUR.hideBreach = (d, w, seed) => {
+  const shriek = ctx.createBufferSource(); shriek.buffer = noiseBuffer('white', 2, seed); shriek.loop = true;
+  const sf = ctx.createBiquadFilter(); sf.type = 'bandpass';
+  sf.frequency.setValueAtTime(420, w); expRamp(sf.frequency, 2400, w + 1.5); sf.Q.value = 13;
+  const sw = ctx.createOscillator(); sw.type = 'triangle'; sw.frequency.value = 7.4;
+  const sd = ctx.createGain(); sd.gain.value = 180;
+  sw.connect(sd); sd.connect(sf.frequency);
+  const { gain: sg, end: sEnd } = envelope(w, { attack: 0.1, hold: 1.35, decay: 0.3, peak: 0.4 });
+  shriek.connect(sf); sf.connect(sg); sg.connect(d);
+  shriek.start(w); sw.start(w); shriek.stop(sEnd); sw.stop(sEnd);
+  tone(d, w, { type:'sawtooth', freq:52, freqTo:38, decay:1.7, peak:0.3, attack:0.06 });
+  for (let i = 0; i < 3; i++) {
+    const at = w + 0.22 + i*0.62, weight = 0.36 + 0.14*i;
+    metalRing(d, at, [176, 388, 830, 1640], { decay: 0.3 + 0.08*i, peak: weight });
+    noiseBurst(d, at, { colour:'brown', type:'lowpass', freq:700, freqTo:220, attack:0.001, decay:0.22, peak:weight, seed: seed + i });
+    noiseBurst(d, at, { colour:'white', type:'highpass', freq:2800, attack:0.0008, decay:0.05, peak:0.24, seed: seed + 10 + i });
+  }
+};
+CUR.hideShell = (d, w, seed) => {
+  const out = ctx.createGain();
+  out.gain.setValueAtTime(SILENCE, w); expRamp(out.gain, 1, w + 0.25); out.connect(d);
+  const body = ctx.createOscillator(); body.type = 'sine'; body.frequency.value = 88;
+  const bt = ctx.createGain(); bt.gain.value = 0.05;
+  body.connect(bt); bt.connect(out);
+  const air = sustainedNoise(out, w, { colour:'pink', type:'bandpass', freq:340, q:1.6, peak:0.07, attack:0.4, seed });
+  const drift = ctx.createOscillator(); drift.type = 'sine'; drift.frequency.value = 0.13;
+  const dd = ctx.createGain(); dd.gain.value = 0.025;
+  drift.connect(dd); dd.connect(air.gain.gain);
+  body.start(w); drift.start(w);
+  return { stop(at, fade = 0.2) {
+    const t = Math.max(at, ctx.currentTime);
+    out.gain.cancelScheduledValues(t);
+    out.gain.setValueAtTime(Math.max(out.gain.value, SILENCE), t);
+    expRamp(out.gain, SILENCE, t + fade);
+    air.stop(t, fade);
+    try { body.stop(t + fade + 0.05); drift.stop(t + fade + 0.05); } catch (e) {}
+  } };
+};
+CUR.alienOneShot = (d, w, seed) => {
+  noiseBurst(d, w, { colour:'pink', type:'bandpass', freq:380, freqTo:190, q:3.2, attack:0.05, hold:0.3, decay:0.5, peak:0.42, seed });
+  tone(d, w, { type:'sawtooth', freq:61, freqTo:47, decay:0.85, peak:0.26 });
+  tone(d, w + 0.02, { type:'sawtooth', freq:58, freqTo:44, decay:0.8, peak:0.22 });
+  for (let i = 0; i < 3; i++) {
+    noiseBurst(d, w + 0.55 + i*0.07, { colour:'white', type:'bandpass', freq:2400 + i*500, q:9, attack:0.001, decay:0.03, peak:0.16, seed: seed + i });
+  }
+};
+CUR.alienHunt = (d, w, seed) => {
+  const growlGain = ctx.createGain();
+  growlGain.gain.setValueAtTime(SILENCE, w);
+  expRamp(growlGain.gain, 0.34, w + 0.35);
+  const lowpass = ctx.createBiquadFilter();
+  lowpass.type = 'lowpass'; lowpass.frequency.value = 520; lowpass.Q.value = 6;
+  const a = ctx.createOscillator(); a.type = 'sawtooth'; a.frequency.value = 57;
+  const b = ctx.createOscillator(); b.type = 'sawtooth'; b.frequency.value = 60.5; b.detune.value = -14;
+  const wander = ctx.createOscillator(); wander.type = 'sine'; wander.frequency.value = 0.23;
+  const wp = ctx.createGain(); wp.gain.value = 7;
+  const wf = ctx.createGain(); wf.gain.value = 260;
+  wander.connect(wp); wander.connect(wf);
+  wp.connect(a.frequency); wp.connect(b.frequency); wf.connect(lowpass.frequency);
+  a.connect(lowpass); b.connect(lowpass); lowpass.connect(growlGain); growlGain.connect(d);
+  const breathLayer = sustainedNoise(d, w, { colour:'pink', type:'bandpass', freq:520, q:2.4, peak:0.22, attack:0.3, seed: seed + 9 });
+  const bl = ctx.createOscillator(); bl.type = 'sine'; bl.frequency.value = 0.55;
+  const bd = ctx.createGain(); bd.gain.value = 0.14;
+  bl.connect(bd); bd.connect(breathLayer.gain.gain);
+  a.start(w); b.start(w); wander.start(w); bl.start(w);
+  return { stop(at, fade = 0.5) {
+    const t = Math.max(at, ctx.currentTime);
+    growlGain.gain.cancelScheduledValues(t);
+    growlGain.gain.setValueAtTime(Math.max(growlGain.gain.value, SILENCE), t);
+    expRamp(growlGain.gain, SILENCE, t + fade);
+    breathLayer.stop(t, fade);
+    try { a.stop(t+fade+0.05); b.stop(t+fade+0.05); wander.stop(t+fade+0.05); bl.stop(t+fade+0.05); } catch (e) {}
+  } };
+};
+CUR.stationHum = (d, w, seed) => {
+  const out = ctx.createGain();
+  out.gain.setValueAtTime(SILENCE, w); expRamp(out.gain, 0.5, w + 1.2); out.connect(d);
+  const lowA = ctx.createOscillator(); lowA.type = 'sine'; lowA.frequency.value = 49;
+  const lowB = ctx.createOscillator(); lowB.type = 'sine'; lowB.frequency.value = 58.3;
+  const lowTrim = ctx.createGain(); lowTrim.gain.value = 0.5;
+  lowA.connect(lowTrim); lowB.connect(lowTrim); lowTrim.connect(out);
+  const air = ctx.createBufferSource(); air.buffer = noiseBuffer('pink', 2, seed); air.loop = true;
+  const af = ctx.createBiquadFilter(); af.type = 'lowpass'; af.frequency.value = 620; af.Q.value = 0.6;
+  const at = ctx.createGain(); at.gain.value = 0.5;
+  air.connect(af); af.connect(at); at.connect(out);
+  const pump = ctx.createOscillator(); pump.type = 'triangle'; pump.frequency.value = 118;
+  const pt = ctx.createGain(); pt.gain.value = 0.03;
+  const pl = ctx.createOscillator(); pl.type = 'sine'; pl.frequency.value = 0.09;
+  const pd = ctx.createGain(); pd.gain.value = 0.028;
+  pl.connect(pd); pd.connect(pt.gain);
+  pump.connect(pt); pt.connect(out);
+  lowA.start(w); lowB.start(w); air.start(w); pump.start(w); pl.start(w);
+  return { stop(at2, fade = 1.0) {
+    const t = Math.max(at2, ctx.currentTime);
+    out.gain.cancelScheduledValues(t);
+    out.gain.setValueAtTime(Math.max(out.gain.value, SILENCE), t);
+    expRamp(out.gain, SILENCE, t + fade);
+    try { lowA.stop(t+fade+0.05); lowB.stop(t+fade+0.05); air.stop(t+fade+0.05); pump.stop(t+fade+0.05); pl.stop(t+fade+0.05); } catch (e) {}
+  } };
+};
+
+/* =========================================================================
+   PROPOSED sounds
+   ========================================================================= */
+const PRO = {};
+
+/* ---- de-alarming ------------------------------------------------------- */
+
+// Gravity warning v2: the beeper becomes a pressure pulse. Each beat is a low
+// whoomp (sine 84→48 Hz + brown-noise push) with a tiny relay tick riding it
+// for rhythmic definition; the plant sag stays but duller. The countdown is
+// still three beats at 0.8 s — you count pressure, not shrieks.
+PRO.gravityWarning = (d, w, seed, span = GRAVITY_WARNING_S) => {
+  const out = ctx.createGain(); out.gain.setValueAtTime(1, w); out.connect(d);
+  const shaper = ctx.createBiquadFilter();
+  shaper.type = 'lowpass'; shaper.Q.value = 1.6;
+  shaper.frequency.setValueAtTime(1000, w);
+  expRamp(shaper.frequency, 360, w + span);
+  shaper.connect(out);
+  const sag = ctx.createOscillator(); sag.type = 'sawtooth';
+  sag.frequency.setValueAtTime(148, w); expRamp(sag.frequency, 92, w + span);
+  const sagGain = ctx.createGain();
+  sagGain.gain.setValueAtTime(SILENCE, w);
+  expRamp(sagGain.gain, 0.16, w + 0.2);
+  expRamp(sagGain.gain, 0.26, w + span*0.85);
+  expRamp(sagGain.gain, SILENCE, w + span);
+  sag.connect(sagGain); sagGain.connect(shaper);
+  sag.start(w); sag.stop(w + span + 0.05);
+  const wobble = ctx.createOscillator(); wobble.type = 'sine';
+  wobble.frequency.setValueAtTime(2.6, w);
+  wobble.frequency.linearRampToValueAtTime(8, w + span);
+  const wd = ctx.createGain();
+  wd.gain.setValueAtTime(3, w); wd.gain.linearRampToValueAtTime(16, w + span);
+  wobble.connect(wd); wd.connect(sag.frequency);
+  wobble.start(w); wobble.stop(w + span + 0.05);
+  const period = 0.8, beats = Math.max(1, Math.floor(span / period));
+  for (let i = 0; i < beats; i++) {
+    const at = w + i*period;
+    const urg = beats > 1 ? i/(beats-1) : 1;
+    // the whoomp
+    tone(d, at, { type:'sine', freq: 84 + 12*urg, freqTo: 48, attack:0.03, hold:0.02, decay:0.3, peak:0.36 + 0.16*urg });
+    noiseBurst(d, at, { colour:'brown', type:'lowpass', freq:520, freqTo:130, attack:0.025, decay:0.3, peak:0.2 + 0.12*urg, seed: seed + i });
+    // relay tick for count definition — quiet, woody, not a beep
+    metalRing(d, at + 0.01, [880, 1760], { decay: 0.035, peak: 0.05 + 0.05*urg });
+  }
+};
+
+// Breaker reset v2: the refusal, not a buzzer. A heavy contactor CLUNK, three
+// descending dead thuds ("no. no. no."), and a capacitor bleed-down whine that
+// is felt more than heard. Same duration, same "everyone heard that".
+PRO.breakerReset = (d, w, seed) => {
+  metalRing(d, w, [138, 296, 615], { decay: 0.3, peak: 0.5 });
+  noiseBurst(d, w, { colour:'white', type:'highpass', freq:2600, attack:0.0008, decay:0.02, peak:0.26, seed });
+  const thuds = [[0.12, 158, 112], [0.28, 128, 90], [0.46, 102, 68]];
+  for (let i = 0; i < thuds.length; i++) {
+    const [dt, f, ft] = thuds[i];
+    tone(d, w + dt, { type:'sine', freq:f, freqTo:ft, attack:0.004, decay:0.12, peak:0.34 - i*0.04 });
+    noiseBurst(d, w + dt, { colour:'brown', type:'lowpass', freq:420, freqTo:150, attack:0.003, decay:0.1, peak:0.22, seed: seed + i + 1 });
+  }
+  tone(d, w + 0.05, { type:'sine', freq:1150, freqTo:240, attack:0.02, decay:0.42, peak:0.045 });
+};
+
+// Tracker beep v3: a sonar pebble. A water-drop ping (fast pitch fall onto the
+// root) in a lower register, dull far / present near. Same urgency axes as v2 —
+// note, brightness, envelope, level all move together — with no triangle edge.
+PRO.trackerBeep = (d, w, u) => {
+  u = clamp(u, 0, 1);
+  const root = geomLerp(290, 640, u);
+  const attack = lerp(0.022, 0.005, u);
+  const decay = lerp(0.13, 0.06, u);
+  const peak = lerp(0.06, 0.19, u) * 2.4; // demo trim to match CUR
+  const cutoff = geomLerp(620, 2100, u);
+  const shaper = ctx.createBiquadFilter();
+  shaper.type = 'lowpass'; shaper.Q.value = 1.1;
+  shaper.frequency.setValueAtTime(cutoff, w);
+  expRamp(shaper.frequency, cutoff * 0.4, w + attack + decay);
+  shaper.connect(d);
+  // the drop: starts a fourth high, lands on the root fast
+  tone(shaper, w, { type:'sine', freq: root*1.33, freqTo: root, attack, decay, peak });
+  // body an octave down
+  tone(shaper, w, { type:'sine', freq: root*0.5, attack, decay: decay*1.35, peak: peak*0.5 });
+  // near-only: a damp tick so contact-range still cuts through a chase
+  if (u > 0.3) noiseBurst(shaper, w, { colour:'pink', type:'bandpass', freq: 1000 + 800*u, q:2.5, attack:0.001, decay:0.015, peak: peak*0.28*u });
+};
+
+// Tracker contact v2: the held tone becomes a low throb — a fast heartbeat
+// flutter on a dark root an octave down. Continuous information, zero siren.
+PRO.trackerTone = (d, w) => {
+  const root = 220;
+  const gain = ctx.createGain();
+  gain.gain.setValueAtTime(SILENCE, w);
+  expRamp(gain.gain, 0.34, w + 0.08);
+  gain.connect(d);
+  const shaper = ctx.createBiquadFilter();
+  shaper.type = 'lowpass'; shaper.frequency.value = 900; shaper.Q.value = 0.8;
+  shaper.connect(gain);
+  const depth = 0.4; // deep tremolo — a flutter, not a wobble
+  const trem = ctx.createGain(); trem.gain.value = 1 - depth; trem.connect(shaper);
+  const lfo = ctx.createOscillator(); lfo.type = 'sine'; lfo.frequency.value = 6.8;
+  const ld = ctx.createGain(); ld.gain.value = depth;
+  lfo.connect(ld); ld.connect(trem.gain);
+  const partials = [['triangle', root, 0.55], ['sine', root*0.5, 0.42], ['sine', root*2, 0.06]];
+  const oscs = partials.map(([type, freq, level]) => {
+    const osc = ctx.createOscillator(); osc.type = type; osc.frequency.value = freq;
+    const trim = ctx.createGain(); trim.gain.value = level;
+    osc.connect(trim); trim.connect(trem); osc.start(w); return osc;
+  });
+  lfo.start(w);
+  return { stop(at, fade = 0.06) {
+    const t = Math.max(at, ctx.currentTime);
+    gain.gain.cancelScheduledValues(t);
+    gain.gain.setValueAtTime(Math.max(gain.gain.value, SILENCE), t);
+    expRamp(gain.gain, SILENCE, t + fade);
+    try { oscs.forEach(o => o.stop(t + fade + 0.02)); lfo.stop(t + fade + 0.02); } catch (e) {}
+  } };
+};
+
+// Headset v2: leaked speech murmur, not a squeal. Pink noise through a formant
+// that wobbles like syllables, dark and brief.
+PRO.headset = (d, w, seed) => {
+  const src = ctx.createBufferSource(); src.buffer = noiseBuffer('pink', 2, seed); src.loop = true;
+  const f = ctx.createBiquadFilter(); f.type = 'bandpass'; f.frequency.value = 950; f.Q.value = 3.2;
+  const wob = ctx.createOscillator(); wob.type = 'sine'; wob.frequency.value = 6.2;
+  const wdp = ctx.createGain(); wdp.gain.value = 260;
+  wob.connect(wdp); wdp.connect(f.frequency);
+  const { gain, end } = envelope(w, { attack: 0.025, hold: 0.14, decay: 0.16, peak: 0.14 });
+  src.connect(f); f.connect(gain); gain.connect(d);
+  src.start(w); wob.start(w); src.stop(end); wob.stop(end);
+  noiseBurst(d, w, { colour:'white', type:'bandpass', freq:2400, q:8, attack:0.004, decay:0.02, peak:0.04, seed: seed + 1 });
+};
+
+/* ---- the alien --------------------------------------------------------- */
+
+// The larynx: a slow glottal pulse (sawtooth at croak rate) driving throat
+// formants. This is the one core every alien sound shares.
+// Returns { input-side handles, out, stop } for sustained use.
+function gatorLarynx(dest, w, opts) {
+  const f0 = opts.f0 ?? 34;           // glottal pulse rate — the croak
+  const peak = opts.peak ?? 0.4;
+  const out = ctx.createGain();
+  out.gain.setValueAtTime(SILENCE, w);
+  expRamp(out.gain, peak, w + (opts.attack ?? 0.3));
+  out.connect(dest);
+  // source: two saws a hair apart = pulse train with movement
+  const a = ctx.createOscillator(); a.type = 'sawtooth'; a.frequency.value = f0;
+  const b = ctx.createOscillator(); b.type = 'sawtooth'; b.frequency.value = f0 * 1.012;
+  const pre = ctx.createGain(); pre.gain.value = 0.5;
+  a.connect(pre); b.connect(pre);
+  // roughness: irregular AM around 20 Hz — the gator-bellow flutter
+  const rough = ctx.createOscillator(); rough.type = 'sine'; rough.frequency.value = opts.roughHz ?? 21;
+  const roughD = ctx.createGain(); roughD.gain.value = (opts.rough ?? 0.35) * 0.5;
+  rough.connect(roughD); roughD.connect(pre.gain);
+  // throat: three parallel formants
+  const formants = (opts.formants ?? [[150, 4, 1.0], [410, 5, 0.55], [900, 7, 0.18]]).map(([freq, q, g]) => {
+    const bp = ctx.createBiquadFilter(); bp.type = 'bandpass'; bp.frequency.value = freq; bp.Q.value = q;
+    const trim = ctx.createGain(); trim.gain.value = g;
+    pre.connect(bp); bp.connect(trim); trim.connect(out);
+    return bp;
+  });
+  // chest: the fundamental straight through a lowpass, so there is body under the formants
+  const chest = ctx.createBiquadFilter(); chest.type = 'lowpass'; chest.frequency.value = 120; chest.Q.value = 0.7;
+  const chestTrim = ctx.createGain(); chestTrim.gain.value = 0.8;
+  pre.connect(chest); chest.connect(chestTrim); chestTrim.connect(out);
+  // wander so it never drones
+  const wander = ctx.createOscillator(); wander.type = 'sine'; wander.frequency.value = opts.wanderHz ?? 0.19;
+  const wPitch = ctx.createGain(); wPitch.gain.value = f0 * 0.09;
+  const wForm = ctx.createGain(); wForm.gain.value = 55;
+  wander.connect(wPitch); wander.connect(wForm);
+  wPitch.connect(a.frequency); wPitch.connect(b.frequency);
+  wForm.connect(formants[0].frequency);
+  a.start(w); b.start(w); rough.start(w); wander.start(w);
+  return {
+    out, oscA: a, oscB: b, formants,
+    stop(at, fade = 0.4) {
+      const t = Math.max(at, ctx.currentTime);
+      out.gain.cancelScheduledValues(t);
+      out.gain.setValueAtTime(Math.max(out.gain.value, SILENCE), t);
+      expRamp(out.gain, SILENCE, t + fade);
+      try { [a, b, rough, wander].forEach(o => o.stop(t + fade + 0.05)); } catch (e) {}
+    },
+  };
+}
+
+// Wet crackle: sparse velvet impulses through a dark bandpass — saliva and
+// loose flesh in the breath. The single cheapest "this thing is ALIVE" layer.
+function wetCrackle(dest, w, dur, peak, seed) {
+  return noiseBurst(dest, w, { colour:'velvet', type:'bandpass', freq:1050, freqTo:520, q:1.6,
+    attack: dur*0.2, hold: dur*0.3, decay: dur*0.5, peak, seed });
+}
+
+// One gator breath cycle: slow intake, wet open exhale with rumble under it.
+function gatorBreathCycle(dest, w, intensity, seed) {
+  const i2 = clamp(intensity, 0, 1);
+  // intake — thin, rising, through the teeth
+  noiseBurst(dest, w, { colour:'pink', type:'bandpass', freq:420, freqTo:980 + 300*i2, q:2.2,
+    attack:0.3 - 0.12*i2, hold:0.15, decay:0.3, peak:0.09 + 0.07*i2, seed });
+  // exhale — wide, falling, wet
+  const exAt = w + 0.85 - 0.25*i2;
+  noiseBurst(dest, exAt, { colour:'pink', type:'bandpass', freq:760, freqTo:230, q:1.0,
+    attack:0.1, hold:0.35 + 0.15*i2, decay:0.65, peak:0.17 + 0.13*i2, seed: seed + 1 });
+  wetCrackle(dest, exAt + 0.05, 0.8, 0.05 + 0.06*i2, seed + 2);
+  // the chest under the exhale
+  tone(dest, exAt, { type:'sine', freq:46, freqTo:34, attack:0.12, hold:0.3, decay:0.6, peak:0.09 + 0.08*i2 });
+}
+
+// PROPOSED one-shot call (replaces alienOneShot): intake, guttural croak-roar
+// falling through the throat, two wet chuffs to close. ~2.3 s.
+PRO.alienCall = (d, w, seed) => {
+  // intake hiss
+  noiseBurst(d, w, { colour:'pink', type:'bandpass', freq:600, freqTo:1400, q:1.8, attack:0.16, decay:0.14, peak:0.14, seed });
+  // the croak: larynx with a falling f0 and closing formants
+  const at = w + 0.3;
+  const lx = gatorLarynx(d, at, { f0: 46, peak: 0.5, attack: 0.06, rough: 0.45, roughHz: 24,
+    formants: [[165, 4, 1.0], [430, 5, 0.6], [980, 7, 0.22]] });
+  expRamp(lx.oscA.frequency, 30, at + 1.15);
+  expRamp(lx.oscB.frequency, 30.4, at + 1.15);
+  expRamp(lx.formants[0].frequency, 115, at + 1.15);
+  expRamp(lx.formants[1].frequency, 300, at + 1.15);
+  lx.stop(at + 0.95, 0.35);
+  wetCrackle(d, at + 0.15, 0.9, 0.08, seed + 3);
+  // two chuffs to close — the gator "chumpf"
+  for (let i = 0; i < 2; i++) {
+    const ct = at + 1.25 + i*0.17;
+    noiseBurst(d, ct, { colour:'brown', type:'lowpass', freq:300, freqTo:130, attack:0.004, decay:0.09, peak:0.26, seed: seed + 5 + i });
+    noiseBurst(d, ct, { colour:'pink', type:'bandpass', freq:620, q:3.5, attack:0.003, decay:0.06, peak:0.14, seed: seed + 8 + i });
+  }
+};
+
+// PROPOSED hunt loop: larynx growl that wanders, a real breath cycle on a
+// scheduler, wet crackle riding the growl, snorts and jaw-clacks at random.
+// Continuous, directional, unmistakably an animal closing distance.
+PRO.alienHunt = (d, w, seed) => {
+  const lx = gatorLarynx(d, w, { f0: 33, peak: 0.42, attack: 0.4, rough: 0.4, roughHz: 19, wanderHz: 0.16 });
+  // constant wet layer, breathing with its own slow LFO
+  const wet = sustainedNoise(d, w, { colour:'velvet', type:'bandpass', freq:900, q:1.8, peak:0.07, attack:0.5, seed: seed + 4 });
+  const wetLfo = ctx.createOscillator(); wetLfo.type = 'sine'; wetLfo.frequency.value = 0.5;
+  const wetD = ctx.createGain(); wetD.gain.value = 0.045;
+  wetLfo.connect(wetD); wetD.connect(wet.gain.gain); wetLfo.start(w);
+  // sub presence — felt at distance before it is heard
+  const sub = ctx.createOscillator(); sub.type = 'sine'; sub.frequency.value = 27;
+  const subG = ctx.createGain(); subG.gain.setValueAtTime(SILENCE, w); expRamp(subG.gain, 0.11, w + 1.2);
+  const subLfo = ctx.createOscillator(); subLfo.type = 'sine'; subLfo.frequency.value = 0.13;
+  const subLfoD = ctx.createGain(); subLfoD.gain.value = 0.05;
+  subLfo.connect(subLfoD); subLfoD.connect(subG.gain);
+  sub.connect(subG); subG.connect(d); sub.start(w); subLfo.start(w);
+  // scheduled animal events
+  const rng = mulberry32(seed);
+  let stopped = false;
+  const timer = setInterval(() => {
+    if (stopped || !ctx) return;
+    const t = ctx.currentTime + 0.05;
+    const roll = rng();
+    if (roll < 0.4) {           // breath
+      gatorBreathCycle(d, t, 0.7, (seed + Math.floor(rng()*9999)) >>> 0);
+    } else if (roll < 0.7) {    // snort
+      noiseBurst(d, t, { colour:'pink', type:'bandpass', freq:850, freqTo:340, q:2.8, attack:0.008, decay:0.16, peak:0.24, seed: (seed + Math.floor(rng()*9999)) >>> 0 });
+      tone(d, t, { type:'sine', freq:70, freqTo:44, decay:0.14, peak:0.14 });
+    } else {                    // jaw clack — teeth meeting
+      for (let i = 0; i < 2; i++) {
+        noiseBurst(d, t + i*0.09, { colour:'brown', type:'lowpass', freq:340, freqTo:140, attack:0.002, decay:0.06, peak:0.2, seed: (seed + i + Math.floor(rng()*9999)) >>> 0 });
+        metalRing(d, t + i*0.09, [720], { decay: 0.05, peak: 0.07 });
+      }
+    }
+  }, 2600);
+  return { stop(at, fade = 0.6) {
+    stopped = true; clearInterval(timer);
+    lx.stop(at, fade); wet.stop(Math.max(at, ctx.currentTime), fade);
+    const t = Math.max(at, ctx.currentTime);
+    subG.gain.cancelScheduledValues(t);
+    subG.gain.setValueAtTime(Math.max(subG.gain.value, SILENCE), t);
+    expRamp(subG.gain, SILENCE, t + fade);
+    try { sub.stop(t+fade+0.05); subLfo.stop(t+fade+0.05); wetLfo.stop(t+fade+0.05); } catch (e) {}
+  } };
+};
+
+// PROPOSED breach: the metal blows stay (they are the clock), but the shriek
+// becomes the animal — an enraged bellow under blow 1, a hiss before blow 3,
+// and a rising roar as the metal gives.
+PRO.hideBreach = (d, w, seed) => {
+  // bellow bed
+  const lx = gatorLarynx(d, w, { f0: 38, peak: 0.4, attack: 0.15, rough: 0.5, roughHz: 22 });
+  expRamp(lx.oscA.frequency, 52, w + 1.5);
+  expRamp(lx.oscB.frequency, 52.6, w + 1.5);
+  lx.stop(w + 1.7, 0.4);
+  tone(d, w, { type:'sine', freq:30, attack:0.2, hold:1.2, decay:0.5, peak:0.14 });
+  wetCrackle(d, w + 0.2, 1.6, 0.07, seed + 20);
+  // the three blows, unchanged
+  for (let i = 0; i < 3; i++) {
+    const at = w + 0.22 + i*0.62, weight = 0.36 + 0.14*i;
+    metalRing(d, at, [176, 388, 830, 1640], { decay: 0.3 + 0.08*i, peak: weight });
+    noiseBurst(d, at, { colour:'brown', type:'lowpass', freq:700, freqTo:220, attack:0.001, decay:0.22, peak:weight, seed: seed + i });
+  }
+  // hiss into the last blow
+  noiseBurst(d, w + 1.05, { colour:'white', type:'bandpass', freq:1600, freqTo:2400, q:0.9, attack:0.2, hold:0.2, decay:0.25, peak:0.2, seed: seed + 30 });
+};
+
+/* ---- new vocabulary ---------------------------------------------------- */
+
+// Bellow — the signature. Gators bellow at ~20 Hz pulse rates; the water dances.
+// Swells over half a second, holds, sinks. Use for HUNT onset & losing prey.
+PRO.bellow = (d, w, seed) => {
+  const lx = gatorLarynx(d, w, { f0: 30, peak: 0.55, attack: 0.55, rough: 0.55, roughHz: 18,
+    formants: [[130, 4, 1.0], [340, 5, 0.5], [780, 7, 0.14]] });
+  // contour: rise a third, sink past the start
+  lx.oscA.frequency.setValueAtTime(30, w);
+  expRamp(lx.oscA.frequency, 38, w + 1.1);
+  expRamp(lx.oscA.frequency, 24, w + 2.6);
+  lx.oscB.frequency.setValueAtTime(30.4, w);
+  expRamp(lx.oscB.frequency, 38.5, w + 1.1);
+  expRamp(lx.oscB.frequency, 24.3, w + 2.6);
+  lx.stop(w + 2.2, 0.8);
+  // infrasonic shove + room rumble: the "water dance" made audible
+  tone(d, w, { type:'sine', freq:24, attack:0.5, hold:1.2, decay:1.0, peak:0.16 });
+  noiseBurst(d, w + 0.3, { colour:'brown', type:'lowpass', freq:200, freqTo:90, attack:0.5, hold:0.8, decay:1.0, peak:0.14, seed });
+  wetCrackle(d, w + 0.4, 1.8, 0.06, seed + 1);
+};
+
+// Hiss — open-mouth warning. Broadband but dark-edged, swelling, growl beneath,
+// closed by a sharp huff. Use for SEARCH near a hide spot.
+PRO.hiss = (d, w, seed) => {
+  noiseBurst(d, w, { colour:'white', type:'bandpass', freq:1300, freqTo:2500, q:0.7,
+    attack:0.4, hold:0.55, decay:0.5, peak:0.3, seed });
+  noiseBurst(d, w, { colour:'pink', type:'highpass', freq:500, attack:0.45, hold:0.5, decay:0.5, peak:0.12, seed: seed + 1 });
+  const lx = gatorLarynx(d, w + 0.1, { f0: 40, peak: 0.14, attack: 0.4, rough: 0.3 });
+  lx.stop(w + 1.2, 0.35);
+  // the huff that ends it
+  noiseBurst(d, w + 1.42, { colour:'brown', type:'lowpass', freq:420, freqTo:150, attack:0.006, decay:0.14, peak:0.3, seed: seed + 2 });
+};
+
+// Chuff — short territorial huffs in an irregular triplet. INVESTIGATE voice:
+// close, curious, horrible.
+PRO.chuff = (d, w, seed) => {
+  const vary = varier(seed);
+  const gaps = [0, 0.16*vary(0.2), 0.38*vary(0.15)];
+  for (let i = 0; i < 3; i++) {
+    const at = w + gaps[i];
+    noiseBurst(d, at, { colour:'brown', type:'lowpass', freq:320, freqTo:120, attack:0.005, decay:0.1, peak:0.3 - i*0.04, seed: seed + i });
+    noiseBurst(d, at, { colour:'pink', type:'bandpass', freq:640*vary(0.08), q:3.2, attack:0.004, decay:0.07, peak:0.16, seed: seed + 4 + i });
+    tone(d, at, { type:'sine', freq:82, freqTo:50, decay:0.09, peak:0.16 });
+  }
+};
+
+// Breathing loop — sustained. The freeze-counter: it is next to you, and it is
+// breathing. Cycle ~3.2 s, wet exhale, chest rumble. PATROL-adjacent voice.
+PRO.breathing = (d, w, seed) => {
+  const rng = mulberry32(seed);
+  let stopped = false;
+  const master2 = ctx.createGain(); master2.gain.value = 1; master2.connect(d);
+  gatorBreathCycle(master2, w + 0.1, 0.5, seed);
+  const timer = setInterval(() => {
+    if (stopped || !ctx) return;
+    gatorBreathCycle(master2, ctx.currentTime + 0.05, 0.45 + rng()*0.3, (seed + Math.floor(rng()*99999)) >>> 0);
+  }, 3200);
+  return { stop(at, fade = 0.8) {
+    stopped = true; clearInterval(timer);
+    const t = Math.max(at, ctx.currentTime);
+    master2.gain.setValueAtTime(1, t);
+    expRamp(master2.gain, SILENCE, t + fade);
+  } };
+};
+
+/* ---- ambience ---------------------------------------------------------- */
+
+// Dread layer — sits UNDER the station hum. A beating sub-drone, a barely-tonal
+// pad a minor second apart, void hiss, and far-off scheduled events: hull
+// groans, stress pings, distant thumps, skitters. Every event is quiet, panned,
+// and drenched in the tube reverb — the station is talking to itself.
+PRO.dread = (d, w, seed) => {
+  const out = ctx.createGain();
+  out.gain.setValueAtTime(SILENCE, w); expRamp(out.gain, 1, w + 2.5); out.connect(d);
+  // beating sub
+  const s1 = ctx.createOscillator(); s1.type = 'sine'; s1.frequency.value = 36.2;
+  const s2 = ctx.createOscillator(); s2.type = 'sine'; s2.frequency.value = 37.9;
+  const subTrim = ctx.createGain(); subTrim.gain.value = 0.12;
+  s1.connect(subTrim); s2.connect(subTrim); subTrim.connect(out);
+  // pad: detuned minor-second cluster through a dark lowpass that wanders
+  const padLp = ctx.createBiquadFilter(); padLp.type = 'lowpass'; padLp.frequency.value = 240; padLp.Q.value = 0.9;
+  const padTrim = ctx.createGain(); padTrim.gain.value = 0.045;
+  padLp.connect(padTrim); padTrim.connect(out);
+  const padFreqs = [110, 110.9, 116.5];
+  const pads = padFreqs.map(f => {
+    const o = ctx.createOscillator(); o.type = 'triangle'; o.frequency.value = f;
+    o.connect(padLp); o.start(w); return o;
+  });
+  const padWander = ctx.createOscillator(); padWander.type = 'sine'; padWander.frequency.value = 0.05;
+  const pwD = ctx.createGain(); pwD.gain.value = 70;
+  padWander.connect(pwD); pwD.connect(padLp.frequency); padWander.start(w);
+  // void hiss
+  const hiss2 = sustainedNoise(out, w, { colour:'white', type:'highpass', freq:5200, peak:0.012, attack:2.0, seed });
+  const hissLfo = ctx.createOscillator(); hissLfo.type = 'sine'; hissLfo.frequency.value = 0.045;
+  const hissD = ctx.createGain(); hissD.gain.value = 0.007;
+  hissLfo.connect(hissD); hissD.connect(hiss2.gain.gain); hissLfo.start(w);
+  s1.start(w); s2.start(w);
+  // far-off events
+  const rng = mulberry32(seed);
+  let stopped = false;
+  function scheduleEvent() {
+    if (stopped || !ctx) return;
+    const t = ctx.currentTime + 0.05;
+    const pan = (rng()*2 - 1) * 0.8;
+    const ev = bus(0.7, pan); // heavy reverb send: it is far away
+    const roll = rng();
+    if (roll < 0.35) {        // hull groan
+      const dur = 1.8 + rng()*1.4;
+      noiseBurst(ev, t, { colour:'white', type:'bandpass', freq: 300 + rng()*120, freqTo: 130, q:14,
+        attack: dur*0.4, hold: dur*0.2, decay: dur*0.4, peak: 0.1, seed: Math.floor(rng()*99999) });
+      tone(ev, t + dur*0.3, { type:'sine', freq:55, freqTo:40, attack:0.3, decay:dur*0.5, peak:0.05 });
+    } else if (roll < 0.6) {  // stress ping
+      const f = 600 + rng()*900;
+      metalRing(ev, t, [f, f*2.3], { decay: 1.1, peak: 0.06 });
+    } else if (roll < 0.85) { // distant thump
+      tone(ev, t, { type:'sine', freq:70, freqTo:42, attack:0.005, decay:0.35, peak:0.14 });
+      noiseBurst(ev, t, { colour:'brown', type:'lowpass', freq:260, freqTo:110, attack:0.004, decay:0.3, peak:0.1, seed: Math.floor(rng()*99999) });
+    } else {                  // skitter
+      for (let i = 0; i < 5; i++) {
+        noiseBurst(ev, t + i*0.055 + rng()*0.02, { colour:'velvet', type:'bandpass', freq:1900, q:3, attack:0.001, decay:0.025, peak:0.035, seed: Math.floor(rng()*99999) });
+      }
+    }
+    timerId = setTimeout(scheduleEvent, (6 + rng()*9) * 1000);
+  }
+  let timerId = setTimeout(scheduleEvent, 2500);
+  return { stop(at, fade = 1.2) {
+    stopped = true; clearTimeout(timerId);
+    const t = Math.max(at, ctx.currentTime);
+    out.gain.cancelScheduledValues(t);
+    out.gain.setValueAtTime(Math.max(out.gain.value, SILENCE), t);
+    expRamp(out.gain, SILENCE, t + fade);
+    hiss2.stop(t, fade);
+    try { [s1, s2, padWander, hissLfo].concat(pads).forEach(o => o.stop(t + fade + 0.05)); } catch (e) {}
+  } };
+};
+
+/* =========================================================================
+   UI wiring
+   ========================================================================= */
+const ONE = {}, SUS = {};
+// one-shots: name -> [fn, reverbSend]
+function o(name, fn, rev = 0.25) { ONE[name] = { fn, rev }; }
+o('railPull', (d, w) => CUR.railPull(d, w, fseed()));
+o('pushOff', (d, w) => CUR.pushOff(d, w, fseed()));
+o('railCatch', (d, w) => CUR.railCatch(d, w, fseed(), 4));
+o('impact', (d, w) => CUR.impact(d, w, fseed(), 5), 0.35);
+o('bodyCollision', (d, w) => CUR.bodyCollision(d, w, fseed()));
+o('cargoBounce', (d, w) => CUR.cargoBounce(d, w, fseed()));
+o('knock', (d, w) => CUR.knock(d, w, fseed()), 0.3);
+o('stepCrouch', (d, w) => CUR.footstep(d, w, fseed(), 'crouch'));
+o('stepWalk', (d, w) => CUR.footstep(d, w, fseed(), 'walk'));
+o('stepSprint', (d, w) => CUR.footstep(d, w, fseed(), 'sprint'));
+o('landSoft', (d, w) => CUR.landingSoft(d, w, fseed()));
+o('landHard', (d, w) => CUR.landingHard(d, w, fseed()), 0.35);
+o('launch', (d, w) => CUR.launchWhoosh(d, w, fseed(), 4));
+o('settle', (d, w) => CUR.settleFall(d, w, fseed()));
+o('liftoff', (d, w) => CUR.liftoffRelease(d, w, fseed()));
+o('jump', (d, w) => CUR.jumpEffort(d, w, fseed()));
+o('breathCalm', (d, w) => CUR.breath(d, w, fseed(), 0.15), 0.1);
+o('breathPanic', (d, w) => CUR.breath(d, w, fseed(), 0.9), 0.1);
+o('breaker', (d, w) => CUR.breaker(d, w, fseed()));
+o('breakerReset', (d, w) => CUR.breakerReset(d, w, fseed()));
+o('valveSlow', (d, w) => CUR.valveSlow(d, w, fseed()));
+o('valveFast', (d, w) => CUR.valveFast(d, w, fseed()));
+o('hatch', (d, w) => CUR.hatchCycle(d, w, fseed()), 0.35);
+o('keyswitch', (d, w) => CUR.keyswitch(d, w, fseed()));
+o('pryBar', (d, w) => CUR.pryBar(d, w, fseed()), 0.35);
+o('handPump', (d, w) => CUR.handPump(d, w, fseed()));
+o('undock', (d, w) => CUR.undockLever(d, w, fseed()), 0.35);
+o('extinguisher', (d, w) => CUR.extinguisher(d, w, fseed()));
+o('decoy', (d, w) => CUR.decoy(d, w, fseed()), 0.45);
+o('headset', (d, w) => CUR.headset(d, w, fseed()));
+o('trackerFar', (d, w) => CUR.trackerBeep(d, w, 0));
+o('trackerMid', (d, w) => CUR.trackerBeep(d, w, 0.55));
+o('trackerNear', (d, w) => CUR.trackerBeep(d, w, 1));
+o('gravShift', (d, w) => CUR.gravityShift(d, w, fseed()), 0.4);
+o('gravWarn', (d, w) => CUR.gravityWarning(d, w, fseed()), 0.2);
+o('hideEnterSlow', (d, w) => CUR.hideEnter(d, w, fseed(), 0));
+o('hideEnterFast', (d, w) => CUR.hideEnter(d, w, fseed(), 1));
+o('hideExit', (d, w) => CUR.hideExit(d, w, fseed(), 1));
+o('hideBreach', (d, w) => CUR.hideBreach(d, w, fseed()), 0.4);
+o('alienShot', (d, w) => CUR.alienOneShot(d, w, fseed()), 0.45);
+// proposed one-shots
+o('p_gravWarn', (d, w) => PRO.gravityWarning(d, w, fseed()), 0.2);
+o('p_breakerReset', (d, w) => PRO.breakerReset(d, w, fseed()));
+o('p_trackerFar', (d, w) => PRO.trackerBeep(d, w, 0));
+o('p_trackerMid', (d, w) => PRO.trackerBeep(d, w, 0.55));
+o('p_trackerNear', (d, w) => PRO.trackerBeep(d, w, 1));
+o('p_headset', (d, w) => PRO.headset(d, w, fseed()));
+o('p_alienCall', (d, w) => PRO.alienCall(d, w, fseed()), 0.5);
+o('p_hideBreach', (d, w) => PRO.hideBreach(d, w, fseed()), 0.4);
+o('p_bellow', (d, w) => PRO.bellow(d, w, fseed()), 0.55);
+o('p_hiss', (d, w) => PRO.hiss(d, w, fseed()), 0.4);
+o('p_chuff', (d, w) => PRO.chuff(d, w, fseed()), 0.35);
+
+// sustained: name -> [startFn, reverbSend]
+function s(name, fn, rev = 0.25) { SUS[name] = { fn, rev }; }
+s('hum', (d, w) => CUR.stationHum(d, w, 149), 0.15);
+s('shell', (d, w) => CUR.hideShell(d, w, 211), 0.05);
+s('trackerHold', (d, w) => CUR.trackerTone(d, w), 0.1);
+s('alienHunt', (d, w) => CUR.alienHunt(d, w, 137), 0.45);
+s('p_trackerHold', (d, w) => PRO.trackerTone(d, w), 0.1);
+s('p_alienHunt', (d, w) => PRO.alienHunt(d, w, 137), 0.45);
+s('p_breathing', (d, w) => PRO.breathing(d, w, 313), 0.35);
+s('p_dread', (d, w) => PRO.dread(d, w, 421), 0.3);
+s('sceneCalm', (d, w) => {
+  const h1 = CUR.stationHum(d, w, 149), h2 = PRO.dread(d, w, 421);
+  return { stop(at, f) { h1.stop(at, 1.0); h2.stop(at, 1.2); } };
+}, 0.2);
+s('sceneHunt', (d, w) => {
+  const h1 = CUR.stationHum(d, w, 149), h2 = PRO.dread(d, w, 421), h3 = PRO.alienHunt(d, w, 137);
+  return { stop(at, f) { h1.stop(at, 1.0); h2.stop(at, 1.2); h3.stop(at, 0.6); } };
+}, 0.3);
+s('sceneHide', (d, w) => {
+  const h1 = CUR.hideShell(d, w, 211), h2 = PRO.breathing(d, w, 313);
+  // distant hunt: quiet, muffled, all reverb
+  const far = ctx.createGain(); far.gain.value = 0.3;
+  const lp = ctx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 420;
+  far.connect(lp); lp.connect(d);
+  const h3 = PRO.alienHunt(far, w, 555);
+  return { stop(at, f) { h1.stop(at, 0.3); h2.stop(at, 0.8); h3.stop(at, 0.6); } };
+}, 0.35);
+
+function playOne(name) {
+  ensureCtx();
+  const { fn, rev } = ONE[name];
+  fn(bus(rev), ctx.currentTime + 0.02);
+}
+function toggleSus(name, btn) {
+  ensureCtx();
+  const live = susHandles.get(name);
+  if (live) {
+    live.handle.stop(ctx.currentTime, 0.5);
+    susHandles.delete(name);
+    btn.classList.remove('on');
+    return;
+  }
+  const { fn, rev } = SUS[name];
+  const handle = fn(bus(rev), ctx.currentTime + 0.02);
+  susHandles.set(name, { handle, btn });
+  btn.classList.add('on');
+}
+// static buttons (the Scenes section) declare their sound via data-sus
+document.querySelectorAll('button[data-sus]').forEach((b) => {
+  b.addEventListener('click', () => toggleSus(b.dataset.sus, b));
+});
+document.getElementById('stopall').addEventListener('click', () => {
+  if (!ctx) return;
+  for (const [name, { handle, btn }] of susHandles) {
+    handle.stop(ctx.currentTime, 0.3);
+    btn.classList.remove('on');
+  }
+  susHandles.clear();
+});
+document.getElementById('vol').addEventListener('input', (e) => {
+  if (master) master.gain.setTargetAtTime(Number(e.target.value) / 100 * 0.9, ctx.currentTime, 0.05);
+});
+
+/* ---- card definitions --------------------------------------------------- */
+function card(host, lv, title, desc, buttons) {
+  const el = document.createElement('div');
+  el.className = 'card';
+  el.innerHTML = '<span class="lv">' + lv + '</span><h4>' + title + '</h4><p>' + desc + '</p>';
+  const btns = document.createElement('div'); btns.className = 'btns';
+  for (const [label, key, sus] of buttons) {
+    const b = document.createElement('button');
+    b.className = 'play' + (sus ? ' sus' : '');
+    b.textContent = label;
+    if (sus) b.addEventListener('click', () => toggleSus(key, b));
+    else b.addEventListener('click', () => playOne(key));
+    btns.appendChild(b);
+  }
+  el.appendChild(btns);
+  document.getElementById(host).appendChild(el);
+}
+
+card('g-move', 'L4/12/30', 'Footsteps', 'Three gaits, distinguishable by structure, not volume.', [['crouch','stepCrouch'],['walk','stepWalk'],['sprint','stepSprint']]);
+card('g-move', 'L4', 'Rail pull', 'A glove sliding a handrail.', [['play','railPull']]);
+card('g-move', 'L8', 'Push-off', 'The shove that starts a zero-G crossing.', [['play','pushOff']]);
+card('g-move', 'L8+3v', 'Rail catch', 'An arrested catch — bright, short, controlled.', [['play','railCatch']]);
+card('g-move', 'L0', 'Launch / settle / liftoff', 'The §4 gravity transitions. Silent to the alien.', [['launch','launch'],['settle','settle'],['liftoff','liftoff']]);
+card('g-move', 'L—', 'Jump / landings', 'Effort up; planted or crashed on the way down.', [['jump','jump'],['soft','landSoft'],['hard','landHard']]);
+card('g-move', 'L6–14', 'Breathing', 'The freeze counter. Scales with heart rate.', [['calm','breathCalm'],['panic','breathPanic']]);
+
+card('g-impact', 'L15+6v', 'Impact', 'You did not catch it. Low, long, keeps ringing.', [['play','impact']]);
+card('g-impact', 'L25', 'Body collision', 'A shoulder into a bulkhead, hands full.', [['play','bodyCollision']]);
+card('g-impact', 'L30', 'Cargo bounce', 'A cargo bag off a wall.', [['play','cargoBounce']]);
+card('g-impact', 'L15', 'Knock', 'A knuckle on a handrail — the knock-code primitive.', [['play','knock']]);
+card('g-impact', 'L70', 'Decoy', 'The loudest thing in the game. It keeps bouncing.', [['play','decoy']]);
+card('g-impact', 'L65', 'Extinguisher', 'A panic button with a price.', [['play','extinguisher']]);
+
+card('g-puzzle', 'L35', 'Breaker', 'A breaker thrown. CLACK.', [['play','breaker']]);
+card('g-puzzle', 'L50', 'Breaker reset', 'The wrong order. See §02 for the proposal.', [['play','breakerReset']]);
+card('g-puzzle', 'L8/40', 'Coolant valve', 'Patient, or spun and four times as far.', [['slow','valveSlow'],['fast','valveFast']]);
+card('g-puzzle', 'L45', 'Hatch cycle', 'Latch, motor, latch. Three modules away.', [['play','hatch']]);
+card('g-puzzle', 'L45', 'Keyswitch', 'Unavoidable, whatever you do.', [['play','keyswitch']]);
+card('g-puzzle', 'L60', 'Pry bar', 'Metal complaining, then giving.', [['play','pryBar']]);
+card('g-puzzle', 'L6', 'Hand pump', 'The quiet-slow path. 25 seconds of this.', [['play','handPump']]);
+card('g-puzzle', 'L60', 'Undock lever', 'The finale, held for five seconds.', [['play','undock']]);
+
+card('g-alarm', 'L20', 'Tracker beep', 'The wrist tracker at three ranges.', [['far','trackerFar'],['mid','trackerMid'],['near','trackerNear']]);
+card('g-alarm', 'L20', 'Tracker contact tone', 'Held while the alien is adjacent.', [['hold','trackerHold', true]]);
+card('g-alarm', 'L0', 'Gravity warning', '2.5 s klaxon before the plant fails.', [['play','gravWarn']]);
+card('g-alarm', 'L35', 'Gravity shift', 'The plant giving up: clunk, wind-down, rush.', [['play','gravShift']]);
+card('g-alarm', 'L5', 'Headset leak', "A spectator's headset leaking into the room.", [['play','headset']]);
+
+card('g-hide', 'L8→30', 'Hide enter', 'Priced by haste: careful fabric, or a dive.', [['careful','hideEnterSlow'],['dive','hideEnterFast']]);
+card('g-hide', 'L8→30', 'Hide exit', 'Latch first, then you.', [['play','hideExit']]);
+card('g-hide', 'L55', 'Hide breach', 'The alien opening your box. Three blows.', [['play','hideBreach']]);
+card('g-hide', 'L—', 'Hide shell', 'The inside of the box, close to your ear.', [['inside','shell', true]]);
+
+card('g-alien', 'L55', 'Alien one-shot', 'INVESTIGATE / SEARCH call. Currently synth saws.', [['play','alienShot']]);
+card('g-alien', 'L55', 'Alien hunt loop', 'The continuous HUNT vocalisation.', [['hunt','alienHunt', true]]);
+card('g-alien', 'L—', 'Station hum', 'Fans, mains beat, a pump cycling. The bed.', [['hum','hum', true]]);
+
+/* ---- A/B rows ----------------------------------------------------------- */
+function ab(host, title, curDesc, proDesc, curBtns, proBtns, why) {
+  const el = document.createElement('div');
+  el.className = 'ab';
+  function half(cls, whoTxt, desc, btnDefs) {
+    const h = document.createElement('div');
+    h.className = 'half ' + cls;
+    h.innerHTML = '<div class="who">' + whoTxt + '</div><h4>' + title + '</h4><p>' + desc + '</p>';
+    const btns = document.createElement('div'); btns.className = 'btns';
+    for (const [label, key, sus] of btnDefs) {
+      const b = document.createElement('button');
+      b.className = 'play' + (sus ? ' sus' : '') + (cls === 'pro' ? ' prop' : '');
+      b.textContent = label;
+      if (sus) b.addEventListener('click', () => toggleSus(key, b));
+      else b.addEventListener('click', () => playOne(key));
+      btns.appendChild(b);
+    }
+    h.appendChild(btns);
+    return h;
+  }
+  el.appendChild(half('cur', 'Current', curDesc, curBtns));
+  el.appendChild(half('pro', 'Proposed', proDesc, proBtns));
+  const w = document.createElement('div'); w.className = 'why'; w.innerHTML = why;
+  el.appendChild(w);
+  document.getElementById(host).appendChild(el);
+}
+
+ab('ab-dealarm', 'Gravity warning',
+  'Two-tone 622/466 Hz triangle klaxon every 0.8 s, brightening. The single most smoke-detector sound in the game.',
+  'Low pressure pulses — a whoomp at ~84→48 Hz per beat with a quiet relay tick for count definition; the plant sag darker beneath.',
+  [['play','gravWarn']], [['play','p_gravWarn']],
+  '<b>Why:</b> the klaxon sits exactly in the 500–4k band the ear flinches at. The countdown only needs RHYTHM — three beats in 2.5 s — so the proposal moves the energy two octaves down and lets pressure carry the dread. You still count the same three beats.');
+ab('ab-dealarm', 'Breaker reset',
+  'A 27 Hz-gated sawtooth buzzer for half a second — deliberately annoying, and it earns it.',
+  'A heavy contactor CLUNK, then three descending dead thuds — no, no, no — with a faint capacitor bleed-down.',
+  [['play','breakerReset']], [['play','p_breakerReset']],
+  '<b>Why:</b> "wrong order, everyone heard it" needs loud + unmistakable, not painful. Falling-pitch thuds read as REFUSAL to every player instantly, and at 50 loudness they still carry two modules.');
+ab('ab-dealarm', 'Tracker beep',
+  'v2 instrument: triangle root 440→880 Hz with octave body and closing lowpass. Far better than r1, still an electronic chirp at the top end.',
+  'v3 sonar pebble: a water-drop ping falling onto a 290→640 Hz root, duller lowpass, damp tick only near contact.',
+  [['far','trackerFar'],['mid','trackerMid'],['near','trackerNear']],
+  [['far','p_trackerFar'],['mid','p_trackerMid'],['near','p_trackerNear']],
+  '<b>Why:</b> same three information axes (note, brightness, envelope — all moving together with urgency), but the register drops a fourth and the attack is a pitch-fall rather than an edge. Sonar instead of alarm; it can tick every 3 s for a whole round without wearing on you.');
+ab('ab-dealarm', 'Tracker contact tone',
+  'A held A5 chord with tremolo. Quieter than it sounds, but a continuous 880 Hz tone is the definition of alarm fatigue.',
+  'A dark 220 Hz throb with a fast 6.8 Hz flutter and a sub octave — a racing heartbeat, not a siren.',
+  [['hold','trackerHold', true]], [['hold','p_trackerHold', true]],
+  '<b>Why:</b> "adjacent" should feel like YOUR body reacting, not the device screaming. The flutter rate is far above the beep cadence so it still reads as a distinct state, and it leaves the whole upper spectrum free for the alien itself.');
+ab('ab-dealarm', 'Headset leak',
+  'A narrow 1900 Hz noise chirp — reads as feedback squeal.',
+  'A syllable-wobbled murmur around 950 Hz with a tiny transistor tick — someone talking in a tin can.',
+  [['play','headset']], [['play','p_headset']],
+  '<b>Why:</b> the fiction is leaked SPEECH. A formant wobbling at syllable rate says "voice" with three nodes, and it stops being piercing.');
+
+ab('ab-alien', 'One-shot call',
+  'Two detuned sawtooths through a lowpass plus a 2.4 kHz chatter tail — more malfunctioning machine than animal.',
+  'Intake hiss → guttural croak falling through the throat (pulse-train larynx, 46→30 Hz) → two wet chuffs.',
+  [['play','alienShot']], [['play','p_alienCall']],
+  '<b>Why:</b> the croak is a glottal pulse rate you can nearly count — the alligator signature. The falling f0 + closing formants read as a large body relaxing after a call, and the chuffs stamp it as breath, not circuitry.');
+ab('ab-alien', 'Hunt loop',
+  'Sustained detuned saws with a wandering lowpass and a sine-LFO breath layer. Never settles, but never lives either.',
+  'The larynx growl, wet crackle riding it, a 27 Hz sub you feel first, and scheduled animal events: breaths, snorts, jaw-clacks.',
+  [['hunt','alienHunt', true]], [['hunt','p_alienHunt', true]],
+  '<b>Why:</b> a loop you hear for 30+ seconds needs EVENTS, not just texture — the snorts and jaw-clacks are what your imagination builds the animal out of. All the loud energy stays under 1 kHz, so it ducks nothing important.');
+ab('ab-alien', 'Hide breach',
+  'A high-Q metal shriek sweeping 420→2400 Hz over the three blows. The shriek is the smoke-detector cousin.',
+  'The three blows stay (they are the 2 s clock); the shriek becomes the animal — bellow under blow one, hiss into blow three.',
+  [['play','hideBreach']], [['play','p_hideBreach']],
+  '<b>Why:</b> the countdown must stay legible, so the percussion is untouched. Replacing the sweep with bellow-then-hiss keeps the terror but pins it on the creature — you hear WHAT is coming through the door, not just that metal is losing.');
+
+card('g-vocab', 'NEW', 'Bellow', 'HUNT onset / lost-prey rage. A ~20 Hz pulse-rate roar that swells, rises a third, and sinks — the "water dance" made audible.', [['play','p_bellow']]);
+card('g-vocab', 'NEW', 'Hiss', 'SEARCH near a hide spot. Open-mouth warning, growl beneath, closed with a huff.', [['play','p_hiss']]);
+card('g-vocab', 'NEW', 'Chuff', 'INVESTIGATE voice. Three irregular territorial huffs, close and curious.', [['play','p_chuff']]);
+card('g-vocab', 'NEW', 'Breathing loop', 'PATROL-adjacent. It is next to your locker, and it is breathing. Wet exhale, chest rumble, ~3 s cycle.', [['breathe','p_breathing', true]]);
+
+ab('ab-amb', 'Ambient bed',
+  'Station hum: mains beat, air handling, a pump cycling. Honest machinery — safe-sounding by design.',
+  'Hum + dread layer: beating 36/37.9 Hz sub, a minor-second pad you can barely pin down, void hiss, and far-off hull groans, stress pings, thumps and skitters every 6–15 s, panned and drowned in the tube reverb.',
+  [['hum','hum', true]], [['dread only','p_dread', true],['hum + dread','sceneCalm', true]],
+  '<b>Why:</b> horror ambience works by intermittent, unexplained, DISTANT events — the station keeps making noises that might be the alien and never quite are. Everything is quiet and low so the §3 noise game is untouched: a real footstep still cuts straight through.');
+
+/* ---- scope -------------------------------------------------------------- */
+function drawScope() {
+  const canvas = document.getElementById('scope');
+  const g = canvas.getContext('2d');
+  const data = new Uint8Array(analyser.fftSize);
+  (function loop() {
+    requestAnimationFrame(loop);
+    analyser.getByteTimeDomainData(data);
+    g.fillStyle = '#0d1114';
+    g.fillRect(0, 0, canvas.width, canvas.height);
+    g.strokeStyle = '#5ee8b5';
+    g.lineWidth = 1.5;
+    g.beginPath();
+    const step = data.length / canvas.width;
+    for (let x = 0; x < canvas.width; x++) {
+      const v = data[Math.floor(x * step)] / 255;
+      const y = v * canvas.height;
+      if (x === 0) g.moveTo(x, y); else g.lineTo(x, y);
+    }
+    g.stroke();
+  })();
+}
+</script>
+</body>
+</html>

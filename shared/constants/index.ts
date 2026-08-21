@@ -1323,45 +1323,53 @@ export const TRACKER_SOLID_RANGE_M = 4;
 export const TRACKER_CADENCE_LOG_BLEND = 1;
 
 /**
- * Tracker voice (§6, §8) — playtest 2 fix: "very high pitched and very annoying".
+ * Tracker voice (§6, §8) — audition-deck v3: the sonar pebble.
  *
- * The r1 chirp was a 2100–2600 Hz square wave, i.e. a smoke alarm parked in the
- * 2–4 kHz band the ear is most sensitive to, and unlistenable across a 20-minute
- * round. These put the device an octave lower, A4 → A5, which is above the §8
- * station hum's energy (49/58 Hz sines plus pink air handling lowpassed at
- * OCCLUSION-free 620 Hz) so it still cuts through, but out of the piercing band.
- * A full octave of travel also makes far and near two different NOTES, not just
- * two tempos — the second legibility cue §6 does not specify but playtest needs.
+ * The r1 chirp was a 2100–2600 Hz square wave — a smoke alarm parked in the
+ * 2–4 kHz band the ear is most sensitive to. v2 rebuilt it as an A4→A5
+ * instrument, which fixed "piercing" but still read as an electronic chirp at
+ * the near end across a 20-minute round. v3 drops the register a further
+ * fourth and reshapes the transient as a water-drop pitch-fall (see
+ * `trackerBeep` in synth.ts): sonar, not alarm. The travel FAR→NEAR is still
+ * more than an octave, so far and near remain two different NOTES, and the
+ * roots sit above the §8 station hum's energy so the tick still cuts through.
  */
-export const TRACKER_TONE_FAR_HZ = 440;
-export const TRACKER_TONE_NEAR_HZ = 880;
+export const TRACKER_TONE_FAR_HZ = 290;
+export const TRACKER_TONE_NEAR_HZ = 640;
 /** Lowpass over the whole chirp, geometric with urgency, closing further as the
  *  chirp decays. Far is dull and woody, near opens up: the timbre half of the
  *  second cue. Hz. */
-export const TRACKER_TONE_LOWPASS_FAR_HZ = 850;
-export const TRACKER_TONE_LOWPASS_NEAR_HZ = 3000;
+export const TRACKER_TONE_LOWPASS_FAR_HZ = 620;
+export const TRACKER_TONE_LOWPASS_NEAR_HZ = 2100;
 /**
  * Chirp envelope, far → near, in seconds. r1's 2 ms attack on a square wave was
- * the click the playtester heard as "piercing"; 18 ms is still percussive with
+ * the click the playtester heard as "piercing"; ~20 ms is still percussive with
  * no edge on it. The decay shortens as the cadence speeds up so chirps never
  * smear into a buzz — see the §14 sanity check, which asserts the whole near-end
  * envelope fits inside TRACKER_BEEP_INTERVAL_NEAR_S.
  */
-export const TRACKER_BEEP_ATTACK_FAR_S = 0.018;
-export const TRACKER_BEEP_ATTACK_NEAR_S = 0.006;
-export const TRACKER_BEEP_DECAY_FAR_S = 0.16;
-export const TRACKER_BEEP_DECAY_NEAR_S = 0.07;
+export const TRACKER_BEEP_ATTACK_FAR_S = 0.022;
+export const TRACKER_BEEP_ATTACK_NEAR_S = 0.005;
+export const TRACKER_BEEP_DECAY_FAR_S = 0.13;
+export const TRACKER_BEEP_DECAY_NEAR_S = 0.06;
 /** Chirp peak amplitude, far → near. §6's idle state has to be ignorable: far is
- *  a quiet low tick, contact is not. Ratio is deliberately large (2.7x). */
-export const TRACKER_BEEP_PEAK_FAR = 0.075;
-export const TRACKER_BEEP_PEAK_NEAR = 0.2;
+ *  a quiet low tick, contact is not. Ratio is deliberately large (~3x). */
+export const TRACKER_BEEP_PEAK_FAR = 0.06;
+export const TRACKER_BEEP_PEAK_NEAR = 0.19;
 /** The solid tone's held level. Lower than the near chirp's transient peak
- *  because a continuous tone is perceived much louder than a 76 ms one. */
+ *  because a continuous tone is perceived much louder than a 65 ms one. */
 export const TRACKER_SOLID_PEAK = 0.115;
-/** Solid-tone tremolo — amplitude, not pitch. A vibrato at this register reads
- *  as a siren; a tremolo reads as an instrument holding a note. Hz, and 0–1. */
-export const TRACKER_SOLID_TREMOLO_HZ = 5.5;
-export const TRACKER_SOLID_TREMOLO_DEPTH = 0.28;
+/**
+ * Contact state (audition-deck v2): a dark 220 Hz throb — a racing heartbeat,
+ * not a held siren note. The root sits BELOW the beep range on purpose: the
+ * state change is a register drop, and the whole upper spectrum stays free for
+ * the alien itself, which at contact range is the thing that matters.
+ */
+export const TRACKER_SOLID_ROOT_HZ = 220;
+/** Solid-tone tremolo — amplitude, not pitch. Fast and deep: a flutter well
+ *  above the beep cadence, so it reads as a distinct state. Hz, and 0–1. */
+export const TRACKER_SOLID_TREMOLO_HZ = 6.8;
+export const TRACKER_SOLID_TREMOLO_DEPTH = 0.8;
 /**
  * Tracker urgency bands (§6). The device never shows a distance, but it does
  * have to show WHICH of its three states it is in, so the eye and the ear teach

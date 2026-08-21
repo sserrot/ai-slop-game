@@ -14,7 +14,7 @@
 import type { GravityMode, LightingLevel, ModuleKind } from '@shared/types';
 
 import type { AudioEngine } from './engine';
-import { stationHum, type HumHandle } from './synth';
+import { dreadLayer, stationHum, type DreadHandle, type HumHandle } from './synth';
 
 export interface AmbienceOptions {
   /** Hum level under nominal lighting, 0–1. */
@@ -25,14 +25,21 @@ export interface AmbienceOptions {
   stageBoost?: number;
   /** How much of the gravity plant is still audible in a `zero` module, 0–1. */
   zeroGPlant?: number;
+  /**
+   * Level of the dread layer under the hum (sub beat, pad, far-off groans and
+   * thumps — see `dreadLayer` in synth.ts), 0–1. 0 disables it. Unlike the hum
+   * it does NOT duck with lighting: a dark module keeps its dread.
+   */
+  dread?: number;
 }
 
-const DEFAULTS = { nominal: 0.5, emergency: 0.34, dark: 0.12, stageBoost: 0, zeroGPlant: 0.12 };
+const DEFAULTS = { nominal: 0.5, emergency: 0.34, dark: 0.12, stageBoost: 0, zeroGPlant: 0.12, dread: 0.8 };
 
 export class StationAmbience {
   private readonly engine: AudioEngine;
   private readonly opts: Required<AmbienceOptions>;
   private hum: HumHandle | null = null;
+  private dread: DreadHandle | null = null;
   private lighting: LightingLevel = 'emergency';
   private stage = 0;
   private volumeScale = 1;
@@ -46,6 +53,7 @@ export class StationAmbience {
       dark: opts.dark ?? DEFAULTS.dark,
       stageBoost: opts.stageBoost ?? DEFAULTS.stageBoost,
       zeroGPlant: opts.zeroGPlant ?? DEFAULTS.zeroGPlant,
+      dread: opts.dread ?? DEFAULTS.dread,
     };
   }
 
@@ -55,11 +63,16 @@ export class StationAmbience {
     this.hum = stationHum(ctx, this.engine.buses.world, ctx.currentTime, { level: this.level() });
     this.hum.setColour(this.colour());
     this.hum.setPlant(this.plant(), 0.01);
+    if (this.opts.dread > 0) {
+      this.dread = dreadLayer(ctx, this.engine.buses.world, ctx.currentTime, { level: this.opts.dread });
+    }
   }
 
   stop(fadeSeconds = 1.2): void {
     this.hum?.stop(this.engine.ctx.currentTime, fadeSeconds);
     this.hum = null;
+    this.dread?.stop(this.engine.ctx.currentTime, fadeSeconds);
+    this.dread = null;
   }
 
   get running(): boolean {

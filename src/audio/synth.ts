@@ -22,6 +22,7 @@ import {
   TRACKER_BEEP_PEAK_FAR,
   TRACKER_BEEP_PEAK_NEAR,
   TRACKER_SOLID_PEAK,
+  TRACKER_SOLID_ROOT_HZ,
   TRACKER_SOLID_TREMOLO_DEPTH,
   TRACKER_SOLID_TREMOLO_HZ,
   TRACKER_TONE_FAR_HZ,
@@ -451,19 +452,21 @@ export function knock(ctx: AudioContext, dest: AudioNode, when: number, seed = 6
  * a smoke alarm sitting in the band the ear is most sensitive to, whose only
  * variable was a 500 Hz drift nobody can hear as information.
  *
- * This is the same device rebuilt as a wrist instrument. Three sine-ish partials
- * through one closing lowpass — an octave-down body that gives the far tick
- * weight, the fundamental, and a twelfth that only fades in as the alien closes
- * — with an 18 ms attack far out so there is no click to flinch at. Everything
- * that moves, moves with `urgency` and moves the SAME way (§14):
+ * This is the device rebuilt a second time (audition-deck v3) as a SONAR
+ * PEBBLE: a water-drop ping whose transient is a fast pitch-fall onto the root
+ * rather than an amplitude edge, through one closing lowpass. v2's instrument
+ * fixed "piercing" but the triangle fundamental still read as an electronic
+ * chirp by minute fifteen; a falling sine has no waveform edge at all, and the
+ * register drops a fourth on top. Everything that moves, moves with `urgency`
+ * and moves the SAME way (§14):
  *
- *   far  (0)  220/440 Hz, dull (850 Hz lowpass), soft, quiet, long   — a tick
- *   near (1)  440/880 Hz, open (3 kHz lowpass), tight, loud, short   — a pulse
+ *   far  (0)  145/290 Hz, dull (620 Hz lowpass), soft, quiet, long   — a drip
+ *   near (1)  320/640 Hz, open (2.1 kHz lowpass), tight, loud, short — a ping
  *
  * so the two ends are a different NOTE and a different TIMBRE, not merely a
- * different tempo. §6 only asks for rate; rate alone did not survive contact
- * with a player, and a second axis that moves in lockstep with the first costs
- * nothing and cannot mislead.
+ * different tempo. A damp noise tick fades in only past mid-urgency so the
+ * contact-range ping still cuts through a chase without the far tick ever
+ * carrying an edge.
  */
 export function trackerBeep(
   ctx: AudioContext,
@@ -478,66 +481,74 @@ export function trackerBeep(
   const peak = lerp(TRACKER_BEEP_PEAK_FAR, TRACKER_BEEP_PEAK_NEAR, u);
   const cutoff = geomLerp(TRACKER_TONE_LOWPASS_FAR_HZ, TRACKER_TONE_LOWPASS_NEAR_HZ, u);
 
-  // One lowpass across the whole chirp, closing as it decays. This is what turns
-  // three oscillators into something struck rather than a sine spike: the top
-  // goes first, exactly as it does on any real resonant body.
+  // One lowpass across the whole ping, closing as it decays: the top goes
+  // first, exactly as it does on any real resonant body.
   const shaper = ctx.createBiquadFilter();
   shaper.type = 'lowpass';
-  shaper.Q.value = 0.9;
+  shaper.Q.value = 1.1;
   shaper.frequency.setValueAtTime(cutoff, when);
-  expRamp(shaper.frequency, cutoff * 0.42, when + attack + decay);
+  expRamp(shaper.frequency, cutoff * 0.4, when + attack + decay);
   shaper.connect(dest);
 
-  // Body — an octave below, ringing a quarter longer. It is what makes the idle
-  // tick read as *low* instead of merely *quiet*, and it fades back as the
-  // brightness comes up so the near end does not turn muddy.
+  // The drop: starts a fourth high and lands on the root within the attack.
+  // The pitch-fall IS the transient — there is no click to flinch at.
+  const end = tone(ctx, shaper, when, {
+    type: 'sine',
+    freq: root * 1.33,
+    freqTo: root,
+    attack,
+    decay,
+    peak,
+  });
+  // Body — an octave below, ringing a third longer. It is what makes the idle
+  // tick read as *low* instead of merely *quiet*.
   const bodyEnd = tone(ctx, shaper, when, {
     type: 'sine',
     freq: root * 0.5,
     attack,
-    decay: decay * 1.25,
-    // Subordinate at both ends on purpose: measured at parity with the
-    // fundamental, the far tick's perceived pitch dropped to the octave below
-    // and the device's travel stopped being a clean octave. Body, not a voice.
-    peak: peak * lerp(0.55, 0.4, u),
+    decay: decay * 1.35,
+    peak: peak * 0.5,
   });
-  // Fundamental. Triangle, not square: odd harmonics at −12 dB/octave instead of
-  // −6, which is the difference between "instrument" and "buzzer".
-  const end = tone(ctx, shaper, when, { type: 'triangle', freq: root, attack, decay, peak });
-  // Brightness — a twelfth up, essentially absent when far and clearly there at
-  // contact, dying first. The urgency cue you notice before you count the rate.
-  tone(ctx, shaper, when, {
-    type: 'sine',
-    freq: root * 3,
-    attack,
-    decay: decay * 0.45,
-    peak: peak * lerp(0.04, 0.3, u),
-  });
+  // Near-contact only: a damp tick so the ping stays audible through a chase.
+  // Gated past mid-urgency — the far tick must never carry an edge.
+  if (u > 0.3) {
+    noiseBurst(ctx, shaper, when, {
+      colour: 'pink',
+      type: 'bandpass',
+      freq: 1000 + 800 * u,
+      q: 2.5,
+      attack: 0.001,
+      decay: 0.015,
+      peak: peak * 0.28 * u,
+    });
+  }
   return oneShot(Math.max(end, bodyEnd) - when);
 }
 
 /**
- * The tracker's solid tone when the alien is adjacent (§6).
+ * The tracker's solid state when the alien is adjacent (§6).
  *
- * The top of the same instrument, held: A5 with its octave-down body and a
- * hollow fifth, under a tremolo rather than r1's 2600 Hz vibrato — a wobble in
- * PITCH at that register is a siren, a wobble in LEVEL is an instrument being
- * leaned on. It swells in over 60 ms so arriving at contact range is a rise, not
- * a stab, and it is deliberately quieter than the near chirp's transient peak
- * because a continuous tone is perceived far louder than a 76 ms one.
+ * Audition-deck v2: not a held note any more — a dark 220 Hz THROB with a fast,
+ * deep amplitude flutter and a sub octave under it. "Adjacent" should feel like
+ * your own body reacting (a racing heartbeat), not like the device screaming; a
+ * continuous 880 Hz chord was the definition of alarm fatigue. The flutter rate
+ * sits far above the beep cadence so the state is still unmistakably distinct
+ * from fast beeping, the register DROP from the near ping is itself the third
+ * legibility cue, and the whole upper spectrum stays free for the alien —
+ * which, at contact range, is the sound that actually matters.
  */
 export function trackerTone(ctx: AudioContext, dest: AudioNode, when: number): SynthHandle {
-  const root = TRACKER_TONE_NEAR_HZ;
+  const root = TRACKER_SOLID_ROOT_HZ;
 
   const gain = ctx.createGain();
   gain.gain.setValueAtTime(SILENCE, when);
-  expRamp(gain.gain, TRACKER_SOLID_PEAK, when + 0.06);
+  expRamp(gain.gain, TRACKER_SOLID_PEAK, when + 0.08);
   gain.connect(dest);
 
   const shaper = ctx.createBiquadFilter();
   shaper.type = 'lowpass';
-  shaper.frequency.value = TRACKER_TONE_LOWPASS_NEAR_HZ;
-  shaper.Q.value = 0.7;
+  shaper.frequency.value = 900;
+  shaper.Q.value = 0.8;
   shaper.connect(gain);
 
   // Tremolo stage: a fixed offset plus an LFO, so `stop()` can fade `gain`
@@ -555,9 +566,9 @@ export function trackerTone(ctx: AudioContext, dest: AudioNode, when: number): S
   lfoDepth.connect(trem.gain);
 
   const partials: Array<[OscillatorType, number, number]> = [
-    ['triangle', root, 0.62],
-    ['sine', root * 0.5, 0.3],
-    ['sine', root * 1.5, 0.1],
+    ['triangle', root, 0.55],
+    ['sine', root * 0.5, 0.42],
+    ['sine', root * 2, 0.06],
   ];
   const oscs = partials.map(([type, freq, level]) => {
     const osc = ctx.createOscillator();
@@ -605,47 +616,68 @@ export function breaker(ctx: AudioContext, dest: AudioNode, when: number, seed =
   return oneShot(end - when + 0.03);
 }
 
-/** 50 — the wrong order. A buzz, and everyone in two modules knows (§11). */
+/**
+ * 50 — the wrong order (§11). Audition-deck v2: the refusal, not a buzzer.
+ *
+ * r1 was a 27 Hz-gated sawtooth — deliberately annoying, and by playtest it
+ * read as a smoke alarm rather than as information. This is the same event as
+ * hardware would do it: the contactor drops with a heavy CLUNK, three
+ * descending dead thuds ("no. no. no.") as the sequence dumps, and a capacitor
+ * bleed-down whine that is felt more than heard. Falling pitch reads as
+ * REFUSAL to every player instantly, and at loudness 50 it still carries two
+ * modules — loud and unmistakable without being painful.
+ */
 export function breakerReset(ctx: AudioContext, dest: AudioNode, when: number, seed = 73): SynthHandle {
-  const duration = 0.55;
-  const osc = ctx.createOscillator();
-  osc.type = 'sawtooth';
-  osc.frequency.value = 108;
-
-  const filter = ctx.createBiquadFilter();
-  filter.type = 'bandpass';
-  filter.frequency.value = 900;
-  filter.Q.value = 1.4;
-
-  const gate = ctx.createGain();
-  gate.gain.value = 0.5;
-  const lfo = ctx.createOscillator();
-  lfo.type = 'square';
-  lfo.frequency.value = 27;
-  const lfoDepth = ctx.createGain();
-  lfoDepth.gain.value = 0.45;
-  lfo.connect(lfoDepth);
-  lfoDepth.connect(gate.gain);
-
-  const { gain, end } = envelope(ctx, when, { attack: 0.006, hold: duration - 0.1, decay: 0.09, peak: 0.5 });
-  osc.connect(filter);
-  filter.connect(gate);
-  gate.connect(gain);
-  gain.connect(dest);
-  osc.start(when);
-  lfo.start(when);
-  osc.stop(end);
-  lfo.stop(end);
-
+  // The contactor.
+  let end = metalRing(ctx, dest, when, [138, 296, 615], { decay: 0.3, peak: 0.5 });
   noiseBurst(ctx, dest, when, {
     colour: 'white',
     type: 'highpass',
-    freq: 2400,
-    attack: 0.001,
-    decay: 0.03,
-    peak: 0.3,
+    freq: 2600,
+    attack: 0.0008,
+    decay: 0.02,
+    peak: 0.26,
     seed,
   });
+
+  // Three descending dead thuds — the sequence dumping.
+  const thuds: ReadonlyArray<[number, number, number]> = [
+    [0.12, 158, 112],
+    [0.28, 128, 90],
+    [0.46, 102, 68],
+  ];
+  thuds.forEach(([dt, freq, freqTo], i) => {
+    const at = tone(ctx, dest, when + dt, {
+      type: 'sine',
+      freq,
+      freqTo,
+      attack: 0.004,
+      decay: 0.12,
+      peak: 0.34 - i * 0.04,
+    });
+    noiseBurst(ctx, dest, when + dt, {
+      colour: 'brown',
+      type: 'lowpass',
+      freq: 420,
+      freqTo: 150,
+      attack: 0.003,
+      decay: 0.1,
+      peak: 0.22,
+      seed: seed + i + 1,
+    });
+    if (at > end) end = at;
+  });
+
+  // Capacitor bleed-down. Barely there — the felt half of the refusal.
+  const bleed = tone(ctx, dest, when + 0.05, {
+    type: 'sine',
+    freq: 1150,
+    freqTo: 240,
+    attack: 0.02,
+    decay: 0.42,
+    peak: 0.045,
+  });
+  if (bleed > end) end = bleed;
   return oneShot(end - when);
 }
 
@@ -965,18 +997,51 @@ export function decoy(ctx: AudioContext, dest: AudioNode, when: number, seed = 1
   return oneShot(end - when);
 }
 
-/** 5 — a spectator's headset leaking into the room (§10). */
+/**
+ * 5 — a spectator's headset leaking into the room (§10).
+ *
+ * Audition-deck v2: the fiction is leaked SPEECH, and r1's narrow 1900 Hz
+ * chirp read as feedback squeal. A formant wobbling at syllable rate says
+ * "voice" instead, with a tiny transistor tick on top — someone talking in a
+ * tin can, too far away to make out.
+ */
 export function headset(ctx: AudioContext, dest: AudioNode, when: number, seed = 127): SynthHandle {
-  const end = noiseBurst(ctx, dest, when, {
+  const src = ctx.createBufferSource();
+  src.buffer = noiseBuffer(ctx, 'pink', 2, seed);
+  src.loop = true;
+
+  const formant = ctx.createBiquadFilter();
+  formant.type = 'bandpass';
+  formant.frequency.value = 950;
+  formant.Q.value = 3.2;
+
+  // Syllable-rate wobble — the murmur.
+  const wobble = ctx.createOscillator();
+  wobble.type = 'sine';
+  wobble.frequency.value = 6.2;
+  const wobbleDepth = ctx.createGain();
+  wobbleDepth.gain.value = 260;
+  wobble.connect(wobbleDepth);
+  wobbleDepth.connect(formant.frequency);
+
+  const { gain, end } = envelope(ctx, when, { attack: 0.025, hold: 0.14, decay: 0.16, peak: 0.14 });
+  src.connect(formant);
+  formant.connect(gain);
+  gain.connect(dest);
+  src.start(when);
+  wobble.start(when);
+  src.stop(end);
+  wobble.stop(end);
+
+  noiseBurst(ctx, dest, when, {
     colour: 'white',
     type: 'bandpass',
-    freq: 1900,
-    q: 7,
-    attack: 0.01,
-    hold: 0.08,
-    decay: 0.12,
-    peak: 0.18,
-    seed,
+    freq: 2400,
+    q: 8,
+    attack: 0.004,
+    decay: 0.02,
+    peak: 0.04,
+    seed: seed + 1,
   });
   return oneShot(end - when);
 }
@@ -1020,12 +1085,206 @@ export function breath(
   return oneShot(end - when);
 }
 
+// ---------------------------------------------------------------------------
+// The alien's voice box (audition-deck rebuild).
+//
+// It looks like an alligator, so it sounds like one. Every alien sound below
+// shares one core — a PULSE-TRAIN LARYNX: a glottal buzz at 25–45 Hz (slow
+// enough that the ear can almost count the pulses, which is exactly what a real
+// gator growl is) pushed through parallel throat-formant filters, with sparse
+// "wet" velvet-noise crackle for saliva and loose flesh. One larynx, many
+// calls, so every sound is recognisably the same animal.
+// ---------------------------------------------------------------------------
+
+interface LarynxHandle {
+  out: GainNode;
+  oscA: OscillatorNode;
+  oscB: OscillatorNode;
+  formants: BiquadFilterNode[];
+  stop(at: number, fade?: number): void;
+}
+
+interface LarynxOptions {
+  /** Glottal pulse rate — the croak. Hz. */
+  f0?: number;
+  peak?: number;
+  attack?: number;
+  /** AM roughness depth 0–1 and rate — the bellow flutter. */
+  rough?: number;
+  roughHz?: number;
+  /** Slow drift so it never settles into a drone. Hz. */
+  wanderHz?: number;
+  /** [centre Hz, Q, gain] per throat formant. */
+  formants?: ReadonlyArray<readonly [number, number, number]>;
+}
+
+function gatorLarynx(ctx: AudioContext, dest: AudioNode, when: number, opts: LarynxOptions = {}): LarynxHandle {
+  const f0 = opts.f0 ?? 34;
+  const out = ctx.createGain();
+  out.gain.setValueAtTime(SILENCE, when);
+  expRamp(out.gain, opts.peak ?? 0.4, when + (opts.attack ?? 0.3));
+  out.connect(dest);
+
+  // Glottal source: two saws a hair apart — a pulse train with movement in it.
+  const a = ctx.createOscillator();
+  a.type = 'sawtooth';
+  a.frequency.value = f0;
+  const b = ctx.createOscillator();
+  b.type = 'sawtooth';
+  b.frequency.value = f0 * 1.012;
+  const pre = ctx.createGain();
+  pre.gain.value = 0.5;
+  a.connect(pre);
+  b.connect(pre);
+
+  // Roughness: irregular AM around 20 Hz — the gator-bellow flutter.
+  const rough = ctx.createOscillator();
+  rough.type = 'sine';
+  rough.frequency.value = opts.roughHz ?? 21;
+  const roughDepth = ctx.createGain();
+  roughDepth.gain.value = (opts.rough ?? 0.35) * 0.5;
+  rough.connect(roughDepth);
+  roughDepth.connect(pre.gain);
+
+  // The throat: parallel formants.
+  const spec = opts.formants ?? [[150, 4, 1.0], [410, 5, 0.55], [900, 7, 0.18]];
+  const formants = spec.map(([freq, q, g]) => {
+    const bp = ctx.createBiquadFilter();
+    bp.type = 'bandpass';
+    bp.frequency.value = freq;
+    bp.Q.value = q;
+    const trim = ctx.createGain();
+    trim.gain.value = g;
+    pre.connect(bp);
+    bp.connect(trim);
+    trim.connect(out);
+    return bp;
+  });
+
+  // The chest: fundamental straight through a lowpass, so there is body
+  // underneath the formants.
+  const chest = ctx.createBiquadFilter();
+  chest.type = 'lowpass';
+  chest.frequency.value = 120;
+  chest.Q.value = 0.7;
+  const chestTrim = ctx.createGain();
+  chestTrim.gain.value = 0.8;
+  pre.connect(chest);
+  chest.connect(chestTrim);
+  chestTrim.connect(out);
+
+  // Wander on pitch and first formant so it never drones.
+  const wander = ctx.createOscillator();
+  wander.type = 'sine';
+  wander.frequency.value = opts.wanderHz ?? 0.19;
+  const wanderPitch = ctx.createGain();
+  wanderPitch.gain.value = f0 * 0.09;
+  const wanderFormant = ctx.createGain();
+  wanderFormant.gain.value = 55;
+  wander.connect(wanderPitch);
+  wander.connect(wanderFormant);
+  wanderPitch.connect(a.frequency);
+  wanderPitch.connect(b.frequency);
+  wanderFormant.connect(formants[0].frequency);
+
+  a.start(when);
+  b.start(when);
+  rough.start(when);
+  wander.start(when);
+
+  return {
+    out,
+    oscA: a,
+    oscB: b,
+    formants,
+    stop(at: number, fade = 0.4): void {
+      const t = Math.max(at, ctx.currentTime);
+      out.gain.cancelScheduledValues(t);
+      out.gain.setValueAtTime(Math.max(out.gain.value, SILENCE), t);
+      expRamp(out.gain, SILENCE, t + fade);
+      try {
+        for (const osc of [a, b, rough, wander]) osc.stop(t + fade + 0.05);
+      } catch {
+        /* already stopped */
+      }
+    },
+  };
+}
+
+/** Saliva and loose flesh in the breath — sparse impulses through a dark band.
+ *  The single cheapest "this thing is ALIVE" layer. */
+function wetCrackle(ctx: AudioContext, dest: AudioNode, when: number, dur: number, peak: number, seed: number): number {
+  return noiseBurst(ctx, dest, when, {
+    colour: 'velvet',
+    type: 'bandpass',
+    freq: 1050,
+    freqTo: 520,
+    q: 1.6,
+    attack: dur * 0.2,
+    hold: dur * 0.3,
+    decay: dur * 0.5,
+    peak,
+    seed,
+  });
+}
+
+/** One gator breath cycle: thin rising intake, wide wet falling exhale with the
+ *  chest under it. ~1.8 s at intensity 0, tighter as intensity rises. */
+function gatorBreathCycle(ctx: AudioContext, dest: AudioNode, when: number, intensity: number, seed: number): number {
+  const i = clamp(intensity, 0, 1);
+  noiseBurst(ctx, dest, when, {
+    colour: 'pink',
+    type: 'bandpass',
+    freq: 420,
+    freqTo: 980 + 300 * i,
+    q: 2.2,
+    attack: 0.3 - 0.12 * i,
+    hold: 0.15,
+    decay: 0.3,
+    peak: 0.09 + 0.07 * i,
+    seed,
+  });
+  const exAt = when + 0.85 - 0.25 * i;
+  const end = noiseBurst(ctx, dest, exAt, {
+    colour: 'pink',
+    type: 'bandpass',
+    freq: 760,
+    freqTo: 230,
+    q: 1.0,
+    attack: 0.1,
+    hold: 0.35 + 0.15 * i,
+    decay: 0.65,
+    peak: 0.17 + 0.13 * i,
+    seed: seed + 1,
+  });
+  wetCrackle(ctx, dest, exAt + 0.05, 0.8, 0.05 + 0.06 * i, seed + 2);
+  tone(ctx, dest, exAt, {
+    type: 'sine',
+    freq: 46,
+    freqTo: 34,
+    attack: 0.12,
+    hold: 0.3,
+    decay: 0.6,
+    peak: 0.09 + 0.08 * i,
+  });
+  return end;
+}
+
 /**
  * 55 — the alien while hunting. §5: "It makes loud noise while hunting.
  * Non-negotiable: a silent charge is unfair and reads as a bug."
  *
- * Sustained mode is what HUNT uses: a growl that wanders, a wet breath layer,
- * and chatter on top. Stop it when the state leaves HUNT.
+ * One-shot: the INVESTIGATE/SEARCH call — an intake hiss, a guttural croak
+ * falling through the throat (46 → 30 Hz pulse rate with closing formants: a
+ * large body relaxing after a call), and two wet chuffs to stamp it as breath
+ * rather than circuitry.
+ *
+ * Sustained is what HUNT uses: the larynx growl wandering, wet crackle riding
+ * it, a 27 Hz sub you feel before you hear, and scheduled animal events —
+ * breaths, snorts, jaw-clacks — because a loop heard for 30+ seconds needs
+ * EVENTS, not just texture; the snorts are what the imagination builds the
+ * animal out of. All the loud energy stays under 1 kHz, so it masks nothing
+ * that matters. Stop it when the state leaves HUNT.
  */
 export function alienVocal(
   ctx: AudioContext,
@@ -1037,114 +1296,318 @@ export function alienVocal(
   const sustain = opts.sustain ?? false;
 
   if (!sustain) {
-    // One-shot: a single call, for INVESTIGATE/SEARCH noises and for the
-    // occasional network 'alien' event.
-    const end = noiseBurst(ctx, dest, when, {
+    // Intake.
+    noiseBurst(ctx, dest, when, {
       colour: 'pink',
       type: 'bandpass',
-      freq: 380,
-      freqTo: 190,
-      q: 3.2,
-      attack: 0.05,
-      hold: 0.3,
-      decay: 0.5,
-      peak: 0.42,
+      freq: 600,
+      freqTo: 1400,
+      q: 1.8,
+      attack: 0.16,
+      decay: 0.14,
+      peak: 0.14,
       seed,
     });
-    tone(ctx, dest, when, { type: 'sawtooth', freq: 61, freqTo: 47, decay: 0.85, peak: 0.26 });
-    tone(ctx, dest, when + 0.02, { type: 'sawtooth', freq: 58, freqTo: 44, decay: 0.8, peak: 0.22 });
-    for (let i = 0; i < 3; i++) {
-      noiseBurst(ctx, dest, when + 0.55 + i * 0.07, {
-        colour: 'white',
+    // The croak: falling f0, closing throat.
+    const at = when + 0.3;
+    const larynx = gatorLarynx(ctx, dest, at, {
+      f0: 46,
+      peak: 0.5,
+      attack: 0.06,
+      rough: 0.45,
+      roughHz: 24,
+      formants: [[165, 4, 1.0], [430, 5, 0.6], [980, 7, 0.22]],
+    });
+    expRamp(larynx.oscA.frequency, 30, at + 1.15);
+    expRamp(larynx.oscB.frequency, 30.4, at + 1.15);
+    expRamp(larynx.formants[0].frequency, 115, at + 1.15);
+    expRamp(larynx.formants[1].frequency, 300, at + 1.15);
+    larynx.stop(at + 0.95, 0.35);
+    wetCrackle(ctx, dest, at + 0.15, 0.9, 0.08, seed + 3);
+    // Two chuffs to close.
+    for (let i = 0; i < 2; i++) {
+      const chuffAt = at + 1.25 + i * 0.17;
+      noiseBurst(ctx, dest, chuffAt, {
+        colour: 'brown',
+        type: 'lowpass',
+        freq: 300,
+        freqTo: 130,
+        attack: 0.004,
+        decay: 0.09,
+        peak: 0.26,
+        seed: seed + 5 + i,
+      });
+      noiseBurst(ctx, dest, chuffAt, {
+        colour: 'pink',
         type: 'bandpass',
-        freq: 2400 + i * 500,
-        q: 9,
-        attack: 0.001,
-        decay: 0.03,
-        peak: 0.16,
-        seed: seed + i,
+        freq: 620,
+        q: 3.5,
+        attack: 0.003,
+        decay: 0.06,
+        peak: 0.14,
+        seed: seed + 8 + i,
       });
     }
-    return oneShot(end - when + 0.4);
+    return oneShot(at + 1.7 - when);
   }
 
-  // Sustained growl: two detuned saws through a wandering lowpass.
-  const growlGain = ctx.createGain();
-  growlGain.gain.setValueAtTime(SILENCE, when);
-  expRamp(growlGain.gain, 0.34, when + 0.35);
-
-  const lowpass = ctx.createBiquadFilter();
-  lowpass.type = 'lowpass';
-  lowpass.frequency.value = 520;
-  lowpass.Q.value = 6;
-
-  const a = ctx.createOscillator();
-  a.type = 'sawtooth';
-  a.frequency.value = 57;
-  const b = ctx.createOscillator();
-  b.type = 'sawtooth';
-  b.frequency.value = 60.5;
-  b.detune.value = -14;
-
-  // Wander: slow LFO on the growl pitch and on the filter, so it never settles
-  // into a drone the ear can tune out.
-  const wander = ctx.createOscillator();
-  wander.type = 'sine';
-  wander.frequency.value = 0.23;
-  const wanderPitch = ctx.createGain();
-  wanderPitch.gain.value = 7;
-  const wanderFilter = ctx.createGain();
-  wanderFilter.gain.value = 260;
-  wander.connect(wanderPitch);
-  wander.connect(wanderFilter);
-  wanderPitch.connect(a.frequency);
-  wanderPitch.connect(b.frequency);
-  wanderFilter.connect(lowpass.frequency);
-
-  a.connect(lowpass);
-  b.connect(lowpass);
-  lowpass.connect(growlGain);
-  growlGain.connect(dest);
-
-  const breathLayer = sustainedNoise(ctx, dest, when, {
-    colour: 'pink',
-    type: 'bandpass',
-    freq: 520,
-    q: 2.4,
-    peak: 0.22,
-    attack: 0.3,
-    seed: seed + 9,
+  // Sustained HUNT loop.
+  const larynx = gatorLarynx(ctx, dest, when, {
+    f0: 33,
+    peak: 0.42,
+    attack: 0.4,
+    rough: 0.4,
+    roughHz: 19,
+    wanderHz: 0.16,
   });
-  // The breath layer opens and closes — it is breathing, not hissing.
-  const breathLfo = ctx.createOscillator();
-  breathLfo.type = 'sine';
-  breathLfo.frequency.value = 0.55;
-  const breathDepth = ctx.createGain();
-  breathDepth.gain.value = 0.14;
-  breathLfo.connect(breathDepth);
-  breathDepth.connect(breathLayer.gain.gain);
 
-  a.start(when);
-  b.start(when);
-  wander.start(when);
-  breathLfo.start(when);
+  // Constant wet layer, breathing on its own slow LFO.
+  const wet = sustainedNoise(ctx, dest, when, {
+    colour: 'velvet',
+    type: 'bandpass',
+    freq: 900,
+    q: 1.8,
+    peak: 0.07,
+    attack: 0.5,
+    seed: seed + 4,
+  });
+  const wetLfo = ctx.createOscillator();
+  wetLfo.type = 'sine';
+  wetLfo.frequency.value = 0.5;
+  const wetDepth = ctx.createGain();
+  wetDepth.gain.value = 0.045;
+  wetLfo.connect(wetDepth);
+  wetDepth.connect(wet.gain.gain);
+  wetLfo.start(when);
+
+  // Sub presence — felt at distance before it is heard.
+  const sub = ctx.createOscillator();
+  sub.type = 'sine';
+  sub.frequency.value = 27;
+  const subGain = ctx.createGain();
+  subGain.gain.setValueAtTime(SILENCE, when);
+  expRamp(subGain.gain, 0.11, when + 1.2);
+  const subLfo = ctx.createOscillator();
+  subLfo.type = 'sine';
+  subLfo.frequency.value = 0.13;
+  const subLfoDepth = ctx.createGain();
+  subLfoDepth.gain.value = 0.05;
+  subLfo.connect(subLfoDepth);
+  subLfoDepth.connect(subGain.gain);
+  sub.connect(subGain);
+  subGain.connect(dest);
+  sub.start(when);
+  subLfo.start(when);
+
+  // Scheduled animal events. A JS timer, not audio-graph scheduling, because
+  // the loop is open-ended; everything it schedules connects to `dest`, so the
+  // events move and attenuate with the loop's panner like the rest of it.
+  const rng = mulberry32(seed >>> 0);
+  let stopped = false;
+  const timer = setInterval(() => {
+    if (stopped) return;
+    const t = ctx.currentTime + 0.05;
+    const roll = rng();
+    const evSeed = (seed + Math.floor(rng() * 9999)) >>> 0;
+    if (roll < 0.4) {
+      gatorBreathCycle(ctx, dest, t, 0.7, evSeed);
+    } else if (roll < 0.7) {
+      // Snort.
+      noiseBurst(ctx, dest, t, {
+        colour: 'pink',
+        type: 'bandpass',
+        freq: 850,
+        freqTo: 340,
+        q: 2.8,
+        attack: 0.008,
+        decay: 0.16,
+        peak: 0.24,
+        seed: evSeed,
+      });
+      tone(ctx, dest, t, { type: 'sine', freq: 70, freqTo: 44, decay: 0.14, peak: 0.14 });
+    } else {
+      // Jaw clack — teeth meeting.
+      for (let i = 0; i < 2; i++) {
+        noiseBurst(ctx, dest, t + i * 0.09, {
+          colour: 'brown',
+          type: 'lowpass',
+          freq: 340,
+          freqTo: 140,
+          attack: 0.002,
+          decay: 0.06,
+          peak: 0.2,
+          seed: evSeed + i,
+        });
+        metalRing(ctx, dest, t + i * 0.09, [720], { decay: 0.05, peak: 0.07 });
+      }
+    }
+  }, 2600);
 
   return {
     duration: Number.POSITIVE_INFINITY,
-    stop(at = ctx.currentTime, fade = 0.5): void {
+    stop(at = ctx.currentTime, fade = 0.6): void {
+      stopped = true;
+      clearInterval(timer);
       const t = Math.max(at, ctx.currentTime);
-      growlGain.gain.cancelScheduledValues(t);
-      growlGain.gain.setValueAtTime(Math.max(growlGain.gain.value, SILENCE), t);
-      expRamp(growlGain.gain, SILENCE, t + fade);
-      breathLayer.stop(t, fade);
+      larynx.stop(t, fade);
+      wet.stop(t, fade);
+      subGain.gain.cancelScheduledValues(t);
+      subGain.gain.setValueAtTime(Math.max(subGain.gain.value, SILENCE), t);
+      expRamp(subGain.gain, SILENCE, t + fade);
       try {
-        a.stop(t + fade + 0.05);
-        b.stop(t + fade + 0.05);
-        wander.stop(t + fade + 0.05);
-        breathLfo.stop(t + fade + 0.05);
+        sub.stop(t + fade + 0.05);
+        subLfo.stop(t + fade + 0.05);
+        wetLfo.stop(t + fade + 0.05);
       } catch {
         /* already stopped */
       }
+    },
+  };
+}
+
+/**
+ * The bellow — HUNT onset / lost-prey rage. Real gators bellow at ~20 Hz pulse
+ * rates, hard enough that the water over their backs dances; this is that,
+ * scaled to a corridor. Swells over half a second, rises a third, sinks past
+ * where it started, with an infrasonic shove and room rumble underneath.
+ * Not yet wired to a NoiseKind — available for the director.
+ */
+export function alienBellow(ctx: AudioContext, dest: AudioNode, when: number, seed = 227): SynthHandle {
+  const larynx = gatorLarynx(ctx, dest, when, {
+    f0: 30,
+    peak: 0.55,
+    attack: 0.55,
+    rough: 0.55,
+    roughHz: 18,
+    formants: [[130, 4, 1.0], [340, 5, 0.5], [780, 7, 0.14]],
+  });
+  larynx.oscA.frequency.setValueAtTime(30, when);
+  expRamp(larynx.oscA.frequency, 38, when + 1.1);
+  expRamp(larynx.oscA.frequency, 24, when + 2.6);
+  larynx.oscB.frequency.setValueAtTime(30.4, when);
+  expRamp(larynx.oscB.frequency, 38.5, when + 1.1);
+  expRamp(larynx.oscB.frequency, 24.3, when + 2.6);
+  larynx.stop(when + 2.2, 0.8);
+  tone(ctx, dest, when, { type: 'sine', freq: 24, attack: 0.5, hold: 1.2, decay: 1.0, peak: 0.16 });
+  noiseBurst(ctx, dest, when + 0.3, {
+    colour: 'brown',
+    type: 'lowpass',
+    freq: 200,
+    freqTo: 90,
+    attack: 0.5,
+    hold: 0.8,
+    decay: 1.0,
+    peak: 0.14,
+    seed,
+  });
+  wetCrackle(ctx, dest, when + 0.4, 1.8, 0.06, seed + 1);
+  return oneShot(3.1);
+}
+
+/**
+ * The hiss — open-mouth warning for SEARCH near a hide spot. Broadband but
+ * dark-edged, swelling, with the growl idling beneath, closed by a sharp huff.
+ * Not yet wired to a NoiseKind — available for the director.
+ */
+export function alienHiss(ctx: AudioContext, dest: AudioNode, when: number, seed = 229): SynthHandle {
+  noiseBurst(ctx, dest, when, {
+    colour: 'white',
+    type: 'bandpass',
+    freq: 1300,
+    freqTo: 2500,
+    q: 0.7,
+    attack: 0.4,
+    hold: 0.55,
+    decay: 0.5,
+    peak: 0.3,
+    seed,
+  });
+  noiseBurst(ctx, dest, when, {
+    colour: 'pink',
+    type: 'highpass',
+    freq: 500,
+    attack: 0.45,
+    hold: 0.5,
+    decay: 0.5,
+    peak: 0.12,
+    seed: seed + 1,
+  });
+  const larynx = gatorLarynx(ctx, dest, when + 0.1, { f0: 40, peak: 0.14, attack: 0.4, rough: 0.3 });
+  larynx.stop(when + 1.2, 0.35);
+  const end = noiseBurst(ctx, dest, when + 1.42, {
+    colour: 'brown',
+    type: 'lowpass',
+    freq: 420,
+    freqTo: 150,
+    attack: 0.006,
+    decay: 0.14,
+    peak: 0.3,
+    seed: seed + 2,
+  });
+  return oneShot(end - when);
+}
+
+/**
+ * The chuff — three irregular territorial huffs. The INVESTIGATE voice: close,
+ * curious, horrible. Not yet wired to a NoiseKind — available for the director.
+ */
+export function alienChuff(ctx: AudioContext, dest: AudioNode, when: number, seed = 233): SynthHandle {
+  const vary = varier(seed);
+  const gaps = [0, 0.16 * vary(0.2), 0.38 * vary(0.15)];
+  let end = when;
+  for (let i = 0; i < 3; i++) {
+    const at = when + gaps[i];
+    const e = noiseBurst(ctx, dest, at, {
+      colour: 'brown',
+      type: 'lowpass',
+      freq: 320,
+      freqTo: 120,
+      attack: 0.005,
+      decay: 0.1,
+      peak: 0.3 - i * 0.04,
+      seed: seed + i,
+    });
+    noiseBurst(ctx, dest, at, {
+      colour: 'pink',
+      type: 'bandpass',
+      freq: 640 * vary(0.08),
+      q: 3.2,
+      attack: 0.004,
+      decay: 0.07,
+      peak: 0.16,
+      seed: seed + 4 + i,
+    });
+    tone(ctx, dest, at, { type: 'sine', freq: 82, freqTo: 50, decay: 0.09, peak: 0.16 });
+    if (e > end) end = e;
+  }
+  return oneShot(end - when);
+}
+
+/**
+ * Sustained breathing — it is next to your locker, and it is breathing. Wet
+ * exhale, chest rumble, ~3.2 s cycle. The PATROL-adjacent voice, and the
+ * counterweight to hiding feeling safe. Not yet wired — available for the
+ * hide/proximity treatment.
+ */
+export function alienBreathing(ctx: AudioContext, dest: AudioNode, when: number, seed = 239): SynthHandle {
+  const rng = mulberry32(seed >>> 0);
+  const out = ctx.createGain();
+  out.gain.value = 1;
+  out.connect(dest);
+  gatorBreathCycle(ctx, out, when + 0.1, 0.5, seed);
+  let stopped = false;
+  const timer = setInterval(() => {
+    if (stopped) return;
+    gatorBreathCycle(ctx, out, ctx.currentTime + 0.05, 0.45 + rng() * 0.3, (seed + Math.floor(rng() * 99999)) >>> 0);
+  }, 3200);
+  return {
+    duration: Number.POSITIVE_INFINITY,
+    stop(at = ctx.currentTime, fade = 0.8): void {
+      stopped = true;
+      clearInterval(timer);
+      const t = Math.max(at, ctx.currentTime);
+      out.gain.setValueAtTime(1, t);
+      expRamp(out.gain, SILENCE, t + fade);
     },
   };
 }
@@ -1274,6 +1737,187 @@ export function stationHum(
         air.stop(t + fade + 0.05);
         pump.stop(t + fade + 0.05);
         pumpLfo.stop(t + fade + 0.05);
+      } catch {
+        /* already stopped */
+      }
+    },
+  };
+}
+
+/**
+ * The dread layer (audition-deck addition) — sits UNDER `stationHum`.
+ *
+ * The hum is honest machinery and safe-sounding by design. This is the other
+ * half of a horror bed: a beating 36/37.9 Hz sub, a barely-tonal minor-second
+ * pad, void hiss, and far-off scheduled events — hull groans, stress pings,
+ * distant thumps, skitters — every 6–15 s, panned at random. The station keeps
+ * making noises that might be the alien and never quite are.
+ *
+ * Everything is quiet and low ON PURPOSE: the §3 noise game is untouched, and
+ * a real footstep still cuts straight through. Like the hum it is not a
+ * NoiseEvent — the alien does not hear the set dressing.
+ */
+export interface DreadHandle extends SynthHandle {
+  /** 0–1 master level for the layer. */
+  setLevel(value: number, tau?: number): void;
+}
+
+export function dreadLayer(
+  ctx: AudioContext,
+  dest: AudioNode,
+  when: number,
+  opts: { level?: number; seed?: number } = {},
+): DreadHandle {
+  const seed = opts.seed ?? 421;
+  const level = clamp(opts.level ?? 1, 0, 1);
+
+  const out = ctx.createGain();
+  out.gain.setValueAtTime(SILENCE, when);
+  expRamp(out.gain, Math.max(level, SILENCE), when + 2.5);
+  out.connect(dest);
+
+  // Beating sub — two sines 1.7 Hz apart. The slow pulse you stop noticing
+  // until it stops.
+  const subA = ctx.createOscillator();
+  subA.type = 'sine';
+  subA.frequency.value = 36.2;
+  const subB = ctx.createOscillator();
+  subB.type = 'sine';
+  subB.frequency.value = 37.9;
+  const subTrim = ctx.createGain();
+  subTrim.gain.value = 0.12;
+  subA.connect(subTrim);
+  subB.connect(subTrim);
+  subTrim.connect(out);
+
+  // Pad: a detuned minor-second cluster through a dark, wandering lowpass —
+  // tonal enough to feel wrong, too dark to hum along to.
+  const padLp = ctx.createBiquadFilter();
+  padLp.type = 'lowpass';
+  padLp.frequency.value = 240;
+  padLp.Q.value = 0.9;
+  const padTrim = ctx.createGain();
+  padTrim.gain.value = 0.045;
+  padLp.connect(padTrim);
+  padTrim.connect(out);
+  const pads = [110, 110.9, 116.5].map((freq) => {
+    const osc = ctx.createOscillator();
+    osc.type = 'triangle';
+    osc.frequency.value = freq;
+    osc.connect(padLp);
+    osc.start(when);
+    return osc;
+  });
+  const padWander = ctx.createOscillator();
+  padWander.type = 'sine';
+  padWander.frequency.value = 0.05;
+  const padWanderDepth = ctx.createGain();
+  padWanderDepth.gain.value = 70;
+  padWander.connect(padWanderDepth);
+  padWanderDepth.connect(padLp.frequency);
+  padWander.start(when);
+
+  // Void hiss, fading in and out over ~20 s.
+  const hiss = sustainedNoise(ctx, out, when, {
+    colour: 'white',
+    type: 'highpass',
+    freq: 5200,
+    peak: 0.012,
+    attack: 2.0,
+    seed,
+  });
+  const hissLfo = ctx.createOscillator();
+  hissLfo.type = 'sine';
+  hissLfo.frequency.value = 0.045;
+  const hissDepth = ctx.createGain();
+  hissDepth.gain.value = 0.007;
+  hissLfo.connect(hissDepth);
+  hissDepth.connect(hiss.gain.gain);
+  hissLfo.start(when);
+
+  subA.start(when);
+  subB.start(when);
+
+  // Far-off events. A JS timer because the layer is open-ended; each event
+  // gets its own random pan so the station talks from everywhere.
+  const rng = mulberry32(seed >>> 0);
+  let stopped = false;
+  let timer: ReturnType<typeof setTimeout> | null = null;
+  const scheduleEvent = (): void => {
+    if (stopped) return;
+    const t = ctx.currentTime + 0.05;
+    const panner = ctx.createStereoPanner();
+    panner.pan.value = (rng() * 2 - 1) * 0.8;
+    panner.connect(out);
+    const roll = rng();
+    const evSeed = Math.floor(rng() * 99999);
+    if (roll < 0.35) {
+      // Hull groan.
+      const dur = 1.8 + rng() * 1.4;
+      noiseBurst(ctx, panner, t, {
+        colour: 'white',
+        type: 'bandpass',
+        freq: 300 + rng() * 120,
+        freqTo: 130,
+        q: 14,
+        attack: dur * 0.4,
+        hold: dur * 0.2,
+        decay: dur * 0.4,
+        peak: 0.1,
+        seed: evSeed,
+      });
+      tone(ctx, panner, t + dur * 0.3, { type: 'sine', freq: 55, freqTo: 40, attack: 0.3, decay: dur * 0.5, peak: 0.05 });
+    } else if (roll < 0.6) {
+      // Stress ping.
+      const freq = 600 + rng() * 900;
+      metalRing(ctx, panner, t, [freq, freq * 2.3], { decay: 1.1, peak: 0.06 });
+    } else if (roll < 0.85) {
+      // Distant thump.
+      tone(ctx, panner, t, { type: 'sine', freq: 70, freqTo: 42, attack: 0.005, decay: 0.35, peak: 0.14 });
+      noiseBurst(ctx, panner, t, {
+        colour: 'brown',
+        type: 'lowpass',
+        freq: 260,
+        freqTo: 110,
+        attack: 0.004,
+        decay: 0.3,
+        peak: 0.1,
+        seed: evSeed,
+      });
+    } else {
+      // Skitter.
+      for (let i = 0; i < 5; i++) {
+        noiseBurst(ctx, panner, t + i * 0.055 + rng() * 0.02, {
+          colour: 'velvet',
+          type: 'bandpass',
+          freq: 1900,
+          q: 3,
+          attack: 0.001,
+          decay: 0.025,
+          peak: 0.035,
+          seed: evSeed + i,
+        });
+      }
+    }
+    timer = setTimeout(scheduleEvent, (6 + rng() * 9) * 1000);
+  };
+  timer = setTimeout(scheduleEvent, 2500);
+
+  return {
+    duration: Number.POSITIVE_INFINITY,
+    setLevel(value: number, tau = 0.8): void {
+      out.gain.setTargetAtTime(clamp(value, 0, 1), ctx.currentTime, tau);
+    },
+    stop(at = ctx.currentTime, fade = 1.2): void {
+      stopped = true;
+      if (timer !== null) clearTimeout(timer);
+      const t = Math.max(at, ctx.currentTime);
+      out.gain.cancelScheduledValues(t);
+      out.gain.setValueAtTime(Math.max(out.gain.value, SILENCE), t);
+      expRamp(out.gain, SILENCE, t + fade);
+      hiss.stop(t, fade);
+      try {
+        for (const osc of [subA, subB, padWander, hissLfo, ...pads]) osc.stop(t + fade + 0.05);
       } catch {
         /* already stopped */
       }
@@ -1738,9 +2382,16 @@ export function gravityShift(ctx: AudioContext, dest: AudioNode, when: number, s
  * under anyone." That fairness guarantee is an AUDIO guarantee — it does not
  * exist unless you can hear it — so this is the most load-bearing sound in the
  * file. It is not a NoiseEvent: the alien does not hear the warning, only the
- * failure. Two layers, both climbing in urgency: a klaxon on a fixed rhythm so
- * you can count the seconds you have left, and the plant's tone sagging under
- * it so you can hear it losing the argument.
+ * failure. Two layers, both climbing in urgency: a fixed rhythm so you can
+ * count the seconds you have left, and the plant's tone sagging under it so
+ * you can hear it losing the argument.
+ *
+ * Audition-deck v2: the rhythm is no longer a 622/466 Hz triangle klaxon — the
+ * single most smoke-detector sound in the game, parked exactly in the band the
+ * ear flinches at. The countdown only needs RHYTHM, so each beat is now a low
+ * pressure WHOOMP (a sine dropping 84 → 48 Hz over a brown-noise push) with a
+ * quiet relay tick riding it for count definition. Same three beats in 2.5 s;
+ * the dread moved two octaves down and turned into pressure.
  */
 export function gravityWarning(
   ctx: AudioContext,
@@ -1756,22 +2407,23 @@ export function gravityWarning(
   out.connect(dest);
 
   // The plant sagging. Not a sweep to zero — it is still fighting until the
-  // contactor drops, which is the moment `gravityShift` takes over.
+  // contactor drops, which is the moment `gravityShift` takes over. Darker
+  // than r1: the beats own the urgency now, the sag only has to lose.
   const shaper = ctx.createBiquadFilter();
   shaper.type = 'lowpass';
-  shaper.Q.value = 2.2;
-  shaper.frequency.setValueAtTime(1800, when);
-  expRamp(shaper.frequency, 620, when + span);
+  shaper.Q.value = 1.6;
+  shaper.frequency.setValueAtTime(1000, when);
+  expRamp(shaper.frequency, 360, when + span);
   shaper.connect(out);
 
   const sag = ctx.createOscillator();
   sag.type = 'sawtooth';
-  sag.frequency.setValueAtTime(196, when);
-  expRamp(sag.frequency, 132, when + span);
+  sag.frequency.setValueAtTime(148, when);
+  expRamp(sag.frequency, 92, when + span);
   const sagGain = ctx.createGain();
   sagGain.gain.setValueAtTime(SILENCE, when);
-  expRamp(sagGain.gain, 0.2, when + 0.15);
-  expRamp(sagGain.gain, 0.3, when + span * 0.85);
+  expRamp(sagGain.gain, 0.16, when + 0.2);
+  expRamp(sagGain.gain, 0.26, when + span * 0.85);
   expRamp(sagGain.gain, SILENCE, when + span);
   sag.connect(sagGain);
   sagGain.connect(shaper);
@@ -1781,51 +2433,46 @@ export function gravityWarning(
   // A wobble that widens as it goes — the sound of something about to stop.
   const wobble = ctx.createOscillator();
   wobble.type = 'sine';
-  wobble.frequency.setValueAtTime(3.2, when);
-  wobble.frequency.linearRampToValueAtTime(9.5, when + span);
+  wobble.frequency.setValueAtTime(2.6, when);
+  wobble.frequency.linearRampToValueAtTime(8, when + span);
   const wobbleDepth = ctx.createGain();
-  wobbleDepth.gain.setValueAtTime(4, when);
-  wobbleDepth.gain.linearRampToValueAtTime(22, when + span);
+  wobbleDepth.gain.setValueAtTime(3, when);
+  wobbleDepth.gain.linearRampToValueAtTime(16, when + span);
   wobble.connect(wobbleDepth);
   wobbleDepth.connect(sag.frequency);
   wobble.start(when);
   wobble.stop(when + span + 0.05);
 
-  // The klaxon. Two tones, a fixed 0.8 s apart, so it is a COUNTDOWN and not a
-  // texture: 2.5 s is three of these, and by the third you should have a hand
-  // on a rail (§4 sizes the warning at 6 m of sprint for exactly that reason).
+  // The beats. A fixed 0.8 s apart, so it is a COUNTDOWN and not a texture:
+  // 2.5 s is three of these, and by the third you should have a hand on a rail
+  // (§4 sizes the warning at 6 m of sprint for exactly that reason).
   const period = 0.8;
-  const chirps = Math.max(1, Math.floor(span / period));
-  for (let i = 0; i < chirps; i++) {
+  const beats = Math.max(1, Math.floor(span / period));
+  for (let i = 0; i < beats; i++) {
     const at = when + i * period;
-    const urgency = chirps > 1 ? i / (chirps - 1) : 1;
-    const peak = 0.26 + 0.16 * urgency;
-    tone(ctx, out, at, {
-      type: 'triangle',
-      freq: 622,
-      attack: 0.006,
-      hold: 0.05,
-      decay: 0.1,
-      peak,
+    const urgency = beats > 1 ? i / (beats - 1) : 1;
+    // The whoomp.
+    tone(ctx, dest, at, {
+      type: 'sine',
+      freq: 84 + 12 * urgency,
+      freqTo: 48,
+      attack: 0.03,
+      hold: 0.02,
+      decay: 0.3,
+      peak: 0.36 + 0.16 * urgency,
     });
-    tone(ctx, out, at + 0.15, {
-      type: 'triangle',
-      freq: 466,
-      attack: 0.006,
-      hold: 0.05,
-      decay: 0.13,
-      peak: peak * 0.9,
-    });
-    noiseBurst(ctx, out, at, {
-      colour: 'white',
-      type: 'bandpass',
-      freq: 1900,
-      q: 5,
-      attack: 0.004,
-      decay: 0.05,
-      peak: 0.06,
+    noiseBurst(ctx, dest, at, {
+      colour: 'brown',
+      type: 'lowpass',
+      freq: 520,
+      freqTo: 130,
+      attack: 0.025,
+      decay: 0.3,
+      peak: 0.2 + 0.12 * urgency,
       seed: seed + i,
     });
+    // Relay tick for count definition — quiet, woody, not a beep.
+    metalRing(ctx, dest, at + 0.01, [880, 1760], { decay: 0.035, peak: 0.05 + 0.05 * urgency });
   }
 
   return {
@@ -1979,43 +2626,23 @@ export function hideExit(
  * this has to be legible as a PROCESS with a clock on it — three blows, each
  * one further into the metal — rather than one undifferentiated roar you can
  * only sit inside.
+ *
+ * Audition-deck v2: the blows are untouched (they ARE the clock), but r1's
+ * high-Q metal shriek — the smoke-detector cousin — becomes the animal: an
+ * enraged bellow rising under the first blow, a hiss drawn in before the last.
+ * You hear WHAT is coming through the door, not just that metal is losing.
  */
 export function hideBreach(ctx: AudioContext, dest: AudioNode, when: number, seed = 199): SynthHandle {
-  // A shriek of metal being opened against its will.
-  const shriek = ctx.createBufferSource();
-  shriek.buffer = noiseBuffer(ctx, 'white', 2, seed);
-  shriek.loop = true;
-  const shriekFilter = ctx.createBiquadFilter();
-  shriekFilter.type = 'bandpass';
-  shriekFilter.frequency.setValueAtTime(420, when);
-  expRamp(shriekFilter.frequency, 2400, when + 1.5);
-  shriekFilter.Q.value = 13;
-  const shriekWobble = ctx.createOscillator();
-  shriekWobble.type = 'triangle';
-  shriekWobble.frequency.value = 7.4;
-  const shriekDepth = ctx.createGain();
-  shriekDepth.gain.value = 180;
-  shriekWobble.connect(shriekDepth);
-  shriekDepth.connect(shriekFilter.frequency);
-  const { gain: shriekGain, end: shriekEnd } = envelope(ctx, when, {
-    attack: 0.1,
-    hold: 1.35,
-    decay: 0.3,
-    peak: 0.4,
-  });
-  shriek.connect(shriekFilter);
-  shriekFilter.connect(shriekGain);
-  shriekGain.connect(dest);
-  shriek.start(when);
-  shriekWobble.start(when);
-  shriek.stop(shriekEnd);
-  shriekWobble.stop(shriekEnd);
-
-  // Underneath it: something very large that wants in.
-  tone(ctx, dest, when, { type: 'sawtooth', freq: 52, freqTo: 38, decay: 1.7, peak: 0.3, attack: 0.06 });
+  // The bellow bed, rising in pulse rate as it works.
+  const larynx = gatorLarynx(ctx, dest, when, { f0: 38, peak: 0.4, attack: 0.15, rough: 0.5, roughHz: 22 });
+  expRamp(larynx.oscA.frequency, 52, when + 1.5);
+  expRamp(larynx.oscB.frequency, 52.6, when + 1.5);
+  larynx.stop(when + 1.7, 0.4);
+  tone(ctx, dest, when, { type: 'sine', freq: 30, attack: 0.2, hold: 1.2, decay: 0.5, peak: 0.14 });
+  wetCrackle(ctx, dest, when + 0.2, 1.6, 0.07, seed + 20);
 
   // Three blows. The clock you are deciding against.
-  let end = shriekEnd;
+  let end = when + 2.1;
   for (let i = 0; i < 3; i++) {
     const at = when + 0.22 + i * 0.62;
     const weight = 0.36 + 0.14 * i;
@@ -2041,6 +2668,20 @@ export function hideBreach(ctx: AudioContext, dest: AudioNode, when: number, see
     });
     if (e > end) end = e;
   }
+
+  // The intake before the last blow.
+  noiseBurst(ctx, dest, when + 1.05, {
+    colour: 'white',
+    type: 'bandpass',
+    freq: 1600,
+    freqTo: 2400,
+    q: 0.9,
+    attack: 0.2,
+    hold: 0.2,
+    decay: 0.25,
+    peak: 0.2,
+    seed: seed + 30,
+  });
 
   return oneShot(end - when + 0.15);
 }
