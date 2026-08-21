@@ -160,9 +160,26 @@ export class HideController {
     return true;
   }
 
-  /** Start climbing out. Same rule, same price: the gait you leave in is what
-   *  it costs, so bailing out at a sprint is as loud as diving in. */
-  exit(haste: number): boolean {
+  /**
+   * Start climbing out. Same rule, same price: the gait you leave in is what it
+   * costs, so bailing out at a sprint is as loud as diving in.
+   *
+   * `eyeLift` is how far the EYE sits above the authored entry point — i.e. the
+   * current gait's eye height. It is not optional in spirit: `Player.position`
+   * is the eye, not the feet (§4 — the body hangs below it so a settle does not
+   * teleport the camera), and an authored `entryPos` is a place to STAND. Lerping
+   * the eye onto it buries the body a full eye-height under the deck, which is
+   * what put a player who climbed out of a locker face-down on the floor,
+   * permanently AIRBORNE, unable to walk it off. Measured before the fix: the eye
+   * settled 0.45 m over the deck against a 1.45 m standing height and stayed
+   * there.
+   *
+   * The two authored conventions disagreed as well — `server/station/layout.ts`
+   * put `entryPos.y` on the deck, `src/station/deckKit.ts` 0.9 m above it — so
+   * the lift is applied to the entry's own ground rather than assumed, and
+   * `Player` re-settles onto the floor once the climb finishes.
+   */
+  exit(haste: number, eyeLift = 0): boolean {
     if (this._phase !== 'hidden') return false;
     const volume = this._volume;
     if (!volume) return false;
@@ -173,6 +190,7 @@ export class HideController {
     this.fromPos.set(volume.centre.x, volume.centre.y, volume.centre.z);
     this.fromQuat.copy(this.toQuat);
     this.toPos.set(volume.entry.x, volume.entry.y, volume.entry.z);
+    this.toPos.addScaledVector(UP, eyeLift);
     // Face back out the way you came, which is the reverse of the way in.
     this.toQuat.copy(outQuat(volume));
     return true;

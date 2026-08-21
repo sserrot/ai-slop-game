@@ -1561,6 +1561,19 @@ export class Player {
       this.coyote = 0;
       this.groundLock = 0;
       this.stride.reset(true);
+      // Land on the deck rather than near it. The climb-out lerps to the entry
+      // point plus an eye height, but an authored entry is not a validated body
+      // pose — the two levels disagree about whether its Y means the deck or
+      // 0.9 m above it — so settle onto whatever floor is actually under the
+      // body. Without this the player leaves the locker AIRBORNE and stays that
+      // way, which reads as crawling.
+      if (hasFloor(this._gravity)) {
+        // Resync the collider to the gait first: `updateHiding` moves `_gait`
+        // directly (haste prices the exit) without resizing the body, so the
+        // capsule can be a gait behind by the time we climb out.
+        capsuleOffsets(this._gait, this.capsule);
+        this.standUpOnSettle();
+      }
       return;
     }
 
@@ -1665,7 +1678,9 @@ export class Player {
     const haste = hasteForGait(this._gait);
     // Not muffled: you are coming out of the shell, not sitting behind it.
     this.emit('hide-exit', { intensity: haste, hidden: false });
-    if (!this.hide.exit(haste)) return false;
+    // The eye must land an eye-height above the entry point, not ON it — see
+    // HideController.exit. Without the lift the body ends up under the deck.
+    if (!this.hide.exit(haste, eyeHeightFor(this._gait))) return false;
     this.config.onHide?.({
       module: volume.module,
       spot: parseHideSpotKey(volume.key).spot,
@@ -1697,6 +1712,11 @@ export class Player {
     this._hidePrompt = null;
     if (volume) {
       this.position.set(volume.entry.x, volume.entry.y, volume.entry.z);
+      // `position` is the EYE and `entry` is a place to STAND, so the body has
+      // to be lifted onto it. Setting the eye to the entry point directly buries
+      // a whole body under the deck — the bug that left a player crawling after
+      // climbing out of a locker.
+      this.position.addScaledVector(UP, eyeHeightFor(this._gait));
       // A spot's authored entry point is a point, not a validated body pose, and
       // a spot derived from a locker prop puts it right against the carcass.
       // Being thrown out of a hide spot must not be a way into the geometry.
