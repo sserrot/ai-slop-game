@@ -306,8 +306,12 @@ export interface PlayerConfig {
 /** A hide spot within reach, and how the verb would be priced right now. */
 export interface HidePrompt {
   volume: HideVolume;
-  /** Metres from the body to the spot's `entryPos`. */
+  /** Metres from the body to the spot's SURFACE (`nearestSurface`). */
   distance: number;
+  /** Closest point on the spot's box, world space — where the prompt glyph
+   *  anchors, so the E chip sits on the cabinet rather than floating at the
+   *  authored standing point a metre away. Pooled; copy if kept. */
+  point: Vec3;
   /** 0–1, from the held gait — crouch is quiet and slow, sprint is a dive. */
   haste: number;
   /** Seconds the climb would take at that haste (§14 `hideEnterSeconds`). */

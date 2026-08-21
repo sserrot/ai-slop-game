@@ -422,6 +422,9 @@ export class Player {
   // -- hiding (§4) -----------------------------------------------------------
   private readonly hide = new HideController();
   private _hidePrompt: HidePrompt | null = null;
+  /** Pooled world-space anchor for the hide prompt — the closest point on the
+   *  candidate spot's box, written by `nearestSurface` each frame. */
+  private readonly hideAnchor: Vec3 = { x: 0, y: 0, z: 0 };
   /** The one `HidePrompt` object, refilled per frame — see `refreshHidePrompt`.
    *  Built on the first frame a spot is actually in reach, so it never has to
    *  hold a placeholder `HideVolume`. */
@@ -1722,21 +1725,38 @@ export class Player {
     this._hidePrompt = null;
     const graph = this.hideSpots;
     if (!graph || !this._alive || this.hide.busy || !this._module) return;
-    const volume = graph.nearestEntry(this._module, this.position, HIDE_REACH_M, this._gravity);
+    // Surface distance, not entry distance: the prompt fires when you are AT
+    // the box, from any side, and `point` is where the glyph anchors.
+    const anchor = this.hideAnchor;
+    const volume = graph.nearestSurface(
+      this._module,
+      this.position,
+      HIDE_REACH_M,
+      this._gravity,
+      anchor,
+    );
     if (!volume) return;
     const haste = hasteForGait(this._gait);
     const distance = Math.hypot(
-      this.position.x - volume.entry.x,
-      this.position.y - volume.entry.y,
-      this.position.z - volume.entry.z,
+      this.position.x - anchor.x,
+      this.position.y - anchor.y,
+      this.position.z - anchor.z,
     );
     let prompt = this.hidePromptBuffer;
     if (!prompt) {
-      prompt = { volume, distance, haste, seconds: hideEnterSeconds(haste), loudness: hideNoise(haste) };
+      prompt = {
+        volume,
+        distance,
+        point: anchor,
+        haste,
+        seconds: hideEnterSeconds(haste),
+        loudness: hideNoise(haste),
+      };
       this.hidePromptBuffer = prompt;
     } else {
       prompt.volume = volume;
       prompt.distance = distance;
+      prompt.point = anchor;
       prompt.haste = haste;
       prompt.seconds = hideEnterSeconds(haste);
       prompt.loudness = hideNoise(haste);
@@ -2638,7 +2658,9 @@ export class Player {
       target.kind = 'hide';
       target.label = '';
       target.object = null;
-      target.point.set(spot.volume.entry.x, spot.volume.entry.y, spot.volume.entry.z);
+      // The glyph goes ON the box (the prompt's surface anchor), never at the
+      // authored standing point out in the open floor.
+      target.point.set(spot.point.x, spot.point.y, spot.point.z);
       target.distance = spot.distance;
       target.hide = spot;
       // The spot was only reported at all because it is inside `HIDE_REACH_M`,

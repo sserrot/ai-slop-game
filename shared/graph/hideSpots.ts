@@ -45,6 +45,7 @@ import {
   cloneV3,
   distance,
   localToWorld,
+  localToWorldInto,
   multiplyQuat,
   normalize,
   sub,
@@ -257,10 +258,57 @@ export class HideSpotGraph {
     return null;
   }
 
+  /** Closest point on this volume's box (surface, or `worldPos` itself when
+   *  inside) to `worldPos`, written into `out`, world space. */
+  closestPointInto(volume: HideVolume, worldPos: Vec3, out: Vec3): Vec3 {
+    const p = this.toLocal(volume, worldPos, this._localA);
+    const h = volume.halfExtents;
+    p.x = Math.max(-h.x, Math.min(h.x, p.x));
+    p.y = Math.max(-h.y, Math.min(h.y, p.y));
+    p.z = Math.max(-h.z, Math.min(h.z, p.z));
+    return localToWorldInto(p, { pos: volume.centre, quat: volume.quat }, out);
+  }
+
+  /**
+   * Nearest usable spot by distance to the box SURFACE, with the closest
+   * surface point written into `outPoint`.
+   *
+   * This is the "press E to get in" query. It used to be `nearestEntry` — the
+   * distance to the authored standing point — but the entry stands a body
+   * radius plus clearance off the shell, so the prompt appeared (and its glyph
+   * anchored) more than a metre from the box it was about: "the E interact to
+   * hide shows up far from the actual hiding spot". Measuring to the box makes
+   * the prompt behave like every other object's: you get it when you are AT
+   * the thing, from any side of it.
+   */
+  nearestSurface(
+    moduleId: ModuleId,
+    worldPos: Vec3,
+    maxDistance: number,
+    gravity: GravityMode | undefined,
+    outPoint: Vec3,
+  ): HideVolume | null {
+    const mode = gravity ?? this.graph.gravityOf(moduleId);
+    let best: HideVolume | null = null;
+    let bestD = Number.POSITIVE_INFINITY;
+    const list = this.inModule(moduleId);
+    for (let i = 0; i < list.length; i++) {
+      const v = list[i];
+      if (!this.usableIn(v, mode)) continue;
+      // Broad-phase: the bounding sphere before three transforms.
+      if (distance(worldPos, v.centre) > v.radius + maxDistance) continue;
+      const d = distance(worldPos, this.closestPointInto(v, worldPos, this._localB));
+      if (d > maxDistance || d >= bestD) continue;
+      best = v;
+      bestD = d;
+    }
+    if (best) this.closestPointInto(best, worldPos, outPoint);
+    return best;
+  }
+
   /**
    * Nearest spot whose ENTRY is within `maxDistance` of `worldPos` and which is
-   * usable under the module's current gravity. This is the "press E to get in"
-   * query.
+   * usable under the module's current gravity.
    */
   nearestEntry(
     moduleId: ModuleId,

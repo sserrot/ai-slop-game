@@ -278,13 +278,16 @@ export const BOB_AMPLITUDE_M = 0.045;
 // it is 0.65 m. What still makes the station feel cramped is the FURNITURE, not
 // the bore, which is where §2's chase geometry moved the problem on purpose.
 
-// Scaled down ~6% after the same playtest. The body was sized to a 1.75 m
-// headroom and read as oversized once the tube widened; a slightly smaller
-// crewmember also buys back deck clearance without shrinking the station's
-// sense of scale, which is the thing worth keeping.
-export const PLAYER_STAND_HEIGHT_M = 1.6;
+// Scaled down twice, both times off playtest reads. First ~6%: the body was
+// sized to a 1.75 m headroom and read as oversized once the tube widened.
+// Then 1.6 → 1.52 ("just a little bit shorter"): with the 6 m nodes the body
+// read tall against the furniture again, and a shorter crewmember buys deck
+// clearance without shrinking the station's sense of scale. The eye keeps its
+// 0.15 m offset below the crown, and `RAIL_ABOVE_DECK_M` tracks the height by
+// definition — re-run `buildLevel.ts` so the authored rails follow.
+export const PLAYER_STAND_HEIGHT_M = 1.52;
 export const PLAYER_CROUCH_HEIGHT_M = 0.95;
-export const EYE_HEIGHT_STAND_M = 1.45;
+export const EYE_HEIGHT_STAND_M = 1.37;
 export const EYE_HEIGHT_CROUCH_M = 0.8;
 
 /**

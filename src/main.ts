@@ -208,9 +208,8 @@ const CONTROLS: ReadonlyArray<readonly [string, string]> = [
   ['HOLD SHIFT', 'sprint (30, always heard) — or grip a rail in zero-G'],
   ['HOLD CTRL', 'crouch (4, near-silent, half speed)'],
   ['SPACE', 'jump — loud unless you land crouched · hold to charge a push-off'],
-  ['E', 'interact — panels, lockers, cargo, hide spots (your gait sets the price), a downed crewmate'],
+  ['E', 'interact — panels, lockers, cargo, hatches, hide spots (your gait sets the price), a downed crewmate'],
   ['Q', 'knock on a handrail (15, carries ~2 modules)'],
-  ['G', 'open / close the nearest hatch (45, and it hears you)'],
   ['H', 'SEAL the nearest hatch — two charges a round, no undo'],
   ['R', 'throw a decoy (70) — two a round, found in lockers'],
   ['HOLD V', 'pry a jammed locker — 60, 3 s (§11 loud-fast)'],
@@ -756,9 +755,6 @@ function onExtraKeys(event: KeyboardEvent): void {
   }
 
   switch (event.code) {
-    case 'KeyG':
-      cycleNearestHatch();
-      break;
     case 'KeyH':
       sealNearestHatch();
       break;
@@ -1859,6 +1855,15 @@ function onInteractPress(): void {
       return;
     }
   }
+
+  // Last: a hatch in reach. E cycles it — open a closed one, close an open one
+  // — the same one-key consolidation as hiding; the dedicated G binding is
+  // gone. Sealing deliberately stays on its own key (H): spending one of two
+  // irreversible charges must never be a mispress of "open".
+  const hatch = nearestPort();
+  if (hatch && !hatch.sealed) {
+    net.sendHatch(hatch.module, hatch.port, hatch.open ? 'close' : 'open');
+  }
 }
 
 /**
@@ -2044,7 +2049,15 @@ function currentPrompt(): InteractPromptSpec | null {
     const dz = other.pos.z - me.z;
     if (dx * dx + dy * dy + dz * dz <= REVIVE_RANGE_M * REVIVE_RANGE_M) downed = other.id;
   });
-  return downed === null ? null : PROMPT.revive(downed);
+  if (downed !== null) return PROMPT.revive(downed);
+
+  // A hatch in reach: E cycles it (45 — and the alien hears it). The id
+  // carries the pending verb so the chip refreshes the moment the state flips.
+  const hatch = nearestPort();
+  if (hatch && !hatch.sealed) {
+    return PROMPT.hatch(`hatch:${hatch.module}:${hatch.port}:${hatch.open ? 'close' : 'open'}`, hatch.open);
+  }
+  return null;
 }
 
 /** A §11 panel: whichever control is actually under the crosshair. */
@@ -2221,19 +2234,6 @@ function nearestPort(): { module: ModuleId; port: PortId; open: boolean; sealed:
     best = { module: module.id, port: port.id, open: port.hatch.open, sealed: port.hatch.sealed };
   }
   return best;
-}
-
-function cycleNearestHatch(): void {
-  const target = nearestPort();
-  if (!target) {
-    ui.toast('no hatch in reach');
-    return;
-  }
-  if (target.sealed) {
-    ui.toast('sealed');
-    return;
-  }
-  net.sendHatch(target.module, target.port, target.open ? 'close' : 'open');
 }
 
 function sealNearestHatch(): void {
