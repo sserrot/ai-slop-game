@@ -764,8 +764,11 @@ export function panelSpecsFromLayout(layout: StationLayout): PuzzlePanelSpec[] {
         module: module.id,
         position: localToWorld(prop.localPos, module.transform),
         // The prop's pose is authored in MODULE space; compose it with the
-        // module's own transform or every panel faces the wrong way.
-        quaternion: composeQuat(module.transform.quat, prop.localQuat),
+        // module's own transform or every panel faces the wrong way. Then take
+        // the plane from ITS frame into the prop screen frame (PLANE_TO_PROP):
+        // without this, a fallback plane lies flat along the prop instead of
+        // facing the room.
+        quaternion: composeQuat(composeQuat(module.transform.quat, prop.localQuat), PLANE_TO_PROP),
         draw,
         regions: REGIONS[regionKey] ?? REGIONS[drawKey] ?? [],
       });
@@ -796,6 +799,12 @@ function chooseCargoPanelProps(layout: StationLayout): Map<ModuleId, string> {
   }
   return chosen;
 }
+
+/** Rotation taking a raw `PlaneGeometry` (U +X, V up +Y, facing +Z) into the
+ *  wall-prop screen frame (U +Z, V up +X, facing +Y — the same mapping
+ *  `buildPanelParts` bakes into the station screen mesh): the axis
+ *  permutation X→Z→Y→X, i.e. 120° about (−1,−1,−1). */
+const PLANE_TO_PROP: Quat = { x: -0.5, y: -0.5, z: -0.5, w: 0.5 };
 
 /** Hamilton product — module quaternion ∘ prop quaternion. */
 function composeQuat(module: Quat, local: Quat | undefined): Quat {

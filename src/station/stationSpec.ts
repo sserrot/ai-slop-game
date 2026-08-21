@@ -105,14 +105,34 @@ const PANEL_INSET = RACK_DEPTH + PROP_ARCHETYPES.panel.size.y / 2 + 0.01;
  * `angleDeg` should be 0 or 180 in any module that has a deck: those put the
  * panel at axis height, 0.75 m over the floor. See the header.
  */
+/**
+ * PANEL ORIENTATION — the one convention, derived once:
+ *
+ * A panel is a PORTRAIT fixture: the plate's long +X axis is its "up", the
+ * screen face (local +Y into the room) maps the puzzle canvas with U along
+ * local +Z and V (canvas-up) along local +X (`buildPanelParts`), and the
+ * lever/dial hardware in `puzzleProps.ts` is designed against that frame. So
+ * every wall panel must be authored with **local +X pointing at the
+ * CEILING**, which `orientProp(inward, along)` produces exactly when
+ * `along = worldUp × inward`. The old authoring passed a fixed tangent, which
+ * left two of the four node orientations with +X pointing at the deck and
+ * every screen standing on its side — the playtest photographed a breaker
+ * panel whose "MAIN BUS" read bottom-to-top.
+ */
+function panelAlong(inward: Vec3): Vec3 {
+  // worldUp × inward, for a horizontal `inward` (every wall panel's case).
+  return v3(inward.z, 0, -inward.x);
+}
+
 function tubePanel(id: string, radius: number, angleDeg: number, z: number): PropRef {
   const a = (angleDeg * Math.PI) / 180;
   const r = radius - PANEL_INSET;
+  const inward = v3(-Math.cos(a), -Math.sin(a), 0);
   return {
     id,
     kind: 'panel',
     localPos: v3(Math.cos(a) * r, Math.sin(a) * r, z),
-    localQuat: orientProp(v3(-Math.cos(a), -Math.sin(a), 0), v3(0, 0, 1)),
+    localQuat: orientProp(inward, panelAlong(inward)),
     interactable: true,
   };
 }
@@ -142,7 +162,9 @@ function nodePanel(id: string, faceNormal: Vec3, tangent: Vec3): PropRef {
     ),
     localQuat: orientProp(
       v3(-faceNormal.x, -faceNormal.y, -faceNormal.z),
-      tangent,
+      // See `panelAlong`: the tangent places the panel along its face, but the
+      // SCREEN frame demands local +X point at the ceiling on every face.
+      panelAlong(v3(-faceNormal.x, -faceNormal.y, -faceNormal.z)),
     ),
     interactable: true,
   };

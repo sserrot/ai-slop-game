@@ -118,7 +118,13 @@ export class PlayerInput {
   private lastLockedState = false;
 
   private readonly onKeyDown = (e: KeyboardEvent): void => {
-    if (e.repeat) return;
+    // Repeats never change state, but they MUST still be defaulted-away while
+    // locked: holding Ctrl+S to crouch-walk fires repeating S keydowns, and an
+    // unprevented repeat is the browser's Save dialog mid-round.
+    if (e.repeat) {
+      if (this.locked && this.codeIndex.has(e.code)) e.preventDefault();
+      return;
+    }
     if (this.setFromCode(e.code, true) && this.shouldPreventDefault(e.code)) e.preventDefault();
   };
 
@@ -391,9 +397,21 @@ export class PlayerInput {
     return true;
   }
 
-  /** Space scrolls the page and arrows move the caret; both would be visible
-   *  under pointer lock as a jittering scrollbar. */
+  /**
+   * Which handled keydowns get `preventDefault()`.
+   *
+   * Under pointer lock: ALL of them. Crouch is Ctrl, so an ordinary
+   * crouch-walk is Ctrl+S / Ctrl+D — the browser's Save and Bookmark
+   * accelerators — and Ctrl+W (close tab) is one panicked crouch-forward away.
+   * Preventing default on every bound key while locked is what keeps the
+   * browser chrome out of the round; anything unbound (F5, F12, Escape) still
+   * reaches the browser untouched.
+   *
+   * Unlocked (menu open): only the keys whose default visibly wrecks the
+   * overlay — Space scrolls the page, arrows move the caret, Tab walks focus.
+   */
   private shouldPreventDefault(code: string): boolean {
+    if (this.locked) return true;
     return code === 'Space' || code.startsWith('Arrow') || code === 'Tab';
   }
 }

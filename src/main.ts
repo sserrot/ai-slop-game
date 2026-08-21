@@ -810,9 +810,10 @@ function buildPuzzles(layout: StationLayout): void {
     // is; we only supply the glass. Size the canvas to the real screen so the
     // drawing is not stretched, and do NOT add a second plane to the scene.
     const screen = station?.panel(propIdOf(spec.key));
-    // Match the station's real screen face (PROP_ARCHETYPES.panel, 0.86 × 0.58
-    // with an 0.86/0.82 inset) so the drawing is not stretched.
-    return screen ? { ...spec, width: 0.74, height: 0.476 } : spec;
+    // Match the station's real screen face: a PORTRAIT plate
+    // (PROP_ARCHETYPES.panel, 0.58 across × 0.86 up with the 0.82/0.86
+    // insets) so the drawing is not stretched.
+    return screen ? { ...spec, width: 0.476, height: 0.74 } : spec;
   });
 
   const puzzlePanels = createPuzzlePanels(ui.panels, specs);

@@ -1369,9 +1369,16 @@ export function buildPanelParts(): PanelParts {
   const body = mergeParts(parts);
   assertPolyBudget(body, BUDGETS.panel, 'wall panel housing');
 
-  const screen = new THREE.PlaneGeometry(s.x * 0.86, s.z * 0.82);
-  // The plane faces +Z by default; rotate it to face +Y (into the room).
+  // PORTRAIT, in the prop's screen frame: canvas U (across) runs along local
+  // +Z with the plate's 0.82 z-inset, canvas V (up) along local +X with the
+  // 0.86 x-inset. The plane was previously built with U along +X — 90° off
+  // the frame the level authors and `puzzleProps.ts` design against, which
+  // put every readout on its side.
+  const screen = new THREE.PlaneGeometry(s.z * 0.82, s.x * 0.86);
+  // The plane faces +Z with V up +Y by default; take it to face +Y (into the
+  // room) with V up +X: X(-90°) then Y(-90°).
   screen.rotateX(-Math.PI / 2);
+  screen.rotateY(-Math.PI / 2);
   screen.translate(0, s.y / 2 + 0.005, 0);
   return { body, screen };
 }
