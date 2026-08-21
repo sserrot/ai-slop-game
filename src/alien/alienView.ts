@@ -90,7 +90,7 @@ import type {
   Quat,
   Vec3,
 } from '@shared/types';
-import { DECK_HEADROOM_M } from '@shared/constants';
+import { DECK_HEADROOM_M, RAIL_Y_M } from '@shared/constants';
 import {
   POLY_BUDGETS,
   assertInert,
@@ -1190,11 +1190,17 @@ const RAIL_LEGS = Object.freeze({
  *
  * The fix is not to bend the arms differently, it is to TURN THE CREATURE OVER,
  * and the station geometry says the same thing. `tubeRails()` in
- * `src/station/kit.ts` puts a `zero` module's rails at `v3(0, ±offset, z)` —
- * the floor-and-ceiling pair the movement grammar was designed around, never
- * the side walls — and `server/sim/alien.ts` snaps the creature ONTO one of
- * them. So the thing is threaded on an overhead bar, and a body hauling itself
- * along an overhead bar hangs UNDER it. See {@link VACUUM_ROLL}.
+ * `src/station/kit.ts` runs a pair of rails the length of every module at
+ * `v3(±tubeRailX(radius), RAIL_Y_M, z)` — high on the bore, about 70% of the
+ * way to the crown, and close enough to the centreline to read as an overhead
+ * pair rather than as wall furniture. `server/sim/alien.ts` snaps the creature
+ * ONTO one of them. So the thing is threaded on an overhead bar, and a body
+ * hauling itself along an overhead bar hangs UNDER it. See {@link VACUUM_ROLL}.
+ *
+ * (Those rails are no longer gravity-dependent: `RAIL_ABOVE_DECK_M` clears a
+ * standing crewmate by 0.22 m so that §4's promise — 2.5 s of warning before a
+ * floor fails is only fair if there is something grabbable overhead — holds in
+ * every module. The creature inherits that: same bar, both regimes.)
  *
  * Everything below therefore describes one contact plane and how far the limbs
  * reach into it. The plane rotates with the body; the reach shortens from the
@@ -1281,6 +1287,14 @@ const DUTY_RAIL = 0.38;
  * across about a second, starting inside the 2.5 s announcement window while
  * somebody is watching. That is the most legible thing this creature does and
  * it costs one term.
+ *
+ * A half turn and not a quarter, even though the rails sit `tubeRailX` off the
+ * centreline rather than on it: at `RAIL_Y_M` that offset is a small fraction
+ * of the bore radius, so the bar is overhead far more than it is beside, and
+ * rolling only 90° would hang the creature off the WALL — which is both wrong
+ * and much less frightening than something inverted on the ceiling. The view
+ * cannot know which of the two rails the server picked, so it commits to the
+ * pose that is right for either.
  *
  * The number is not free to change: {@link CONTACT}'s whole formulation assumes
  * the contact plane and the body rotate TOGETHER, and `assertAlienCoherent()`
@@ -2681,21 +2695,34 @@ const SECONDARY_PROBES: readonly Secondary[] = Object.freeze([
 ]);
 
 /**
- * m — how far the spine may swing sideways from the body's own axis.
+ * m — how far the spine may swing sideways from the body's own axis before it
+ * is inside the hull.
  *
- * Read off the kit rather than typed in: a straight piece's bore and the offset
- * its `zero` handrails sit at are both properties of `KIT.straight`, so a level
- * built from wider or narrower tube moves this on its own. The available half
- * width beside the rail is `sqrt(bore² − railOffset²)`; a third of it is left
- * for the creature's own girth and for not visibly grazing the wall, because a
- * tail that technically clears the hull by a centimetre reads as clipping.
+ * Read off the kit rather than typed in, so a level built from wider or
+ * narrower tube moves it on its own — which is exactly what happened when
+ * `TUBE_RADIUS_M` went 1.0 → 1.5. What did NOT survive that change was the
+ * first version of this derivation, and the way it failed is worth keeping:
+ *
+ *   `sqrt(bore² − railOffset²)` was right when a `zero` module's rails were a
+ *   floor-and-ceiling pair, because `railOffset` was then a HEIGHT and that
+ *   expression is the bore's half width at that height. Rails now run at
+ *   `(±tubeRailX, RAIL_Y_M, z)`, so `railOffset` is an X coordinate and the
+ *   old expression measures nothing at all. It kept returning a plausible
+ *   number — 0.938 m against a true 0.722 m — so the check went on passing,
+ *   for the wrong reason, which is the worst state an assertion can be in.
+ *
+ * Derived properly: the body hangs {@link CONTACT.railReach} below the bar, so
+ * its spine sits at `RAIL_Y_M − railReach`. The bore's half width THERE is
+ * `sqrt(bore² − y²)`, and the creature is already `railOffset` off the
+ * centreline toward one wall, so the room it actually has is the difference.
+ * Two thirds of that is left for its own girth and for not visibly grazing the
+ * hull, because a tail clearing the wall by a centimetre reads as clipping.
  */
 const SPINE_LATERAL_LIMIT = (() => {
   const straight = KIT.straight;
-  const halfWidth = Math.sqrt(
-    Math.max(0, straight.radius * straight.radius - straight.railOffset * straight.railOffset),
-  );
-  return halfWidth * 0.67;
+  const spineY = RAIL_Y_M - CONTACT.railReach;
+  const halfWidth = Math.sqrt(Math.max(0, straight.radius * straight.radius - spineY * spineY));
+  return Math.max(0.1, halfWidth - straight.railOffset) * 0.67;
 })();
 
 /**
