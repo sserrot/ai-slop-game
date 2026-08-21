@@ -218,6 +218,32 @@ const _prevPoint = new THREE.Vector3();
 const _step = new THREE.Vector3();
 const _preVel = new THREE.Vector3();
 /** Scratch for `standUpOnSettle()`'s one downward ray. */
+/**
+ * Reach beyond the body radius for a brace surface (§4 surface push-off).
+ *
+ * Deliberately generous — 1.0 m, so 1.3 m from the body centre. A tighter 0.45 m
+ * was measured as useless: contact with a bulkhead is elastic (RESTITUTION), so
+ * a drifting body touches the wall and is already coasting back out of reach by
+ * the time the player reacts. Measured in that state: the surface probe returned
+ * false on every frame while the wall sat 0.73-0.9 m away.
+ *
+ * This is a rescue, not a movement tech. Being unable to move at all is a far
+ * worse failure than occasionally pushing off something slightly out of arm's
+ * reach, and §4 already prices every push-off the same flat 8 regardless.
+ */
+const BRACE_REACH_M = 1.0;
+/** Axis probe directions for {@link Player.probeBraceSurface}. */
+const BRACE_DIRS: readonly THREE.Vector3[] = [
+  new THREE.Vector3(1, 0, 0),
+  new THREE.Vector3(-1, 0, 0),
+  new THREE.Vector3(0, 1, 0),
+  new THREE.Vector3(0, -1, 0),
+  new THREE.Vector3(0, 0, 1),
+  new THREE.Vector3(0, 0, -1),
+];
+const _braceNormal = new THREE.Vector3();
+const _braceHit = makeRayHit();
+
 const _settleHit: RayHit = makeRayHit();
 const _tangent = new THREE.Vector3();
 const _centre = new THREE.Vector3();
@@ -1302,6 +1328,105 @@ export class Player {
     this.foldPropContact();
     if (latched || stoppedByDoor) return;
     if (this.contact.hit) this.resolveImpact(_preVel, this.contact.normal);
+
+    // A surface you are touching is something to push off. Without this the only
+    // way out of a drift is a rail: a player who crossed into a zero-G module,
+    // missed the grab and coasted into a wall had NO input that moved them —
+    // reported as "i fell and then was stuck on the floor". The fire
+    // extinguisher (§4) is the authored rescue and it is bound and working, but
+    // three charges behind a key nobody has pressed yet is not an answer to
+    // being stranded by ordinary movement.
+    //
+    // This is also just how bodies work in zero-G: astronauts push off walls far
+    // more than they haul on rails. §4's push-off numbers are unchanged — same
+    // charge time, same PUSH_MIN..PUSH_MAX, same flat loudness 8 — the only new
+    // thing is that a bulkhead counts as something to push against.
+    this.updateSurfacePush(dt);
+  }
+
+  /**
+   * Charge a push-off against whatever the body is resting on (zero-G only).
+   *
+   * Entered from FLOATING while in contact, so it cannot interfere with the rail
+   * path: `updateAnchored` owns CHARGING when a grip is held, and this only runs
+   * when there is no grip at all. The launch direction is where you are looking,
+   * hemisphere-clamped to the contact normal so you cannot push yourself further
+   * into the wall you are pressed against.
+   */
+  private updateSurfacePush(dt: number): void {
+    const touching = this.probeBraceSurface(_braceNormal);
+    if (this._state === 'CHARGING' && this._gripKey === null) {
+      this._charge = clamp(this._charge + dt / CHARGE_TIME, 0, 1);
+      this.publishCharge();
+      // Drifting off the surface mid-charge cancels it — you have nothing left
+      // to push against. Releasing fires.
+      if (!this.input.isDown('charge') || !touching) {
+        if (touching) this.pushOffFrom(_braceNormal);
+        else {
+          this._charge = 0;
+          this.setState('FLOATING');
+          this.publishCharge();
+        }
+      }
+      return;
+    }
+    if (this._state === 'FLOATING' && touching && this.input.isDown('charge')) {
+      this.setState('CHARGING');
+      this._charge = 0;
+    }
+  }
+
+  /**
+   * Is there a surface within arm's reach to brace against, and which way does
+   * it face? Writes the outward normal into `out`.
+   *
+   * A PROBE, not `this.contact`. `contact` only reports a hit when the swept
+   * body actually collides during motion, so a player already at rest against a
+   * bulkhead has no contact at all — which is precisely the stranded case this
+   * exists to rescue, and is why the first version of this fix did nothing.
+   * Measured on the reported situation: state FLOATING, speed 0.47 m/s,
+   * `contact.hit === false`.
+   *
+   * Six axis rays, only while the charge key is held, so the cost is nil.
+   */
+  private probeBraceSurface(out: THREE.Vector3): boolean {
+    const collider = this.collider;
+    if (!collider?.ready) return false;
+    const reach = PLAYER_RADIUS + BRACE_REACH_M;
+    let best = Infinity;
+    let found = false;
+    for (const dir of BRACE_DIRS) {
+      const hit = collider.raycast(this.position, dir, reach, _braceHit);
+      if (!hit.hit || hit.distance >= best) continue;
+      best = hit.distance;
+      // Face the normal back toward the body: a double-sided hit can report
+      // either winding, and "away from the wall" is the only useful answer.
+      out.copy(hit.normal);
+      if (out.dot(dir) > 0) out.negate();
+      found = true;
+    }
+    return found;
+  }
+
+  /** `pushOff` with the launch direction clamped out of a surface. */
+  private pushOffFrom(normal: THREE.Vector3): void {
+    this.look.forward(_fwd);
+    // Looking into the wall would otherwise launch you into it. Reflect the
+    // inward component out along the normal so "push" always means "away".
+    const into = _fwd.dot(normal);
+    if (into < 0) _fwd.addScaledVector(normal, -into * 2);
+    if (_fwd.lengthSq() > 1e-9) _fwd.normalize();
+    else _fwd.copy(normal);
+    const charge = this._charge;
+    const speed = PUSH_MIN + (PUSH_MAX - PUSH_MIN) * charge;
+    this.velocity.copy(_fwd).multiplyScalar(speed);
+    this._charge = 0;
+    this.slideAccum = 0;
+    this.latchLockout = PUSH_LATCH_LOCKOUT_S;
+    this.setState('FLOATING');
+    this.publishCharge();
+    this.emit('push-off');
+    this.heart.addExertion(EXERTION_PUSH * (0.4 + 0.6 * charge));
   }
 
   // =========================================================================

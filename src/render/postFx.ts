@@ -95,12 +95,30 @@ import type { QualityProfile } from './types';
  *
  * The number below that is 4.1 Mpx, where a 4× multisampled RGBA16F target was
  * still costing 1.5 ms; at 5.2 Mpx it stopped fitting and the same frame cost
- * 106 ms. 3.4 Mpx leaves 1.8 Mpx of margin under the measured cliff. The
- * cliff's exact position depends on what else holds VRAM — it was measured with
- * another 3D application holding 8.5 GB of 10 — but the ordering (MSAA
- * dominates everything else once the target is large) does not.
+ * 106 ms. The cliff's exact position depends on what else holds VRAM — it was
+ * measured with another 3D application holding 8.5 GB of 10 — but the ordering
+ * (MSAA dominates everything else once the target is large) does not.
+ *
+ * LOWERED 3.4 Mpx -> 2.3 Mpx. A player reported the game running at 10 fps, and
+ * the renderer's own guard logged `quality high -> medium (auto, 10 fps)` and
+ * then `medium -> low (auto, 14 fps)`. 10 fps is a 100 ms frame, which is the
+ * 106 ms signature above and nothing else in this renderer — CPU on the same
+ * build measures 1.4 ms/frame, and cutting the frame to a THIRD of its pixels
+ * changed GPU cost by 16%, so it was never fill rate.
+ *
+ * The old gate assumed the cliff sits somewhere near 5 Mpx. It does not: it
+ * moves with whatever else holds VRAM, and on a machine with a browser and a
+ * game and everything else running it can sit under the gate — which is exactly
+ * what a `maxRenderPixels` of 3.3 Mpx then walks straight off. 2.3 Mpx is the
+ * highest size MEASURED on the flat part of the curve (1.2 ms), so it is the
+ * only value here justified by data rather than by extrapolation.
+ *
+ * The trade is real and small: above 2.3 Mpx you get no MSAA. In a scene that is
+ * fog, darkness and a torch beam, losing edge antialiasing costs far less than a
+ * 100 ms frame — and the alternative is a cliff whose position we cannot predict
+ * on someone else's machine.
  */
-export const MSAA_MAX_PIXELS = 3_400_000;
+export const MSAA_MAX_PIXELS = 2_300_000;
 
 /** Blur target size relative to the bright pass. One 4× box downsample. */
 const BLOOM_BLUR_DIVISOR = 4;
