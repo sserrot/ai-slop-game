@@ -803,7 +803,19 @@ const STRAIGHT: KitPiece = {
 // Piece 2 — 6-way node (§2 "6-way node")
 // ---------------------------------------------------------------------------
 
-export const NODE_H = scaled(1.5);
+/**
+ * Node half-extent. `scaled(2.0)` = 3.0 m, a 6 m room.
+ *
+ * Was `scaled(1.5)` (a 4.5 m room), and the playtest read that as cramped: with
+ * a 1.36 m console island in the middle, the lanes were 1.57 m and the island
+ * filled a third of the view from any doorway. At 6 m the lanes round the
+ * island are 2.3 m+, the island reads as furniture rather than a roadblock,
+ * and a node finally feels like the junction room §2 describes instead of a
+ * wide bit of corridor. Everything below — ports, rails, deck, strips, chases,
+ * decor — derives from this one number; re-run `buildLevel.ts` after touching
+ * it.
+ */
+export const NODE_H = scaled(2.0);
 
 /**
  * How far off a node face's centre its rack bay sits, along the face.
@@ -1044,20 +1056,26 @@ const NODE: KitPiece = {
    * §2 calls a loop the highest-value piece of geometry in the kit, and a node
    * with an island in it is a genuine four-exit ring: the thing has to pick a
    * direction and it can pick wrong. Putting the hide volume UNDER the console
-   * costs the ring nothing and puts the spot at the centre of the loop, which is
-   * the most useful metre in the room during the chase §4 built hiding for.
+   * costs the ring nothing.
    *
-   * The island grew with the room. At 3 m across, a 1.0 m island left 1.0 m
-   * lanes and any box parked in one of them closed it; at 4.5 m, a 1.36 m island
-   * leaves 1.57 m lanes, so the island can finally be a piece of furniture a
-   * body genuinely fits inside rather than a minimum-sized token.
+   * OFF-CENTRE now, toward the (−X, +Z) quarter — the corner the fins do NOT
+   * occupy. Dead centre it was the first thing every doorway framed and the
+   * one obstacle every crossing had to route around, which the playtest read
+   * as "a cabinet in the middle of the room". Pushed to a quarter it still
+   * closes the diagonal on its own side of the ring (a loop survives an
+   * asymmetric island), but the straight walk between any two opposite
+   * doorways is now clear. The offset scales with the room so the clearances
+   * hold if `NODE_H` moves again: at 3.0 m half-extent the island's outer face
+   * keeps 0.75 m to the nearest rack and the doorway lanes keep a body width
+   * plus margin, which `buildLevel.ts`'s walkable check proves on every run.
    *
    * `geometry.ts` builds the shell from this volume, so the console you see and
    * the box the alien has to route around are the same object.
    */
   hideSpots(moduleId, gravity) {
     if (gravity === 'zero') return [];
-    return [nodeConsoleVoid(`${moduleId}-console`, NODE_ISLAND_HALF)];
+    const off = round2(NODE_H * 0.45);
+    return [nodeConsoleVoid(`${moduleId}-console`, NODE_ISLAND_HALF, -off, off)];
   },
 };
 

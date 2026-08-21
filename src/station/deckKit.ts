@@ -918,18 +918,22 @@ export function labIsland(moduleId: ModuleId, radius: number, length: number): P
  * the top is available and costs a landing (§4). Loud shortcut, quiet detour; the same rule
  * as everything else in §11.
  */
-export function nodeConsoleVoid(id: string, half = 0.42): HideSpot {
+export function nodeConsoleVoid(id: string, half = 0.42, offsetX = 0, offsetZ = 0): HideSpot {
   const halfExtents = v3(half, 0.3, half);
+  // The entry stands on the module-CENTRE side of the island, so an off-centre
+  // island is always approached from the open middle of the room rather than
+  // from the narrower gap between the island and the wall it was pushed toward.
+  const entrySign = offsetZ > 0 ? -1 : 1;
   return {
     id,
     kind: 'equipment-bay',
     // Sit the shell's underside exactly on the deck.
-    localPos: roundVec(v3(0, DECK_Y_M + HIDE_SHELL_T + halfExtents.y, 0)),
+    localPos: roundVec(v3(offsetX, DECK_Y_M + HIDE_SHELL_T + halfExtents.y, offsetZ)),
     halfExtents,
-    // Approached along +Z, standing clear of the shell the way every other bay's
-    // mouth does (`bayEntryOffset`) rather than at a hard-coded 0.95.
-    entryPos: roundVec(v3(0, DECK_Y_M + 0.9, bayEntryOffset(half))),
-    lookDir: v3(0, 0, 1),
+    // Standing clear of the shell the way every other bay's mouth does
+    // (`bayEntryOffset`) rather than at a hard-coded 0.95.
+    entryPos: roundVec(v3(offsetX, DECK_Y_M + 0.9, offsetZ + entrySign * bayEntryOffset(half))),
+    lookDir: v3(0, 0, entrySign),
     usableIn: 'any',
   };
 }

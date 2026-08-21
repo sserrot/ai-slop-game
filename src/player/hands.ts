@@ -64,13 +64,18 @@ import type { ItemKind } from '../station/items';
  * (+Z) and 0.13 m below it, so the sleeves are clipped by the near plane instead
  * of ending in a floating stump, and the resting glove sits exactly on the
  * bottom edge — present, not in the way.
+ *
+ * `x` was 0.28 — 68% of the half-width at glove depth — which parked each hand
+ * hard against its frame edge, where the near-plane perspective stretches it
+ * into a fisheye smear the playtest read as "way too big". 0.19 brings both
+ * arms into the middle third of the frame, where they read at their true size.
  */
-const ELBOW = { x: 0.28, y: -0.07, z: 0.06 };
+const ELBOW = { x: 0.19, y: -0.075, z: 0.06 };
 
 /** m — sleeve seal ring. */
-const CUFF_L = 0.055;
-const PALM_L = 0.055;
-const FINGER_L = 0.075;
+const CUFF_L = 0.045;
+const PALM_L = 0.048;
+const FINGER_L = 0.062;
 /** m — where the knuckle line sits relative to the wrist end of the forearm. */
 const WRIST_TO_KNUCKLE = CUFF_L + PALM_L - 0.012;
 
@@ -154,18 +159,21 @@ function at(g: THREE.BufferGeometry, x: number, y: number, z: number): THREE.Buf
  */
 function buildLimb(side: -1 | 1): THREE.BufferGeometry {
   const parts: THREE.BufferGeometry[] = [];
-  // Sleeve, elbow to wrist.
-  parts.push(at(zTube(0.064, 0.052, FOREARM_L), 0, 0, 0));
+  // Sleeve, elbow to wrist. Cross-sections sized to a forearm in a suit sleeve,
+  // not a padded gauntlet: at 0.3 m from the eye every extra centimetre of
+  // radius reads as three, and the playtest verdict on the first sizing was
+  // simply "way too big".
+  parts.push(at(zTube(0.047, 0.038, FOREARM_L), 0, 0, 0));
   // Cuff: a hard ring where the glove meets the sleeve, FLARED outward toward
   // the hand so the join reads as a seal — which is what an EVA cuff is, and the
   // one hard silhouette break between shoulder and knuckle.
-  parts.push(at(zTube(0.07, 0.078, CUFF_L), 0, 0, -FOREARM_L + 0.012));
+  parts.push(at(zTube(0.051, 0.057, CUFF_L), 0, 0, -FOREARM_L + 0.012));
 
   const palmZ = -FOREARM_L - CUFF_L - PALM_L / 2 + 0.012;
-  parts.push(at(chamferedBox({ x: 0.098, y: 0.056, z: PALM_L + 0.018 }, 0.014), 0, 0, palmZ));
+  parts.push(at(chamferedBox({ x: 0.073, y: 0.042, z: PALM_L + 0.014 }, 0.011), 0, 0, palmZ));
   for (let i = 0; i < 4; i++) {
-    const x = (-0.033 + i * 0.022) * side;
-    parts.push(at(new THREE.BoxGeometry(0.019, 0.012, 0.03), x, 0.031, palmZ - 0.014));
+    const x = (-0.0255 + i * 0.017) * side;
+    parts.push(at(new THREE.BoxGeometry(0.0145, 0.009, 0.023), x, 0.0235, palmZ - 0.011));
   }
 
   const g = mergeParts(parts);
@@ -184,17 +192,17 @@ function buildLimb(side: -1 | 1): THREE.BufferGeometry {
 function buildDigits(side: -1 | 1): THREE.BufferGeometry {
   const parts: THREE.BufferGeometry[] = [];
   for (let i = 0; i < 4; i++) {
-    const x = (-0.033 + i * 0.022) * side;
+    const x = (-0.0255 + i * 0.017) * side;
     // Middle fingers longer, like fingers.
     const len = FINGER_L * (i === 1 || i === 2 ? 1 : 0.86);
-    const finger = zTube(0.011, 0.009, len, 6);
+    const finger = zTube(0.0085, 0.007, len, 6);
     finger.rotateY(((i - 1.5) * 0.06) * side);
     parts.push(at(finger, x, 0.002, -len / 2));
   }
-  const thumb = zTube(0.014, 0.011, FINGER_L * 0.8, 6);
+  const thumb = zTube(0.011, 0.0085, FINGER_L * 0.8, 6);
   thumb.rotateY(-0.85 * side);
   thumb.rotateX(0.25);
-  parts.push(at(thumb, 0.044 * side, -0.016, -0.022));
+  parts.push(at(thumb, 0.033 * side, -0.013, -0.018));
 
   const g = mergeParts(parts);
   g.name = `hand-digits-${side < 0 ? 'l' : 'r'}`;

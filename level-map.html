@@ -1,0 +1,364 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ISS — Level Map</title>
+<style>
+  :root {
+    --bg: #0a0c0e; --panel: #12161a; --line: #232b32; --ink: #cfd8de; --dim: #7c8a94;
+    --green: #5ee8b5; --amber: #ffb454; --red: #ff5d5d; --blue: #6fb8ff;
+    --mono: ui-monospace, 'Cascadia Mono', Consolas, monospace;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font-family: var(--mono); font-size: 13px; }
+  header {
+    padding: 12px 20px; border-bottom: 1px solid var(--line);
+    display: flex; align-items: baseline; gap: 16px; flex-wrap: wrap;
+  }
+  header h1 { font-size: 15px; letter-spacing: .14em; margin: 0; text-transform: uppercase; }
+  header h1 b { color: var(--green); }
+  header .sub { color: var(--dim); font-size: 12px; }
+  #wrap { display: flex; gap: 0; align-items: stretch; }
+  #map { flex: 1; min-width: 0; }
+  svg { display: block; width: 100%; height: calc(100vh - 96px); }
+  aside {
+    width: 290px; flex: 0 0 auto; border-left: 1px solid var(--line);
+    padding: 14px 16px; overflow-y: auto; height: calc(100vh - 96px);
+  }
+  aside h2 { font-size: 11px; letter-spacing: .2em; text-transform: uppercase; color: var(--dim); margin: 18px 0 8px; }
+  aside h2:first-child { margin-top: 0; }
+  .key { display: flex; align-items: center; gap: 8px; margin: 4px 0; color: var(--dim); font-size: 12px; }
+  .sw { width: 14px; height: 14px; flex: 0 0 auto; border-radius: 3px; }
+  .mod-row { padding: 5px 0; border-bottom: 1px dashed #1a2127; font-size: 12px; }
+  .mod-row b { color: var(--ink); }
+  .mod-row .meta { color: var(--dim); }
+  text { font-family: var(--mono); }
+  .err { padding: 40px; color: var(--red); }
+</style>
+</head>
+<body>
+<header>
+  <h1>ISS <b>// Level Map</b></h1>
+  <span class="sub" id="title">loading levels/station.json…</span>
+  <span class="sub">top-down · north = −Z (up) · 1 grid square = 1 m</span>
+</header>
+<div id="wrap">
+  <div id="map"></div>
+  <aside id="side"></aside>
+</div>
+<script>
+'use strict';
+/* Footprint dims per module kind — mirrors src/station/kit.ts (radius/length of
+   each KitPiece). Update here if the kit changes; everything else on this page
+   is read live from levels/station.json. */
+const KIND_DIMS = {
+  node:     { shape: 'square',   half: 3.0 },
+  straight: { shape: 'cylinder', radius: 1.5,  length: 5.0 },
+  lab:      { shape: 'cylinder', radius: 2.1,  length: 5.0 },
+  airlock:  { shape: 'cylinder', radius: 1.8,  length: 4.0 },
+  cupola:   { shape: 'dome',     radius: 2.25, portZ: -1.8 },
+};
+
+// Humanize a prop id: 'node-beta-panel-breaker' -> 'breaker'.
+function propLabel(module, prop) {
+  let s = prop.id;
+  if (s.startsWith(module.id + '-')) s = s.slice(module.id.length + 1);
+  return s;
+}
+const PUZZLE_HINTS = {
+  breaker: 'Puzzle: breaker sequence', valve: 'Puzzle: coolant valve',
+  fuse: 'Puzzle: fuse socket', gauge: 'Puzzle: coolant gauge',
+  keyswitch: 'Puzzle: airlock keyswitch (two-person)', undock: 'Finale: undock lever',
+  egress: 'Finale: egress console', capsule: 'Escape capsule console',
+};
+function puzzleHint(label) {
+  for (const k of Object.keys(PUZZLE_HINTS)) if (label.includes(k)) return PUZZLE_HINTS[k];
+  return null;
+}
+
+// Quaternion rotate (x,y,z) by {x,y,z,w}.
+function rot(q, v) {
+  const { x, y, z, w } = q;
+  const ix = w * v.x + y * v.z - z * v.y;
+  const iy = w * v.y + z * v.x - x * v.z;
+  const iz = w * v.z + x * v.y - y * v.x;
+  const iw = -x * v.x - y * v.y - z * v.z;
+  return {
+    x: ix * w + iw * -x + iy * -z - iz * -y,
+    y: iy * w + iw * -y + iz * -x - ix * -z,
+    z: iz * w + iw * -z + ix * -y - iy * -x,
+  };
+}
+function toWorld(mod, local) {
+  const r = rot(mod.transform.quat, local);
+  const p = mod.transform.pos;
+  return { x: r.x + p.x, y: r.y + p.y, z: r.z + p.z };
+}
+
+const SVG = 'http://www.w3.org/2000/svg';
+function el(name, attrs, parent) {
+  const n = document.createElementNS(SVG, name);
+  for (const k in attrs) n.setAttribute(k, attrs[k]);
+  if (parent) parent.appendChild(n);
+  return n;
+}
+function tip(node, text) {
+  const t = document.createElementNS(SVG, 'title');
+  t.textContent = text;
+  node.appendChild(t);
+}
+
+async function main() {
+  let layout;
+  try {
+    const res = await fetch('levels/station.json');
+    if (!res.ok) throw new Error(res.status + ' ' + res.statusText);
+    layout = await res.json();
+  } catch (e) {
+    document.getElementById('map').innerHTML =
+      '<div class="err">Could not fetch levels/station.json (' + e.message +
+      ').<br>Open this page through the dev server, e.g. http://localhost:3000/level-map.html</div>';
+    return;
+  }
+  document.getElementById('title').textContent =
+    layout.id + ' · ' + layout.modules.length + ' modules · escape: ' + layout.escapeModule +
+    ' · finale: ' + layout.finaleModule;
+
+  // World bounds (XZ).
+  let minX = 1e9, maxX = -1e9, minZ = 1e9, maxZ = -1e9;
+  const touch = (p) => {
+    if (p.x < minX) minX = p.x; if (p.x > maxX) maxX = p.x;
+    if (p.z < minZ) minZ = p.z; if (p.z > maxZ) maxZ = p.z;
+  };
+  for (const m of layout.modules) {
+    const d = KIND_DIMS[m.kind] ?? { shape: 'square', half: 2.5 };
+    const r = d.shape === 'square' ? d.half : Math.max(d.radius, (d.length ?? 0) / 2);
+    touch({ x: m.transform.pos.x - r - 1, z: m.transform.pos.z - r - 1 });
+    touch({ x: m.transform.pos.x + r + 1, z: m.transform.pos.z + r + 1 });
+  }
+
+  const PAD = 1.5;
+  const vb = [minX - PAD, minZ - PAD, (maxX - minX) + PAD * 2, (maxZ - minZ) + PAD * 2];
+  const svg = el('svg', { viewBox: vb.join(' '), preserveAspectRatio: 'xMidYMid meet' });
+  document.getElementById('map').appendChild(svg);
+  // Map world (x, z) -> svg (x, y). One unit = one metre.
+  const root = el('g', {}, svg);
+
+  // Metre grid.
+  const grid = el('g', { stroke: '#151b20', 'stroke-width': 0.02 }, root);
+  for (let gx = Math.floor(minX - PAD); gx <= Math.ceil(maxX + PAD); gx++) {
+    el('line', { x1: gx, y1: vb[1], x2: gx, y2: vb[1] + vb[3] }, grid);
+  }
+  for (let gz = Math.floor(minZ - PAD); gz <= Math.ceil(maxZ + PAD); gz++) {
+    el('line', { x1: vb[0], y1: gz, x2: vb[0] + vb[2], y2: gz }, grid);
+  }
+
+  const layerFloor = el('g', {}, root);
+  const layerRails = el('g', {}, root);
+  const layerProps = el('g', {}, root);
+  const layerHides = el('g', {}, root);
+  const layerPorts = el('g', {}, root);
+  const layerLabels = el('g', {}, root);
+
+  const side = document.getElementById('side');
+  side.innerHTML = `
+    <h2>Legend</h2>
+    <div class="key"><span class="sw" style="background:#1b2b33"></span>module (nominal gravity)</div>
+    <div class="key"><span class="sw" style="background:#152238;border:1px dashed #6fb8ff"></span>module (zero-G)</div>
+    <div class="key"><span class="sw" style="background:#5ee8b5"></span>hide spot (footprint + entry ○)</div>
+    <div class="key"><span class="sw" style="background:#ffb454"></span>puzzle / finale panel ◆</div>
+    <div class="key"><span class="sw" style="background:#ffd9a0"></span>locker ▪ / cargo slot ▫</div>
+    <div class="key"><span class="sw" style="background:#e86fc0"></span>escape / finale module ring</div>
+    <div class="key"><span class="sw" style="background:#3d4750"></span>rails (overhead) · racks/furniture (faint)</div>
+    <div class="key"><span class="sw" style="background:#5ee8b5;border-radius:50%"></span>port: open</div>
+    <div class="key"><span class="sw" style="background:#ffb454;border-radius:50%"></span>port: closed hatch</div>
+    <div class="key"><span class="sw" style="background:#ff5d5d;border-radius:50%"></span>port: sealed</div>
+    <div class="key"><span class="sw" style="background:#3d4750;border-radius:50%"></span>port: capped (no link)</div>
+    <h2>Modules</h2>
+    <div id="modlist"></div>
+    <p style="color:var(--dim);font-size:11px">Hover anything on the map for details. Data is fetched live from <b>levels/station.json</b> — re-run <b>npx tsx src/station/buildLevel.ts</b> and refresh.</p>`;
+  const modlist = document.getElementById('modlist');
+
+  for (const m of layout.modules) {
+    const d = KIND_DIMS[m.kind] ?? { shape: 'square', half: 2.5 };
+    const q = m.transform.quat, pos = m.transform.pos;
+    const zero = m.gravity === 'zero';
+    const fill = zero ? '#152238' : '#1b2b33';
+    const stroke = zero ? '#6fb8ff' : '#3d4750';
+    const isEscape = m.id === layout.escapeModule;
+    const isFinale = m.id === layout.finaleModule;
+
+    // Footprint.
+    const g = el('g', {}, layerFloor);
+    let shape;
+    if (d.shape === 'square') {
+      shape = el('rect', {
+        x: pos.x - d.half, y: pos.z - d.half, width: d.half * 2, height: d.half * 2,
+        fill, stroke, 'stroke-width': 0.07, rx: 0.25,
+      }, g);
+    } else if (d.shape === 'dome') {
+      shape = el('circle', { cx: pos.x, cy: pos.z, r: d.radius, fill, stroke, 'stroke-width': 0.07 }, g);
+      // Collar toward the port.
+      const port = toWorld(m, { x: 0, y: 0, z: d.portZ });
+      el('line', {
+        x1: pos.x, y1: pos.z, x2: port.x, y2: port.z,
+        stroke, 'stroke-width': 1.4, 'stroke-linecap': 'round', opacity: 0.5,
+      }, g);
+    } else {
+      // Cylinder: axis along local +Z. Draw an oriented rect via corner points.
+      const hw = d.radius, hl = d.length / 2;
+      const corners = [
+        { x: -hw, y: 0, z: -hl }, { x: hw, y: 0, z: -hl },
+        { x: hw, y: 0, z: hl }, { x: -hw, y: 0, z: hl },
+      ].map((c) => toWorld(m, c));
+      shape = el('polygon', {
+        points: corners.map((c) => c.x + ',' + c.z).join(' '),
+        fill, stroke, 'stroke-width': 0.07,
+      }, g);
+    }
+    if (zero && shape) shape.setAttribute('stroke-dasharray', '0.3 0.18');
+    tip(g, m.id + ' — ' + m.kind + '\ngravity: ' + (m.gravity ?? 'nominal') +
+      ' · lighting: ' + m.lighting + '\nvolume: ' + m.volume + ' m³');
+    if (isEscape || isFinale) {
+      const r = d.shape === 'square' ? d.half + 0.3 : (d.radius ?? 2) + 0.35;
+      const ring = el('circle', {
+        cx: pos.x, cy: pos.z, r, fill: 'none', stroke: '#e86fc0',
+        'stroke-width': 0.08, 'stroke-dasharray': '0.45 0.3',
+      }, layerFloor);
+      tip(ring, m.id + (isEscape ? ' — ESCAPE module (the capsule)' : ' — FINALE module (undock console)'));
+    }
+
+    // Rails.
+    for (const rail of m.rails ?? []) {
+      const a = toWorld(m, rail.a), b = toWorld(m, rail.b);
+      el('line', {
+        x1: a.x, y1: a.z, x2: b.x, y2: b.z,
+        stroke: '#3d4750', 'stroke-width': 0.06, 'stroke-linecap': 'round', opacity: 0.8,
+      }, layerRails);
+    }
+
+    // Ports.
+    for (const port of m.ports) {
+      const w = toWorld(m, port.localPos);
+      const linked = !!port.link;
+      const colour = !linked ? '#3d4750'
+        : port.hatch.sealed ? '#ff5d5d'
+        : port.hatch.open ? '#5ee8b5' : '#ffb454';
+      const c = el('circle', { cx: w.x, cy: w.z, r: 0.24, fill: colour, stroke: '#0a0c0e', 'stroke-width': 0.05 }, layerPorts);
+      tip(c, m.id + ':' + port.id + (linked
+        ? ' → ' + port.link.module + ':' + port.link.port +
+          '\nhatch: ' + (port.hatch.sealed ? 'SEALED' : port.hatch.open ? 'open' : 'closed')
+        : ' — capped (no link)'));
+    }
+
+    // Props.
+    for (const prop of m.props ?? []) {
+      const w = toWorld(m, prop.localPos);
+      const label = propLabel(m, prop);
+      const hint = puzzleHint(label);
+      if (prop.kind === 'panel') {
+        const s = 0.32;
+        const dm = el('polygon', {
+          points: [[w.x, w.z - s], [w.x + s, w.z], [w.x, w.z + s], [w.x - s, w.z]]
+            .map((p) => p.join(',')).join(' '),
+          fill: '#ffb454', stroke: '#0a0c0e', 'stroke-width': 0.04,
+        }, layerProps);
+        tip(dm, m.id + ' · ' + label + (hint ? '\n' + hint : ''));
+        el('text', {
+          x: w.x + 0.4, y: w.z + 0.1, 'font-size': 0.42, fill: '#ffb454',
+        }, layerLabels).textContent = label.replace(/^panel-/, '');
+      } else if (prop.kind === 'locker') {
+        const r = el('rect', {
+          x: w.x - 0.22, y: w.z - 0.22, width: 0.44, height: 0.44,
+          fill: '#ffd9a0', stroke: '#0a0c0e', 'stroke-width': 0.04,
+        }, layerProps);
+        tip(r, m.id + ' · locker (' + label + ')' + (prop.interactable ? ' — openable, may hold fuses/decoys' : ''));
+      } else if (prop.kind === 'slot') {
+        const r = el('rect', {
+          x: w.x - 0.2, y: w.z - 0.2, width: 0.4, height: 0.4,
+          fill: 'none', stroke: '#ffd9a0', 'stroke-width': 0.06,
+        }, layerProps);
+        tip(r, m.id + ' · cargo slot (' + label + ') — stow a bag here (§11)');
+      } else if (prop.kind === 'cargo') {
+        const c = el('circle', { cx: w.x, cy: w.z, r: 0.2, fill: '#c9a86f' }, layerProps);
+        tip(c, m.id + ' · cargo bag (' + label + ')');
+      } else if (prop.kind === 'rack' || prop.kind === 'bulkhead' || prop.kind === 'bench' || prop.kind === 'bank') {
+        const r = el('rect', {
+          x: w.x - 0.3, y: w.z - 0.3, width: 0.6, height: 0.6,
+          fill: '#232b32', opacity: 0.85, rx: 0.08,
+        }, layerProps);
+        tip(r, m.id + ' · ' + prop.kind + ' (' + label + ')');
+      } else if (prop.kind === 'laptop') {
+        const c = el('circle', { cx: w.x, cy: w.z, r: 0.14, fill: '#6fb8ff' }, layerProps);
+        tip(c, m.id + ' · laptop (' + label + ')');
+      } else {
+        const c = el('circle', { cx: w.x, cy: w.z, r: 0.08, fill: '#2c3640' }, layerProps);
+        tip(c, m.id + ' · ' + prop.kind + ' (' + label + ')');
+      }
+    }
+
+    // Hide spots.
+    for (const spot of m.hideSpots ?? []) {
+      const w = toWorld(m, spot.localPos);
+      const hx = spot.halfExtents.x, hz = spot.halfExtents.z;
+      // Oriented footprint via the module quat (spots are axis-aligned locally).
+      const corners = [
+        { x: spot.localPos.x - hx, y: 0, z: spot.localPos.z - hz },
+        { x: spot.localPos.x + hx, y: 0, z: spot.localPos.z - hz },
+        { x: spot.localPos.x + hx, y: 0, z: spot.localPos.z + hz },
+        { x: spot.localPos.x - hx, y: 0, z: spot.localPos.z + hz },
+      ].map((c) => toWorld(m, c));
+      const poly = el('polygon', {
+        points: corners.map((c) => c.x + ',' + c.z).join(' '),
+        fill: 'rgba(94,232,181,0.28)', stroke: '#5ee8b5', 'stroke-width': 0.06,
+      }, layerHides);
+      tip(poly, m.id + ' · HIDE SPOT: ' + spot.id + '\nkind: ' + spot.kind +
+        '\nusable in: ' + (spot.usableIn ?? 'any'));
+      const entry = toWorld(m, spot.entryPos);
+      const e = el('circle', {
+        cx: entry.x, cy: entry.z, r: 0.16, fill: 'none', stroke: '#5ee8b5', 'stroke-width': 0.06,
+      }, layerHides);
+      tip(e, spot.id + ' — entry point (stand here, press T)');
+    }
+
+    // Module label.
+    const ly = d.shape === 'square' ? pos.z - d.half + 0.55 : pos.z - (d.radius ?? 2) + 0.55;
+    el('text', {
+      x: pos.x, y: ly, 'font-size': 0.52, fill: '#cfd8de', 'text-anchor': 'middle',
+      'font-weight': 'bold', 'letter-spacing': '0.04',
+    }, layerLabels).textContent = m.id;
+    el('text', {
+      x: pos.x, y: ly + 0.55, 'font-size': 0.36, fill: '#7c8a94', 'text-anchor': 'middle',
+    }, layerLabels).textContent = m.kind + (zero ? ' · ZERO-G' : '') +
+      (m.lighting === 'dark' ? ' · dark' : '');
+
+    // Sidebar row.
+    const row = document.createElement('div');
+    row.className = 'mod-row';
+    const hides = (m.hideSpots ?? []).map((h) => h.id.replace(m.id + '-', '')).join(', ');
+    const panels = (m.props ?? []).filter((p) => p.kind === 'panel')
+      .map((p) => propLabel(m, p).replace(/^panel-/, '')).join(', ');
+    row.innerHTML = '<b>' + m.id + '</b> <span class="meta">' + m.kind +
+      (zero ? ' · zero-G' : '') + ' · ' + m.lighting + '</span><br>' +
+      '<span class="meta">' +
+      (panels ? 'panels: ' + panels + '<br>' : '') +
+      (hides ? 'hide: ' + hides : 'no hide spots') +
+      (isEscape ? ' · <b style="color:#e86fc0">ESCAPE</b>' : '') +
+      (isFinale ? ' · <b style="color:#e86fc0">FINALE</b>' : '') +
+      '</span>';
+    modlist.appendChild(row);
+  }
+
+  // North arrow + scale bar.
+  el('text', {
+    x: vb[0] + 0.6, y: vb[1] + 0.9, 'font-size': 0.55, fill: '#7c8a94',
+  }, root).textContent = 'N ↑ (−Z)';
+  const sbY = vb[1] + vb[3] - 0.7;
+  el('line', { x1: vb[0] + 0.6, y1: sbY, x2: vb[0] + 5.6, y2: sbY, stroke: '#7c8a94', 'stroke-width': 0.1 }, root);
+  el('text', { x: vb[0] + 0.6, y: sbY - 0.25, 'font-size': 0.45, fill: '#7c8a94' }, root).textContent = '5 m';
+}
+main();
+</script>
+</body>
+</html>
