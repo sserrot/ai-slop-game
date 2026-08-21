@@ -204,7 +204,7 @@ const CONTROLS: ReadonlyArray<readonly [string, string]> = [
   // all round. The zero-G verbs share the same physical keys deliberately —
   // Shift is "run" on a deck and "hold on" in vacuum — and that is why the two
   // rows read as one control each.
-  ['W A S D', 'walk · slide along a rail · steer a drift'],
+  ['W A S D', 'walk · slide along a rail · suit thrusters while floating (W climbs where you look, S brakes)'],
   ['HOLD SHIFT', 'sprint (30, always heard) — or grip a rail in zero-G'],
   ['CTRL', 'toggle crouch (4, near-silent, half speed)'],
   ['SPACE', 'jump — loud unless you land crouched · hold to charge a push-off'],

@@ -258,6 +258,26 @@ export const GROUND_STOP_HALFLIFE_S = 0.06;
  *  jump; you may not accelerate out of a fall. */
 export const AIR_CONTROL = 0.25;
 
+/**
+ * Suit thrusters (§4 amendment) — weak, continuous, camera-relative
+ * acceleration while FLOATING, m/s².
+ *
+ * Rails and push-offs stayed the FAST way across a module, but they were also
+ * the ONLY way, and that made zero-G freight (§11 cargo stow) nearly
+ * unplayable: a body drifting with a bag had no input that moved it. The suit
+ * now has a cold-gas RCS: WASD thrusts relative to where you are looking, so
+ * W climbs where you look, S burns retrograde to stop, and a stranded body is
+ * never truly stranded. Deliberately WEAK — a fifth of a push-off's top speed,
+ * reached over a full second — so the §4 movement grammar (grab, pull, commit)
+ * still wins every race; the thruster is how you steer freight and recover,
+ * not how you flee. Silent, like drifting: §3 has no row for it, and the zero
+ * loudness rule means no event is emitted.
+ */
+export const FLOAT_THRUST_M_S2 = 1.6;
+/** m/s — thrust stops ADDING speed here (it may still redirect or brake a
+ *  faster body). Under every gait speed and far under `PUSH_MAX`. */
+export const FLOAT_THRUST_MAX_M_S = 1.2;
+
 /** m — camera bob amplitude at `headBob = 1`, scaled by gait cadence. Comfort
  *  may zero it (`ComfortOptions.headBob`); noise never changes with it. */
 export const BOB_AMPLITUDE_M = 0.045;
@@ -284,16 +304,16 @@ export const BOB_AMPLITUDE_M = 0.045;
 // sized to a 1.75 m headroom and read as oversized once the tube widened.
 // Then 1.6 → 1.52, which fixed nothing, because the complaint was never the
 // height — it was PROPORTION: "the model feels too big relative to everything
-// else." So the third pass scales the whole body ~8% uniformly — radius (see
+// else." So the third pass scales the whole body uniformly — radius (see
 // PLAYER_RADIUS), stand, crouch and both eyes together — which reads as the
-// station getting roomier rather than the ceiling getting closer. The eye
-// keeps its ~0.14 m offset below the crown, and `RAIL_ABOVE_DECK_M` tracks
-// the height by definition — re-run `buildLevel.ts` so the authored rails
-// follow.
-export const PLAYER_STAND_HEIGHT_M = 1.4;
-export const PLAYER_CROUCH_HEIGHT_M = 0.88;
-export const EYE_HEIGHT_STAND_M = 1.26;
-export const EYE_HEIGHT_CROUCH_M = 0.74;
+// station getting roomier rather than the ceiling getting closer. Settled at
+// 10% off the 1.52/0.30 body after trying 8%. The eye keeps its ~0.14 m
+// offset below the crown, and `RAIL_ABOVE_DECK_M` tracks the height by
+// definition — re-run `buildLevel.ts` so the authored rails follow.
+export const PLAYER_STAND_HEIGHT_M = 1.37;
+export const PLAYER_CROUCH_HEIGHT_M = 0.86;
+export const EYE_HEIGHT_STAND_M = 1.23;
+export const EYE_HEIGHT_CROUCH_M = 0.72;
 
 /**
  * m — where the deck sits, as an offset from a module's centreline, in the

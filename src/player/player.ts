@@ -75,6 +75,8 @@ import {
   BOB_AMPLITUDE_M,
   CHARGE_TIME,
   DRAG_HALFLIFE,
+  FLOAT_THRUST_M_S2,
+  FLOAT_THRUST_MAX_M_S,
   FLOOR,
   GRAB_RANGE,
   GROUND_ACCEL_M_S2,
@@ -1290,6 +1292,29 @@ export class Player {
   private updateFloating(dt: number, gripHeld: boolean): void {
     // Air drag: vel *= 0.5^(dt / DRAG_HALFLIFE). NEVER a bare exponent.
     this.velocity.multiplyScalar(halfLifeDecay(dt, DRAG_HALFLIFE));
+
+    // Suit thrusters: WASD is a weak camera-relative RCS burn — W climbs where
+    // you look, S burns retrograde. Thrust stops ADDING speed at
+    // FLOAT_THRUST_MAX_M_S but may still redirect or brake a faster body, so a
+    // push-off remains the fast way across a module and the thruster is how
+    // you steer freight and recover from a bad drift. Silent (§3 has no row).
+    this.input.axis(_axis);
+    if (this._alive && (_axis.x !== 0 || _axis.y !== 0)) {
+      this.look.right(_right);
+      this.look.forward(_fwd);
+      _wish
+        .set(0, 0, 0)
+        .addScaledVector(_right, _axis.x)
+        .addScaledVector(_fwd, _axis.y)
+        .normalize();
+      const along = this.velocity.dot(_wish);
+      if (along < FLOAT_THRUST_MAX_M_S) {
+        this.velocity.addScaledVector(
+          _wish,
+          Math.min(FLOAT_THRUST_M_S2 * dt, FLOAT_THRUST_MAX_M_S - along),
+        );
+      }
+    }
 
     this.fireExtinguisherIfRequested();
 
