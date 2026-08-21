@@ -1840,11 +1840,20 @@ function onInteractPress(): void {
     if (bag && cargo.grab(bag)) return;
   }
 
-  // A hide spot within reach (§4). E is THE hide key — the dedicated T binding
-  // is gone, so this fallback is the way in. It runs AFTER the interactable
-  // raycast on purpose: a panel, a locker or a downed crewmate is never worth
-  // losing to a bunk you happened to be standing beside.
-  if (player.hideCandidate && player.toggleHide()) return;
+  // A hide spot within reach (§4) — but a hatch may be in reach too, and near
+  // a doorway they often BOTH are (a straight's bay stands half a metre from
+  // its port). When both offer, E goes to the one under your GAZE, or the
+  // hatch cycle silently ate every hide attempt at a doorway — and vice versa:
+  // the surface-gated hide prompt ate every hatch press, which shipped as
+  // "the hatch E interact doesn't work anymore".
+  const spot = player.hideCandidate;
+  const hatch = nearestPort();
+  const hatchUsable = hatch !== null && !hatch.sealed;
+  if (spot && hatchUsable && gazePrefersHatch(spot, hatch)) {
+    net.sendHatch(hatch.module, hatch.port, hatch.open ? 'close' : 'open');
+    return;
+  }
+  if (spot && player.toggleHide()) return;
 
   // Nothing in front of you: a downed crewmate within arm's reach (§10)?
   const me = player.position;
@@ -1860,10 +1869,35 @@ function onInteractPress(): void {
   // — the same one-key consolidation as hiding; the dedicated G binding is
   // gone. Sealing deliberately stays on its own key (H): spending one of two
   // irreversible charges must never be a mispress of "open".
-  const hatch = nearestPort();
-  if (hatch && !hatch.sealed) {
+  if (hatchUsable) {
     net.sendHatch(hatch.module, hatch.port, hatch.open ? 'close' : 'open');
   }
+}
+
+/**
+ * When a hide spot and a hatch are both in reach, which is E actually FOR?
+ * The one closer to the camera's forward ray. Both candidates are physical
+ * things you look at to use, so the gaze is the honest tiebreak — and
+ * `currentPrompt` uses the same test, so the chip always names what a press
+ * would do.
+ */
+const _gazeDir = new THREE.Vector3();
+const _gazeTo = new THREE.Vector3();
+function gazePrefersHatch(
+  spot: NonNullable<Player['hideCandidate']>,
+  hatch: { module: ModuleId; port: PortId },
+): boolean {
+  if (!station || !player) return false;
+  const world = station.graph.portWorldPos(hatch.module, hatch.port);
+  if (!world) return false;
+  cameraForward(_gazeDir);
+  const eye = camera.position;
+  const align = (p: { x: number; y: number; z: number }): number => {
+    _gazeTo.set(p.x - eye.x, p.y - eye.y, p.z - eye.z);
+    const len = _gazeTo.length();
+    return len < 1e-6 ? -1 : _gazeTo.dot(_gazeDir) / len;
+  };
+  return align(world) > align(spot.point);
 }
 
 /**
@@ -2027,7 +2061,18 @@ function currentPrompt(): InteractPromptSpec | null {
   // `hideCandidate` recomputes both numbers from §14 every frame, so the cost
   // chip visibly drops from 30 to 8 as you let go of sprint. That is the
   // loud-fast/quiet-slow rule taught in one glance, with no tutorial text.
+  //
+  // Same gaze tiebreak as `onInteractPress`: near a doorway a hide spot and a
+  // hatch are often both in reach, and the chip must name what E would DO.
   const spot = player.hideCandidate;
+  const nearHatch = nearestPort();
+  const nearHatchUsable = nearHatch !== null && !nearHatch.sealed;
+  if (spot && nearHatchUsable && gazePrefersHatch(spot, nearHatch)) {
+    return PROMPT.hatch(
+      `hatch:${nearHatch.module}:${nearHatch.port}:${nearHatch.open ? 'close' : 'open'}`,
+      nearHatch.open,
+    );
+  }
   if (spot) {
     const usable = target?.kind === 'hide' ? target.usable : true;
     return {

@@ -361,6 +361,17 @@
   overflow: hidden;
 }
 
+/* A verb that must be HELD gets a real bar, not a hairline: the playtest
+   verdict on the 1 px version was "tiny and illegible", which for a 20 s
+   override is the difference between commitment and a guess. Untimed prompts
+   keep the hairline — for them the track is a divider, not a readout. */
+.iss-prompt__opt[data-timed="true"] .iss-prompt__track {
+  height: 9px;
+  background: rgba(255, 176, 58, 0.08);
+  border: 1px solid rgba(255, 176, 58, 0.5);
+  border-radius: 3px;
+}
+
 .iss-prompt__fill {
   display: block;
   width: 100%;

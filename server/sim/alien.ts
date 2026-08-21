@@ -132,6 +132,24 @@ export const RAIL_RELEASE_COOLDOWN_S = 0.5;
 /** s — HUNT is not silent (§5, non-negotiable). It roars this often. */
 export const HUNT_NOISE_INTERVAL_S = 0.75;
 
+/**
+ * The prowl call (playtest fix: "the monster isn't showing up anywhere").
+ *
+ * Outside HUNT the alien used to be COMPLETELY silent — and it is also pale,
+ * matte and non-emissive in a station lit by emergency power, so a full round
+ * could pass without a player ever perceiving it: it patrolled past them in
+ * the dark and said nothing. §5 only *guarantees* noise while hunting; it
+ * nowhere requires silence elsewhere, and an apex predator that breathes is
+ * scarier than one that teleports. So while PATROL / INVESTIGATE / SEARCH it
+ * now lets out a quiet call — a chuff, a wet breath — every dozen-ish seconds:
+ * loud enough to carry a module or two and place it, far too quiet to matter
+ * next to its 55-loudness hunt voice. The client already plays 'alien'
+ * one-shots through the gator vocal; this just gives it a reason to.
+ */
+export const PROWL_CALL_INTERVAL_S = 11;
+export const PROWL_CALL_JITTER_S = 6;
+export const PROWL_CALL_LOUDNESS = 24;
+
 /** s — a fix older than this, once arrived at, means it lost you → SEARCH. */
 export const HUNT_FIX_STALE_S = 3.0;
 
@@ -412,6 +430,9 @@ export class Alien {
   private searchRemainingS = 0;
   private huntNoiseTimerS = 0;
   private retreatReason: 'kill' | 'decoy' = 'kill';
+  /** s until the next prowl call (see PROWL_CALL_INTERVAL_S). */
+  private prowlCallInS = PROWL_CALL_INTERVAL_S;
+
   /** s of DORMANT left before it starts patrolling. Set by `spawn()` to the
    *  `DORMANT_SECONDS` backstop and by `wake()` to the real round-start grace. */
   private graceRemainingS = DORMANT_SECONDS;
@@ -787,6 +808,17 @@ export class Alien {
     // 3. Anti-camping (§5): fuzzed 60–150s within 15m of a living player
     //    without a kill, and it is evicted to a distant module.
     this.updateAntiCamp(dt, nowMs);
+
+    // 3b. The prowl call — audible presence outside HUNT (see
+    //     PROWL_CALL_INTERVAL_S). Never in DORMANT (the round-start grace is
+    //     quiet on purpose) and never in HUNT/ATTACK (the roar owns those).
+    if (this._state === 'PATROL' || this._state === 'INVESTIGATE' || this._state === 'SEARCH') {
+      this.prowlCallInS -= dt;
+      if (this.prowlCallInS <= 0) {
+        this.emit('alien', this._pos, this._module, PROWL_CALL_LOUDNESS);
+        this.prowlCallInS = PROWL_CALL_INTERVAL_S + this.rng() * PROWL_CALL_JITTER_S;
+      }
+    }
 
     // 4. Behaviour.
     switch (this._state) {
@@ -2034,12 +2066,14 @@ export class Alien {
     this.emit('alien', this._pos, this._module);
   }
 
-  private emit(kind: NoiseEvent['kind'], origin: Vec3, module: ModuleId): void {
+  private emit(kind: NoiseEvent['kind'], origin: Vec3, module: ModuleId, loudness?: number): void {
     const event: NoiseEvent = {
       kind,
       origin: cloneV3(origin),
       module,
-      loudness: noiseLoudness(kind),
+      // The prowl call passes its own quiet level; everything else prices
+      // itself off the section-3 table.
+      loudness: loudness ?? noiseLoudness(kind),
       t: this._tick,
       actor: ALIEN_ACTOR_ID,
     };

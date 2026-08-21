@@ -132,17 +132,24 @@ export function drawBreakerPanel(
 
   // --- the card line: the whole puzzle, in one sentence ---------------------
   if (state.sequence) {
-    panelText(ctx, `ORDER  ${state.sequence.map((n) => n + 1).join(' · ')}`, box.x, box.y, {
+    panelText(ctx, `THROW IN THIS ORDER:  ${state.sequence.map((n) => n + 1).join(' → ')}`, box.x, box.y, {
       size: small,
       color: UI_COLORS.green,
       baseline: 'top',
       glow: true,
     });
   } else {
-    const where = state.card.module ? `LOCKER · ${state.card.module.toUpperCase()}` : 'LOCKER UNKNOWN';
-    panelText(ctx, `ORDER CARD MISSING — ${where}`, box.x, box.y, {
+    const where = state.card.module
+      ? `A LOCKER IN ${state.card.module.toUpperCase()}`
+      : 'A LOCKER, SOMEWHERE';
+    panelText(ctx, `STEP 1 — FETCH THE ORDER CARD FROM ${where}`, box.x, box.y, {
       size: small,
       color: UI_COLORS.amber,
+      baseline: 'top',
+    });
+    panelText(ctx, 'IT LISTS THE BREAKER ORDER. WRONG THROW = LOUD RESET', box.x, box.y + small * 1.35, {
+      size: small,
+      color: UI_COLORS.textDim,
       baseline: 'top',
     });
   }
@@ -288,7 +295,7 @@ export function drawCoolantGaugePanel(
     baseline: 'middle',
   });
 
-  panelText(ctx, 'NO VALVE FITTED — VALVE IS IN ANOTHER MODULE', frame.width / 2, box.y + box.h, {
+  panelText(ctx, 'THE VALVE IS IN ANOTHER MODULE — SHOUT "OPEN" / "CLOSE" / "HOLD" TO WHOEVER IS ON IT', frame.width / 2, box.y + box.h, {
     size: small,
     color: UI_COLORS.amberDim,
     align: 'center',
@@ -379,7 +386,7 @@ export function drawCoolantValvePanel(
     });
   });
 
-  panelText(ctx, 'NO GAUGE FITTED — ASK THEM', frame.width / 2, box.y + box.h, {
+  panelText(ctx, 'THE GAUGE IS IN ANOTHER MODULE — TURN AS THEY CALL IT. SLOW IS QUIET, FAST IS HEARD', frame.width / 2, box.y + box.h, {
     size: small,
     color: UI_COLORS.amberDim,
     align: 'center',
@@ -402,7 +409,12 @@ export function drawCargoPanel(
   const box = inset(frame);
   const small = Math.max(9, frame.height * 0.042);
 
-  panelText(ctx, 'RACK MANIFEST', box.x, box.y, {
+  panelText(ctx, 'LOOSE BAGS ARE FLOATING IN THIS MODULE', box.x, box.y, {
+    size: small,
+    color: UI_COLORS.amber,
+    baseline: 'top',
+  });
+  panelText(ctx, 'GRAB ONE (E) · FLY IT TO THE RACK · E AT A SLOT TO STOW', box.x, box.y + small * 1.35, {
     size: small,
     color: UI_COLORS.textDim,
     baseline: 'top',
@@ -490,9 +502,9 @@ export function drawFusePanel(
   });
 
   // --- the manifest: where the spares are, which is the whole puzzle --------
-  panelText(ctx, 'SPARES', box.x, sy + sh + box.h * 0.08, {
+  panelText(ctx, 'SPARE FUSES — IN THESE LOCKERS. FETCH, THEN E ON A SOCKET', box.x, sy + sh + box.h * 0.08, {
     size: small,
-    color: UI_COLORS.textDim,
+    color: UI_COLORS.amber,
     baseline: 'middle',
   });
   state.fuses.forEach((fuse, i) => {
@@ -560,9 +572,16 @@ export function drawKeyswitchPanel(
 
   panelText(
     ctx,
-    `BOTH KEYS WITHIN ${state.windowS.toFixed(1)} s  ·  ${state.separationM} m APART`,
+    `TAKES TWO CREW — ONE ON EACH KEY, ${state.separationM} m APART`,
     frame.width / 2,
-    box.y + box.h * 0.72,
+    box.y + box.h * 0.68,
+    { size: small, color: UI_COLORS.amber, align: 'center', baseline: 'middle' },
+  );
+  panelText(
+    ctx,
+    `TURN BOTH WITHIN ${state.windowS.toFixed(1)} s OF EACH OTHER`,
+    frame.width / 2,
+    box.y + box.h * 0.76,
     { size: small, color: UI_COLORS.text, align: 'center', baseline: 'middle' },
   );
   loudTag(ctx, 'ACTIVATION', frame.width / 2, box.y + box.h * 0.86, LOUDNESS.KEYSWITCH, small);
@@ -593,7 +612,9 @@ export function drawUndockPanel(
 
   panelText(
     ctx,
-    state.armed ? 'LEVERS ARMED' : `SAFE — ${state.systemsRequired} SYSTEMS REQUIRED`,
+    state.armed
+      ? 'ARMED — HOLD ALL 3 LEVERS AT ONCE'
+      : `LOCKED — BRING ${state.systemsRequired} SYSTEMS ONLINE FIRST`,
     box.x,
     box.y,
     {
@@ -631,7 +652,7 @@ export function drawUndockPanel(
     ctx,
     state.undocked
       ? 'UNDOCKED — GET TO THE CAPSULE'
-      : `ALL THREE, ${UNDOCK_HOLD_S} SECONDS  ·  ${LOUDNESS.UNDOCK_LEVER}`,
+      : `3 CREW HOLD E ON A LEVER EACH, ${UNDOCK_HOLD_S} s TOGETHER  ·  ${LOUDNESS.UNDOCK_LEVER}`,
     frame.width / 2,
     box.y + box.h,
     {
@@ -718,13 +739,13 @@ const DRAWERS: Record<string, PuzzlePanelSpec['draw']> = {
 };
 
 const TITLES: Record<string, string> = {
-  'breaker-sequence': 'MAIN BUS',
-  'coolant-valve:gauge': 'COOLANT · GAUGE',
-  'coolant-valve:wheel': 'COOLANT · VALVE',
-  'cargo-stow': 'BALLAST TRIM',
-  'fuse-hunt': 'COMMS ARRAY',
-  'airlock-keyswitch': 'AIRLOCK CTRL',
-  'undock-sequence': 'UNDOCK',
+  'breaker-sequence': 'MAIN BUS · THROW BREAKERS IN ORDER',
+  'coolant-valve:gauge': 'COOLANT · READ GAUGE, CALL IT OUT',
+  'coolant-valve:wheel': 'COOLANT · TURN VALVE AS CALLED',
+  'cargo-stow': 'CARGO · STOW LOOSE BAGS IN RACK',
+  'fuse-hunt': 'COMMS · FETCH + SEAT 3 FUSES',
+  'airlock-keyswitch': 'AIRLOCK · TWO KEYS, TWO CREW',
+  'undock-sequence': 'UNDOCK · HOLD 3 RELEASE LEVERS',
 };
 
 /**
