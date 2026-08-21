@@ -12,6 +12,8 @@
  * safe to change without re-checking the §14 sanity set.
  */
 
+import { PLAYER_RADIUS } from '@shared/constants';
+
 // ---------------------------------------------------------------------------
 // Loop
 // ---------------------------------------------------------------------------
@@ -24,8 +26,8 @@ export const MAX_FRAME_DT = 0.1;
 // Collision response (§4 "swept sphere against a BVH of static geometry")
 // ---------------------------------------------------------------------------
 
-/** Sweep substep length as a fraction of PLAYER_RADIUS. Small enough that a
- *  0.35 m sphere cannot tunnel a bulkhead at PUSH_MAX. */
+/** Sweep substep length as a fraction of PLAYER_RADIUS. Half a radius, so the
+ *  body cannot tunnel a bulkhead at PUSH_MAX whatever §14 sizes it at. */
 export const COLLISION_SUBSTEP_FACTOR = 0.5;
 /** Depenetration passes per substep. Four resolves a corner cleanly. */
 export const DEPENETRATION_ITERATIONS = 4;
@@ -117,18 +119,25 @@ export const STEP_UP_PROGRESS = 0.9;
 /**
  * Metres the step-up carries the body forward while it is lifted, at minimum.
  *
- * It has to be more than a body radius. A capsule that clears a coaming by a
- * centimetre is still centred outside it, and the ground ray — cast straight
- * down the body's own axis — would find the deck it just left rather than the
- * ledge it is standing over. Slightly more than `PLAYER_RADIUS` puts the axis
- * genuinely over the new surface, which is also the point at which the body
- * would actually be standing on it rather than balanced on its edge.
+ * It has to be more than a body radius — so it is DERIVED from one, not typed.
+ * A capsule that clears a coaming by a centimetre is still centred outside it,
+ * and the ground ray — cast straight down the body's own axis — would find the
+ * deck it just left rather than the ledge it is standing over. Slightly more
+ * than `PLAYER_RADIUS` puts the axis genuinely over the new surface, which is
+ * also the point at which the body would actually be standing on it rather than
+ * balanced on its edge.
+ *
+ * The 7 cm of margin is what it was when the radius was 0.35 (0.42 total). It
+ * is expressed against the radius now because the radius moved to 0.30 and a
+ * literal 0.42 would have quietly become 1.4 body radii of free travel per
+ * step-up — see the measured 5.22 m/s graze exploit under `STEP_RISE_MIN_M`,
+ * which is exactly what over-paying this buys.
  *
  * The visible cost is a short forward lurch onto the step. Every first-person
  * controller has one; the alternative is a body that mounts a coaming by
  * millimetres per frame and reads as stuck.
  */
-export const STEP_FORWARD_MIN_M = 0.42;
+export const STEP_FORWARD_MIN_M = PLAYER_RADIUS + 0.07;
 
 /** Extra metres the step-up probe drops through, so a body lifted over a
  *  coaming lands back on the deck rather than hovering a hair above it. */
@@ -176,6 +185,31 @@ export const STEP_BLOCKED_PROGRESS = 0.15;
 export const STAND_UP_CLEARANCE_M = 0.02;
 
 /**
+ * Minimum half-extent, in metres, the prop barrier gives a measured box.
+ *
+ * A puzzle panel's screen is a flat plate — one of its three local extents is
+ * genuinely zero — and a zero half-extent has no face to leave by, so a body
+ * resolved onto it would sit exactly on the plane and flicker. One centimetre
+ * is below anything a player can see and above every floating-point tie.
+ */
+export const PROP_MIN_HALF_M = 0.01;
+
+/**
+ * Spacing of the prop barrier's capsule samples, as a fraction of
+ * `PLAYER_RADIUS`.
+ *
+ * The barrier resolves a body as spheres along its own segment (see
+ * `./propBarrier`), and the gap between two samples is the depth a box edge
+ * landing between them can reach before either notices:
+ * `r - sqrt(r^2 - (spacing/2)^2)`. At one whole radius that is 2.7 cm; at half a
+ * radius it is 0.6 cm, which is under the resting contact the BVH already
+ * tolerates (`STAND_UP_CLEARANCE_M`). The cost is three extra point-in-box tests
+ * against props that are already inside the broad-phase, which is almost never
+ * more than one prop.
+ */
+export const PROP_SAMPLE_FACTOR = 0.5;
+
+/**
  * Metres of depenetration, in ONE grounded step, above which the body is judged
  * to be wedged rather than merely touching.
  *
@@ -201,8 +235,9 @@ export const WEDGE_DEPTH_M = 0.12;
  * rather than an impact.
  *
  * Deliberately above `IMPACT_MIN_SPEED`: under gravity you are in contact with
- * the world constantly, and a tube is 1.32 m wide. The zero-G threshold is
- * unchanged and still governs everything in a `zero` module.
+ * the world constantly, and the walkable deck is only `2 × DECK_HALF_WIDTH_M`
+ * across. The zero-G threshold is unchanged and still governs everything in a
+ * `zero` module.
  */
 export const WALL_IMPACT_MIN_SPEED = 1.5;
 
@@ -360,6 +395,24 @@ export const DEFAULT_FOV_DEGREES = 75;
 
 /** Metres the interaction ray reaches. You must be at the panel (§6). */
 export const INTERACT_RANGE = 2.5;
+
+/**
+ * Metres from the prop's own surface within which the §6 prompt reads "usable"
+ * rather than merely "aimed at".
+ *
+ * `INTERACT_RANGE` is the RAY, and it is generous on purpose so the crosshair
+ * lights up as you approach. This is the second half of §6's rule — "you must
+ * physically be at the panel, one hand on a rail, back exposed" — and it is what
+ * an on-screen `[E]` prompt should be gated on, because a prompt that appears
+ * from across a 2.6 m deck teaches the player that they do not have to commit.
+ *
+ * Measured from the SURFACE, not from the prop's centre, so a big locker and a
+ * flat panel both mean the same thing by "at". The swept body now stops a full
+ * `PLAYER_RADIUS` clear of both (see `./propBarrier`), so the closest anybody
+ * can ever be is 0.30 m — this has to be comfortably above that or the verb
+ * would be unreachable.
+ */
+export const INTERACT_REACH_M = 0.9;
 
 /**
  * Hz at which the interaction ray is re-cast.

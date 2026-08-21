@@ -37,6 +37,13 @@ const HIGH: QualityProfile = Object.freeze({
   // 3.3 Mpx ≈ 2340×1420. The reported player's 1920×1200 (2.30 Mpx) is well
   // inside it, so their picture does not change; what this stops is a
   // devicePixelRatio of 1.5–2 quietly turning a large window into 5–8 Mpx.
+  //
+  // Tried lowering this to 2.1 Mpx to chase a reported frame-rate regression and
+  // REVERTED it: cutting the frame from 2.73 Mpx to 0.75 Mpx — 3.6x fewer pixels
+  // — moved mean GPU only 6.50 ms -> 5.48 ms and made p95 slightly WORSE. This
+  // frame is not fill-rate bound, so resolution is the wrong dial and softening
+  // the image would have bought nothing. Whatever the cost is, it scales with
+  // something other than pixels.
   maxRenderPixels: 3_300_000,
   msaaSamples: 4,
 });

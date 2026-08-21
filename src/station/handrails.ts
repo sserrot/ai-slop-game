@@ -39,6 +39,7 @@
 
 import * as THREE from 'three';
 import type { ModuleId } from '@shared/types';
+import type { ModuleGraph } from '@shared/graph/moduleGraph';
 import type { RailGraph, RailNode } from '@shared/graph/railGraph';
 import { buildRailBracketGeometry, buildRailGeometry } from './geometry';
 import { InstancedSet } from './instancing';
@@ -74,7 +75,7 @@ export class StationHandrails {
   private readonly nominalSet = new Set<ModuleId>();
   private readonly visibleSet = new Set<ModuleId>();
 
-  constructor(rails: RailGraph, materials: StationMaterials) {
+  constructor(rails: RailGraph, materials: StationMaterials, graph?: ModuleGraph) {
     this.group.name = 'station-handrails';
     this.rails = rails;
 
@@ -92,7 +93,24 @@ export class StationHandrails {
     }
 
     for (const [module, nodes] of byModule) {
-      const centroid = railCentroid(nodes);
+      // THE ANCHOR A BRACKET STANDS OFF FROM is the module's own CENTRE when we
+      // have it, and the centroid of its rails only as a fallback.
+      //
+      // The centroid was right while a module's rails straddled its axis: a
+      // tube's pair sat either side of it, so "away from the middle of the rail
+      // layout" and "away from the module axis" were the same direction. Now
+      // that both rails of a pair run OVERHEAD (see `RAIL_ABOVE_DECK_M` in
+      // `kit.ts`) the centroid has moved up between them, and the same
+      // subtraction points sideways along the ceiling instead of out at the
+      // hull — every bracket in the station ends up hanging off the wrong face
+      // of its rail. The module centre is on the axis by construction, in every
+      // piece in the kit, so it gives a genuinely radial standoff for a tube, an
+      // upward one for a node's overhead spokes, and the same answer as before
+      // for the cupola.
+      const anchor = graph?.centre(module);
+      const centroid = anchor
+        ? new THREE.Vector3(anchor.x, anchor.y, anchor.z)
+        : railCentroid(nodes);
       for (const node of nodes) {
         const a = new THREE.Vector3(node.a.x, node.a.y, node.a.z);
         const b = new THREE.Vector3(node.b.x, node.b.y, node.b.z);
@@ -108,13 +126,11 @@ export class StationHandrails {
         });
         if (length < BRACKET_MIN_LENGTH) continue;
 
-        // The standoff points AWAY from the middle of the module's own rail
-        // layout, perpendicular to the rail. That is the wall in every piece the
-        // kit has — a tube's rails sit either side of the axis, the cupola's ring
-        // is radial — and it needs no module transform, which this class does not
-        // have. A node's six spokes run THROUGH their centroid, so the
-        // perpendicular collapses and they are left unbracketed: correct, since a
-        // spoke's ends die into the face frames rather than into a wall.
+        // The standoff points AWAY from the anchor, perpendicular to the rail —
+        // at the hull in a tube, at the ceiling for a node's overhead spokes. A
+        // segment that runs THROUGH the anchor leaves the perpendicular
+        // collapsed and is left unbracketed, which is correct: it dies into a
+        // face frame rather than into a wall.
         const standoff = mid.clone().sub(centroid);
         standoff.addScaledVector(dir, -standoff.dot(dir));
         if (standoff.length() < STANDOFF_MIN) continue;

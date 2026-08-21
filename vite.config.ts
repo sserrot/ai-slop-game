@@ -37,7 +37,12 @@ export default defineConfig({
     global: 'globalThis',
   },
   server: {
-    port: 5173,
+    // Honour PORT when the launcher assigns one, else the usual Vite default.
+    // Hardcoding it here overrode an assigned port and collided with whatever
+    // dev server was already up; nothing depends on a specific port, because the
+    // client reaches the game server on its own (ws://127.0.0.1:2567 by default,
+    // or VITE_SERVER_URL).
+    port: Number(process.env.PORT) || 5173,
     strictPort: false,
   },
   build: {

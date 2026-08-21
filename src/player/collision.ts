@@ -1,7 +1,8 @@
 /**
  * Swept-sphere collision against the static station BVH (DESIGN.md §4:
- * "Hand-rolled kinematic controller, swept sphere (radius 0.35m) against a BVH
- * of static geometry"; §1 picks `three-mesh-bvh` for exactly this).
+ * "Hand-rolled kinematic controller, swept sphere against a BVH of static
+ * geometry"; §1 picks `three-mesh-bvh` for exactly this). The sphere is
+ * `PLAYER_RADIUS`, which §14 owns and has already moved once.
  *
  * The integrator hands us whatever it has — a `MeshBVH`, a `Mesh` whose geometry
  * already carries `boundsTree`, or a whole `Object3D` to walk. Everything is

@@ -46,6 +46,65 @@ export interface InteractionHit {
   distance: number;
 }
 
+/**
+ * What kind of verb the interact key would be this frame.
+ *
+ * Deliberately open-ended on the caller's side: the player subsystem cannot know
+ * a locker from a panel — that is `Station.interactableAt`'s job — so anything
+ * it is told through `PlayerConfig.describeInteractable` is passed through
+ * verbatim. `hide` is the one kind the controller resolves by itself, because
+ * hide spots are its own geometry (§4).
+ */
+export type InteractKind = 'panel' | 'locker' | 'hide' | 'item' | 'crew' | 'other';
+
+/** What a consumer says about an object the interaction ray hit. */
+export interface InteractableInfo {
+  kind?: InteractKind;
+  /** Short human label — "Breaker panel", "Locker". Rendered next to the key. */
+  label?: string;
+  /** False for a target that exists but cannot be used right now (a spent
+   *  locker, a dead panel). The prompt still reports it, with `usable` false. */
+  usable?: boolean;
+}
+
+/**
+ * The §6 interact prompt: what `[E]` would do right now, and whether it would
+ * do anything at all.
+ *
+ * THIS IS THE SAME RESULT THE CROSSHAIR USES. `Player.crosshair` reports `hand`
+ * exactly when this is non-null — one raycast, sampled at `AIM_RAYCAST_HZ`,
+ * feeding both — so a HUD that draws the prompt can never disagree with the
+ * glyph the player is looking through. Do not re-raycast to build a prompt.
+ *
+ * Owned by the controller and refilled in place. Read it every frame; never
+ * keep a reference to `point`.
+ */
+export interface InteractTarget {
+  kind: InteractKind;
+  label: string;
+  /** The object the ray is on. Null for a hide spot, which is authored volume
+   *  rather than scene geometry. */
+  object: THREE.Object3D | null;
+  /** Where to anchor a world-space prompt: the ray's contact point, or the
+   *  spot's entry position. */
+  point: THREE.Vector3;
+  /** Metres from the body to `point`. */
+  distance: number;
+  /**
+   * The body is close enough for §6's "you must physically be AT the panel",
+   * i.e. within `INTERACT_REACH_M` of the prop's surface — not merely inside
+   * the 2.5 m ray. False means "walk closer"; a HUD may dim the prompt.
+   */
+  inReach: boolean;
+  /**
+   * Pressing the key this frame would actually do something: alive, not
+   * mid-climb, and the target itself said it was usable.
+   */
+  usable: boolean;
+  /** Populated for `kind === 'hide'` — what the climb would cost (§14). */
+  hide: HidePrompt | null;
+}
+
 /** Extra context handed to the noise sink alongside the event. */
 export interface NoiseInfo {
   /** Source loudness, from §14's `noiseLoudness()` — never a client guess. */
@@ -147,8 +206,34 @@ export interface PlayerConfig {
   spawn?: PlayerSpawn;
   /** Bursts in the extinguisher bottle (§4). */
   extinguisherCharges?: number;
-  /** Objects the interaction ray may hit (panels, levers, lockers). */
+  /**
+   * Objects the interaction ray may hit (panels, levers, lockers).
+   *
+   * These are ALSO the props the swept body is kept out of — see
+   * `./propBarrier`. An interactable is by definition a thing the player walks
+   * up to and presses their face against, and the station's static BVH does not
+   * carry them at their built extent, so the controller measures them itself.
+   */
   interactables?: THREE.Object3D[];
+
+  /**
+   * Name what the interaction ray is on, for the §6 prompt.
+   *
+   * The controller resolves geometry, never identity: `Station.interactableAt`
+   * is what knows a breaker panel from a locker, and importing it here would
+   * cross a subsystem boundary this file exists to keep (see the header). Hand
+   * in a resolver and `Player.interactTarget` carries a real label; omit it and
+   * the prompt still works, reporting kind `other` with an empty label.
+   *
+   * The argument is the raycast's LEAF — a mesh somewhere under the object you
+   * put in `interactables`, exactly as `InteractionHit.object` is. Resolve
+   * upward through `parent`, which is what `Station.interactableAt` already
+   * does. Called once per frame with one object, so a map lookup is fine; it is
+   * asked every frame rather than once per target on purpose, because a
+   * locker's `usable` goes false the moment somebody empties it and the player
+   * is still standing in front of it when that happens.
+   */
+  describeInteractable?: (object: THREE.Object3D) => InteractableInfo | null;
 
   /** Mirror events onto the shared `bus` from src/core. Default true. */
   emitToBus?: boolean;
@@ -173,6 +258,17 @@ export interface PlayerConfig {
 
   onNoise?: NoiseSink;
   onInteract?: (hit: InteractionHit | null) => void;
+
+  /**
+   * The §6 interact prompt changed — a different target, or the same one
+   * becoming reachable or unusable.
+   *
+   * Edge-triggered, so a HUD can show and hide the `[E]` chip without polling.
+   * The argument is the controller's own live `InteractTarget` (or null); read
+   * it, do not keep it. `Player.interactTarget` is the same value if you would
+   * rather poll.
+   */
+  onInteractTarget?: (prompt: InteractTarget | null) => void;
   onFlashlight?: (on: boolean) => void;
   onTrackerMute?: (muted: boolean) => void;
 

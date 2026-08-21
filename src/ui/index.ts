@@ -5,7 +5,11 @@
  *
  *   1. WRIST TRACKER   bottom-left, proximity as pulse rate + heart rate + crew
  *   2. NOISE RING      around the crosshair, scaled to how far a sound carried
- *   3. CROSSHAIR       dot / hand / rail, plus the push-off charge arc
+ *   3. CROSSHAIR       dot / hand / rail, plus the push-off charge arc — and
+ *                      under it the interact prompt, which is the same element:
+ *                      the glyph says "something is here", the prompt names the
+ *                      bound key, the verb and the §11 noise price. Not a fifth
+ *                      element; the caption on the third.
  *   4. PUZZLE PANELS   CanvasTexture planes in the world, 10 Hz, module-gated
  *
  * Plus three screens that are not HUD: the main menu (which states the alien's
@@ -33,6 +37,7 @@ import type { ComfortOptions, ModuleId } from '@shared/types';
 import { bus as sharedBus, type EventBus, type GameEvents, type Unsubscribe } from '../core/eventBus';
 import { Crosshair, type CrosshairState } from './crosshair';
 import { el, resolveMount } from './dom';
+import { InteractPrompt, type InteractPromptSpec, type PromptSlot } from './interactPrompt';
 import { MainMenu, type ControlRow } from './menu';
 import { NoiseRing } from './noiseRing';
 import { PanelSystem } from './panel';
@@ -80,6 +85,7 @@ export class GameUI {
   readonly menuHost: HTMLElement;
 
   readonly crosshair: Crosshair;
+  readonly interactPrompt: InteractPrompt;
   readonly noiseRing: NoiseRing;
   readonly tracker: WristTracker;
   readonly toasts: ToastLayer;
@@ -105,6 +111,9 @@ export class GameUI {
     // ---- HUD (§6) --------------------------------------------------------
     this.noiseRing = new NoiseRing({ parent: this.hudRoot, bus });
     this.crosshair = new Crosshair({ parent: this.hudRoot, bus });
+    // Under the reticle, and after it in the DOM so it stacks on top: the
+    // crosshair says "something is here", this says which key and what it costs.
+    this.interactPrompt = new InteractPrompt({ parent: this.hudRoot });
     this.tracker = new WristTracker({
       parent: this.hudRoot,
       bus,
@@ -176,6 +185,7 @@ export class GameUI {
   update(dt: number, nowMs: number = performance.now()): void {
     this.tracker.update(dt);
     this.noiseRing.update(dt);
+    this.interactPrompt.update(dt);
     this.toasts.update(dt);
     this.panels.update(nowMs);
     this.syncOverlayHost();
@@ -187,6 +197,10 @@ export class GameUI {
    */
   private syncOverlayHost(): void {
     const anyScreen = this.menu.visible || this.settings.visible || this.results.visible;
+    // The prompt keeps its target but stops rendering behind a screen. Hiding
+    // the HUD root already does that; this is belt and braces for a caller that
+    // drives the prompt directly without going through `setHudVisible`.
+    this.interactPrompt.setSuppressed(anyScreen);
     const hideHost = !anyScreen;
     if (hideHost !== this.menuHostHidden) {
       this.menuHostHidden = hideHost;
@@ -208,6 +222,30 @@ export class GameUI {
   /** Push-off charge 0–1 (also arrives automatically via `player:charge`). */
   setCharge(charge: number): void {
     this.crosshair.setCharge(charge);
+  }
+
+  /**
+   * What the interaction raycaster is on, priced (§6, §11) — or `null` for
+   * nothing in reach.
+   *
+   * Call it every frame right next to `setCrosshair`; an unchanged spec costs a
+   * handful of comparisons and touches no DOM. Build the spec from `PROMPT` so
+   * the loudness and hold-time numbers keep coming out of §14 rather than out
+   * of a caller.
+   */
+  setInteractPrompt(spec: InteractPromptSpec | null): void {
+    this.interactPrompt.set(spec);
+  }
+
+  /**
+   * A prompt's key is down — fills that line's hold bar (`pry`, `pump`, the
+   * breaker override, an undock lever).
+   *
+   * `slot` picks which line of a §11 dual path: `'alt'` is the quiet-slow one,
+   * the hand pump drawn under the pry bar.
+   */
+  setInteractHolding(active: boolean, slot: PromptSlot = 'primary'): void {
+    this.interactPrompt.setHolding(active, slot);
   }
 
   /** Ripple the noise ring for a sound the local player made. */
@@ -310,6 +348,7 @@ export class GameUI {
     for (const off of this.disposers) off();
     this.disposers.length = 0;
     this.crosshair.dispose();
+    this.interactPrompt.dispose();
     this.noiseRing.dispose();
     this.tracker.dispose();
     this.toasts.dispose();
@@ -331,6 +370,15 @@ export function createUI(opts: GameUiOptions = {}): GameUI {
 // ---------------------------------------------------------------------------
 
 export { Crosshair, type CrosshairOptions, type CrosshairState } from './crosshair';
+export {
+  InteractPrompt,
+  PROMPT,
+  formatSeconds,
+  type InteractPromptOptions,
+  type InteractPromptSpec,
+  type PromptKey,
+  type PromptSlot,
+} from './interactPrompt';
 export { NoiseRing, NOISE_RING_REFERENCE_M, type NoiseRingOptions } from './noiseRing';
 export {
   WristTracker,
@@ -391,5 +439,13 @@ export {
   type ResultsShowOptions,
 } from './results';
 export { ToastLayer, type ToastLayerOptions } from './toast';
-export { UI_COLORS, UI_FONT, uiFont, loudnessColor, loudnessRgba } from './theme';
+export {
+  UI_COLORS,
+  UI_FONT,
+  uiFont,
+  loudnessBand,
+  loudnessColor,
+  loudnessRgba,
+  type LoudnessBand,
+} from './theme';
 export { HiDpiCanvas, el, svgEl, listen, formatDuration, resolveMount } from './dom';

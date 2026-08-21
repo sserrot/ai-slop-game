@@ -32,7 +32,7 @@
 
 import * as THREE from 'three';
 
-import { CARGO_BAG_COUNT } from '@shared/constants';
+import { CARGO_BAG_COUNT, MODULE_LENGTH_M, TUBE_RADIUS_M } from '@shared/constants';
 import type {
   ModuleId,
   NoiseIntentMessage,
@@ -52,6 +52,10 @@ import {
   type CargoStaticSpec,
 } from './cargoPhysics';
 import { cargoBagId, cargoSlotId, cargoSlotIndex, puzzlePropRole, PUZZLE_PROP_KINDS } from './logic/index';
+// The kit's own slot pitch. `src/station/deckKit.ts` is three.js-free, so this
+// is a constant import and not a subsystem dependency — and it is the pitch the
+// rack is actually BUILT at, which is the only number the fallback below may use.
+import { CARGO_SLOT_PITCH } from '../station/deckKit';
 import { puzzleStore, type PuzzleStore } from './store';
 import type { CargoPanelState } from './types';
 
@@ -61,8 +65,17 @@ import type { CargoPanelState } from './types';
 // kind, and CARGO_BAG_COUNT (5).
 // ---------------------------------------------------------------------------
 
-/** §2: "The straight kit piece has a 1.0 m interior radius." */
-export const MODULE_INTERIOR_RADIUS_M = 1.0;
+/**
+ * The bore the bags bounce around inside (§2's straight kit piece).
+ *
+ * DERIVED, never typed. It was a literal 1.0 and the tube widened to 1.5 under
+ * it, which broke this puzzle twice over: the bags met an invisible wall half a
+ * metre inside the hull, and `moduleHalfLength()` — which back-solves length
+ * from `volume / (pi r^2)` — read tube-spine's 35.34 m^3 as an 11.25 m module,
+ * clamped it to the 4 m cap and put both end bulkheads OUTSIDE the room, so a
+ * bag could drift out through a hatch and make §11 puzzle 3 unsolvable.
+ */
+export const MODULE_INTERIOR_RADIUS_M = TUBE_RADIUS_M;
 /** Wall slab thickness for the bounding box. Thick enough that a fast bag
  *  cannot tunnel through it in one 1/60 s step at any speed it can reach. */
 const WALL_THICKNESS_M = 0.25;
@@ -71,15 +84,83 @@ const WALL_THICKNESS_M = 0.25;
  *
  * Generous on purpose — this is a dexterity puzzle about momentum, not about
  * millimetres, and §11 says "the difficulty is the alien, never the logic".
- * Kept under half the 0.95 m slot pitch so two slots can never both claim the
- * same bag, with room to spare for the module's own rotation (the test is
- * world-axis-aligned; a cube's worst case under rotation is ×√2, 0.47 < 0.475).
+ * Kept under half the `CARGO_SLOT_PITCH` so two slots can never both claim the
+ * same bag: 0.33 of trigger either side of a slot is 0.66 m across an 0.85 m
+ * pitch, leaving 0.19 m of dead space between neighbours. The trigger is a
+ * WORLD-axis-aligned cube, so its own rotation is not a factor — what matters
+ * is that the whole 0.85 m of separation lands on one world axis, which it does
+ * for every module in the level (all their quats are 90° multiples).
+ *
+ * The pitch was 0.95 and is now 0.85 — it moved when the props were brought
+ * into scale with a 1.6 m crewmember — so the relationship is asserted below
+ * rather than left as a sentence that used to be true.
  */
 const SLOT_TRIGGER_HALF_M = 0.33;
 /** How far in front of your hands a carried bag rides. */
 export const CARRY_DISTANCE_M = 0.85;
 /** Reach for picking a bag up. Mirrors the §4 interaction raycaster. */
 export const CARGO_REACH_M = 2.5;
+
+/**
+ * The two relationships this file cannot check by reading itself.
+ *
+ * Both are §11 puzzle 3 becoming unsolvable rather than looking wrong, which is
+ * the failure worth a build-time noise: a trigger wider than half the pitch
+ * lets two slots claim one bag, and a shell that does not enclose the room lets
+ * a bag drift out of it. The bore has already moved once (1.0 -> 1.5) and the
+ * pitch has already moved once (0.95 -> 0.85), each in a pass that had nothing
+ * to do with cargo.
+ */
+export function assertCargoCoherent(): void {
+  const failures: string[] = [];
+  if (SLOT_TRIGGER_HALF_M >= CARGO_SLOT_PITCH / 2) {
+    failures.push(
+      `SLOT_TRIGGER_HALF_M ${SLOT_TRIGGER_HALF_M} must stay under half the ` +
+        `CARGO_SLOT_PITCH ${CARGO_SLOT_PITCH} — two slots would claim one bag`,
+    );
+  }
+  if (MODULE_INTERIOR_RADIUS_M !== TUBE_RADIUS_M) {
+    failures.push(
+      `MODULE_INTERIOR_RADIUS_M ${MODULE_INTERIOR_RADIUS_M} must be the kit bore ` +
+        `TUBE_RADIUS_M ${TUBE_RADIUS_M}, or the shell is not the room`,
+    );
+  }
+  // A five-slot rack has to fit inside the module the shell encloses. Volume is
+  // the only length the level carries (§2), so this is the same arithmetic
+  // `moduleHalfLength` runs, against the shortest module a rack can live in.
+  const shortest = Math.PI * TUBE_RADIUS_M * TUBE_RADIUS_M * MODULE_LENGTH_M;
+  const half = Math.min(Math.max(shortest / (Math.PI * TUBE_RADIUS_M * TUBE_RADIUS_M), 2) / 2, 4);
+  const rackHalf = ((CARGO_BAG_COUNT - 1) / 2) * CARGO_SLOT_PITCH + SLOT_TRIGGER_HALF_M;
+  if (rackHalf > half) {
+    failures.push(
+      `the rack reaches ${rackHalf.toFixed(2)} m from the module centre but the ` +
+        `shell's bulkheads sit at ${half.toFixed(2)} m`,
+    );
+  }
+  if (failures.length > 0) {
+    throw new Error(`cargo stow (§11 puzzle 3) is incoherent: ${failures.join('; ')}`);
+  }
+}
+
+/** Dev only, at import — the same idiom `src/player/bodyView.ts` uses. A
+ *  production bundle must never refuse to boot over a tuning constant. */
+export const CARGO_CHECKED: boolean = (() => {
+  if (!isDevEnvironment()) return false;
+  assertCargoCoherent();
+  return true;
+})();
+
+function isDevEnvironment(): boolean {
+  try {
+    const env = (import.meta as unknown as { env?: { DEV?: boolean } }).env;
+    if (env && typeof env.DEV === 'boolean') return env.DEV;
+  } catch {
+    /* plain Node — fall through */
+  }
+  const proc = (globalThis as { process?: { env?: Record<string, string | undefined> } }).process;
+  if (proc && proc.env) return proc.env.NODE_ENV !== 'production';
+  return true;
+}
 
 /** One player, for the "nearest player owns the bag" rule (§1). */
 export interface CargoPlayer {
@@ -242,13 +323,13 @@ function moduleHalfLength(module: StationModule): number {
 
 /** Slot i, when the level authored a rack but no numbered slots. */
 function offsetAlongAxis(module: StationModule, i: number): Vec3 {
-  const spread = (i - (CARGO_BAG_COUNT - 1) / 2) * 0.95;
+  const spread = (i - (CARGO_BAG_COUNT - 1) / 2) * CARGO_SLOT_PITCH;
   return { x: MODULE_INTERIOR_RADIUS_M - 0.27, y: 0, z: spread };
 }
 
 /** Where bag i starts: off the rack, on the far side of the axis. */
 function bagStartLocal(module: StationModule, i: number): Vec3 {
-  const spread = (i - (CARGO_BAG_COUNT - 1) / 2) * 0.95;
+  const spread = (i - (CARGO_BAG_COUNT - 1) / 2) * CARGO_SLOT_PITCH;
   return {
     x: -0.32,
     y: i % 2 === 0 ? 0.3 : -0.3,

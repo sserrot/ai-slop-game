@@ -2,7 +2,7 @@
  * ISS-CHR-03 — the remote crew member, and the instancing machinery both
  * character families share (DESIGN.md §9 / §10, asset bible "Characters").
  *
- * Before this file every other player was a 0.35 × 0.9 capsule, which is the
+ * Before this file every other player was a bare capsule, which is the
  * same primitive the alien was. That is the one confusion the bible calls out
  * as unacceptable:
  *
@@ -10,10 +10,10 @@
  *   > moment of relief, never confusion.
  *
  * So the crewmate is built as the alien's opposite on every axis of the
- * silhouette. **Squat** — 1.70 m, which is `PLAYER_STAND_HEIGHT_M`, not the
- * bible's 1.80 (see `CREW_HEIGHT_M`). **Upright** — a vertical stack of boxy
- * masses with a hard horizon at the shoulder. **Broad** — a 0.58 m shoulder
- * yoke, wider than anything on the alien. **Hard-helmeted** — a smooth sphere
+ * silhouette. **Squat** — exactly `PLAYER_STAND_HEIGHT_M`, not the bible's 1.80
+ * (see `CREW_HEIGHT_M`). **Upright** — a vertical stack of boxy masses with a
+ * hard horizon at the shoulder. **Broad** — a shoulder yoke that fills the
+ * collider's width, wider than anything on the alien. **Hard-helmeted** — a smooth sphere
  * with a dark visor cut into it, which is a closed convex outline where the
  * alien's head is a long tapering wedge on a thin neck. And it walks on two
  * legs with the pelvis at half its own height, where the alien's spine runs
@@ -221,21 +221,71 @@ const MORPH_PROXY = new THREE.Mesh();
 // ===========================================================================
 
 /**
+ * m — the body every literal below is authored against.
+ *
+ * NOT the body the game currently prices. §14 moved the collider once already
+ * (1.70 → 1.60 standing, 0.35 → 0.30 radius in the scale-down pass) and the
+ * proportions below — hip at half height, yoke at 1.42, helmet crown on the
+ * collider's own ceiling — are a *design*, not a set of measurements. Keeping
+ * the design in one reference frame and projecting it onto whatever §14 declares
+ * is what stops a resize turning the crewmate into a pile of parts that no
+ * longer touch: on the last one it put the helmet inside the shoulder yoke and
+ * pushed the life-support pack 2 cm outside the collider, which
+ * `assertCrewCoherent` correctly refused to build.
+ */
+const CREW_BASE_HEIGHT_M = 1.7;
+/** m — the body radius those same literals were authored against. */
+const CREW_BASE_RADIUS_M = 0.35;
+
+/**
  * m — total standing height, helmet crown included.
  *
- * The bible says 1.80. This is 1.70, and the difference is deliberate:
- * `PLAYER_STAND_HEIGHT_M` is the collider the server prices contact against and
- * `DECK_HEADROOM_M` is 1.75, so a 1.80 m crewmate would put its helmet through
- * every ceiling in the station and stand taller than the body the alien is
- * allowed to touch. "Scale comes from constants, not taste" — the constant wins
- * and the bible's round number loses.
+ * The bible says 1.80. The collider wins: `PLAYER_STAND_HEIGHT_M` is what the
+ * server prices contact against and what has to fit under `DECK_HEADROOM_M`, so
+ * a crewmate taller than it would put a helmet through every ceiling in the
+ * station and stand taller than the body the alien is allowed to touch. "Scale
+ * comes from constants, not taste" — the constant wins and the bible's round
+ * number loses.
  */
 export const CREW_HEIGHT_M = PLAYER_STAND_HEIGHT_M;
 
-/** m — shoulder yoke width. Wider than any part of the alien (0.42 girdle), and
- *  inside the 0.70 m collider diameter so a crewmate never clips a doorway its
- *  own body fits through. */
-export const CREW_SHOULDER_W_M = 0.58;
+/**
+ * Vertical and lateral scale from the authored reference body onto §14's.
+ *
+ * TWO factors, not one, because the collider does not resize uniformly: the
+ * scale-down pass took 6% off the height and 14% off the radius. A single
+ * uniform factor sized off either one leaves the other wrong — off the height,
+ * the pack still hangs outside the sweep; off the radius, the crewmate is a
+ * head shorter than the body it is standing in.
+ *
+ * Applied to GEOMETRY inside each joint's own frame (see the builders) and to
+ * the rig's joint offsets, never as a scale on a node that also rotates — a
+ * non-uniform scale above a rotation shears, and a sheared limb is exactly the
+ * "doll furniture" failure this section exists to prevent.
+ */
+const CREW_V = CREW_HEIGHT_M / CREW_BASE_HEIGHT_M;
+const CREW_L = PLAYER_RADIUS / CREW_BASE_RADIUS_M;
+
+/** Project an authored vertical / lateral measurement onto the live body. */
+function up(metres: number): number {
+  return metres * CREW_V;
+}
+function across(metres: number): number {
+  return metres * CREW_L;
+}
+
+/** Scale one part's geometry in its own joint frame. */
+function fitToBody(g: THREE.BufferGeometry): THREE.BufferGeometry {
+  g.scale(CREW_L, CREW_V, CREW_L);
+  return g;
+}
+
+/** m — shoulder yoke width, as authored. Wider than any part of the alien
+ *  (0.42 girdle), and inside the collider diameter so a crewmate never clips a
+ *  doorway its own body fits through. */
+const YOKE_W_BASE = 0.58;
+/** m — shoulder yoke width on the live body. */
+export const CREW_SHOULDER_W_M = across(YOKE_W_BASE);
 
 /** m — hip joint height. Half of standing height: the give-away that this thing
  *  is bipedal, read from the leg length alone. */
@@ -256,7 +306,9 @@ const SHOULDER_X = 0.26;
  *  a head, and a head is what the alien has. A bubble nearly a third of the
  *  shoulder width reads as hardware. */
 const HELMET_R = 0.155;
-const HELMET_Y = CREW_HEIGHT_M - HELMET_R; // crown lands exactly on 1.70
+/** Crown lands exactly on the reference height, and therefore — after
+ *  `fitToBody` — exactly on `CREW_HEIGHT_M`. */
+const HELMET_Y = CREW_BASE_HEIGHT_M - HELMET_R;
 const UPPER_ARM_L = 0.34;
 const FOREARM_L = 0.3;
 const GLOVE_L = 0.11;
@@ -414,7 +466,7 @@ function buildCrewCore(): THREE.BufferGeometry {
   // Shoulder yoke: a hard horizontal shelf at 1.42 m. The alien has no
   // horizontal anything, so this line alone separates them in a torch beam.
   parts.push(
-    at(chamferedBox({ x: CREW_SHOULDER_W_M, y: YOKE_H, z: TORSO_D }, 0.025), 0, YOKE_Y, 0),
+    at(chamferedBox({ x: YOKE_W_BASE, y: YOKE_H, z: TORSO_D }, 0.025), 0, YOKE_Y, 0),
   );
   // Pelvis.
   parts.push(at(chamferedBox({ x: 0.4, y: HIP_BLOCK_H, z: 0.3 }, 0.03), 0, HIP_Y + 0.04, 0));
@@ -441,7 +493,7 @@ function buildCrewCore(): THREE.BufferGeometry {
   parts.push(at(tube(0.05, 0.05, 0.34, 6), -0.12, TORSO_Y - 0.02, 0.27));
   parts.push(at(tube(0.05, 0.05, 0.34, 6), 0.12, TORSO_Y - 0.02, 0.27));
 
-  const g = mergeParts(parts);
+  const g = fitToBody(mergeParts(parts));
   g.name = 'crew-core';
   return g;
 }
@@ -456,6 +508,7 @@ function buildCrewVisor(): THREE.BufferGeometry {
   // three's sphere puts −Z at phi = −π/2, so this spans the front 103°.
   const g = new THREE.SphereGeometry(HELMET_R * 1.03, 7, 3, -Math.PI / 2 - 0.9, 1.8, 0.86, 1.02);
   g.translate(0, HELMET_Y, 0);
+  fitToBody(g);
   g.name = 'crew-visor';
   return g;
 }
@@ -471,7 +524,7 @@ function buildCrewVisor(): THREE.BufferGeometry {
  * geometry, one material, one draw call for every band on every crewmate.
  */
 function buildCrewStripe(): THREE.BufferGeometry {
-  const g = withVertexColor(new THREE.PlaneGeometry(0.19, 0.034), 0xffffff);
+  const g = fitToBody(withVertexColor(new THREE.PlaneGeometry(0.19, 0.034), 0xffffff));
   g.name = 'crew-stripe';
   return g;
 }
@@ -500,7 +553,7 @@ function buildCrewArm(): THREE.BufferGeometry {
   glove.rotateX(ELBOW_BAKED);
   parts.push(at(glove, 0, wristY - GLOVE_L / 2, wristZ));
 
-  const g = mergeParts(parts);
+  const g = fitToBody(mergeParts(parts));
   g.name = 'crew-arm';
   return g;
 }
@@ -515,7 +568,7 @@ function buildCrewThigh(): THREE.BufferGeometry {
   // leg legible: a smooth cylinder rotating about its own axis looks static.
   parts.push(at(new THREE.BoxGeometry(0.055, 0.16, 0.13), 0.098, -0.2, 0.01));
   parts.push(at(new THREE.BoxGeometry(0.055, 0.16, 0.13), -0.098, -0.2, 0.01));
-  const g = mergeParts(parts);
+  const g = fitToBody(mergeParts(parts));
   g.name = 'crew-thigh';
   return g;
 }
@@ -527,7 +580,7 @@ function buildCrewShank(): THREE.BufferGeometry {
   parts.push(at(tube(0.084, 0.062, SHIN_L, 8), 0, -SHIN_L / 2, 0));
   parts.push(at(chamferedBox({ x: 0.13, y: FOOT_H, z: 0.24 }, 0.02), 0, -SHIN_L - FOOT_H / 2 + 0.02, -0.04));
   parts.push(at(new THREE.BoxGeometry(0.14, 0.026, 0.26), 0, -SHIN_L - FOOT_H + 0.022, -0.04));
-  const g = mergeParts(parts);
+  const g = fitToBody(mergeParts(parts));
   g.name = 'crew-shank';
   return g;
 }
@@ -546,11 +599,15 @@ function stripeLocals(stripes: number): readonly THREE.Matrix4[] {
     { p: [-(TORSO_W / 2 + 0.004), 0, 0], ry: -Math.PI / 2 },
     { p: [TORSO_W / 2 + 0.004, 0, 0], ry: Math.PI / 2 },
   ];
+  // Authored on the reference body like every other measurement here, and
+  // projected onto the live one — these are TORSO-LOCAL offsets applied to a
+  // node whose geometry `fitToBody` already scaled, so they have to move with
+  // it or the decals float off the chest.
   for (const face of faces) {
     for (let i = 0; i < stripes; i++) {
       const y = top - i * pitch;
       const m = new THREE.Matrix4().makeRotationY(face.ry);
-      m.setPosition(face.p[0], y, face.p[2]);
+      m.setPosition(across(face.p[0]), up(y), across(face.p[2]));
       out.push(m);
     }
   }
@@ -592,12 +649,14 @@ function buildCrewRig(): CrewRig {
   const root = new THREE.Object3D();
   root.name = 'crew-rig';
   const core = node(root, 'core');
-  const shoulderL = node(core, 'shoulder-l', -SHOULDER_X, SHOULDER_Y, 0);
-  const shoulderR = node(core, 'shoulder-r', SHOULDER_X, SHOULDER_Y, 0);
-  const hipL = node(core, 'hip-l', -0.11, HIP_Y, 0);
-  const hipR = node(core, 'hip-r', 0.11, HIP_Y, 0);
-  const kneeL = node(hipL, 'knee-l', 0, -THIGH_L, 0);
-  const kneeR = node(hipR, 'knee-r', 0, -THIGH_L, 0);
+  // Joint offsets are REAL metres — the rig is posed in world space and its
+  // nodes rotate, so the projection lands here rather than on a node scale.
+  const shoulderL = node(core, 'shoulder-l', across(-SHOULDER_X), up(SHOULDER_Y), 0);
+  const shoulderR = node(core, 'shoulder-r', across(SHOULDER_X), up(SHOULDER_Y), 0);
+  const hipL = node(core, 'hip-l', across(-0.11), up(HIP_Y), 0);
+  const hipR = node(core, 'hip-r', across(0.11), up(HIP_Y), 0);
+  const kneeL = node(hipL, 'knee-l', 0, up(-THIGH_L), 0);
+  const kneeR = node(hipR, 'knee-r', 0, up(-THIGH_L), 0);
   return { root, core, shoulderL, shoulderR, hipL, hipR, kneeL, kneeR };
 }
 
@@ -784,8 +843,8 @@ function poseCrew(
   }
 
   if (hidden) {
-    // Folded small enough to fit a 0.85 m bench shell without a knee through
-    // the door. Still a body, still recognisable, just packed.
+    // Folded small enough to fit a crouch-height bench shell without a knee
+    // through the door. Still a body, still recognisable, just packed.
     rig.core.rotation.x += 0.55;
     rig.shoulderL.rotation.set(-1.5, 0, 0.5);
     rig.shoulderR.rotation.set(-1.5, 0, -0.5);
@@ -795,8 +854,8 @@ function poseCrew(
     // Death: face down on the deck, arms out. Read as a shape on the floor,
     // never as a standing figure that stopped animating.
     rig.core.rotation.x = limp * (Math.PI / 2 - 0.12);
-    rig.core.position.y -= limp * (HIP_Y - 0.16);
-    rig.core.position.z -= limp * 0.34;
+    rig.core.position.y -= limp * up(HIP_Y - 0.16);
+    rig.core.position.z -= limp * across(0.34);
   }
 
   rig.root.updateMatrixWorld(true);
@@ -878,7 +937,7 @@ export class RemoteCrewViews {
     this.lampAlive = new PartInstances(lamp, materials.interact, seats, 'crew-id-lamp');
     this.lampDown = new PartInstances(lamp, materials.indicatorFor('red'), seats, 'crew-down-lamp');
     this.lampLocal = accentMatrix(
-      { x: 0.13, y: TORSO_Y + 0.16, z: -(TORSO_D / 2 + 0.002) },
+      { x: across(0.13), y: up(TORSO_Y + 0.16), z: across(-(TORSO_D / 2 + 0.002)) },
       { x: 0, y: 0, z: -1 },
     );
 
@@ -1076,8 +1135,9 @@ export class CrewCoherenceError extends Error {
  *
  * "Doll furniture is the most common failure", and a character is the asset
  * that fails it hardest, because there is no room to notice: the collider is
- * 1.70 m tall and 0.70 m across and both numbers are load-bearing for the
- * sweep, the hatch coamings and the alien's contact test.
+ * `PLAYER_STAND_HEIGHT_M` tall and `2 × PLAYER_RADIUS` across, and both numbers
+ * are load-bearing for the sweep, the hatch coamings and the alien's contact
+ * test. Both have moved once already — read them, never restate them.
  */
 export function assertCrewCoherent(): void {
   const failures: string[] = [];

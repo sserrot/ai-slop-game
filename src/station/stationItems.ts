@@ -63,7 +63,13 @@ function lockerSlotOffset(slot: number): THREE.Vector3 {
   const s = PROP_ARCHETYPES.locker.size;
   // The cavity floor is `t` thick at −s.y/2; sit on it with a hair of clearance.
   const y = -s.y / 2 + 0.03 + 0.004;
-  return new THREE.Vector3((slot - 1) * 0.22, y, 0);
+  // Pitch derived from the carcass rather than typed at 0.22: the locker came
+  // down from 0.72 to 0.60 across in the art pass, and a fixed pitch would have
+  // parked the outer two bays 0.02 m inside the end walls with a 0.14 m decoy
+  // sitting in them. `s.x / 2 − 0.11` keeps the outer bay a decoy's half-width
+  // plus the 0.03 m wall clear of the end, at any carcass size.
+  const pitch = Math.min(0.22, s.x / 2 - 0.11);
+  return new THREE.Vector3((slot - 1) * pitch, y, 0);
 }
 
 function offsetMatrix(parent: THREE.Matrix4, offset: THREE.Vector3): THREE.Matrix4 {

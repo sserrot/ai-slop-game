@@ -26,6 +26,7 @@ import {
 import { ModuleGraph, PASSABLE_OPEN_ONLY } from '@shared/graph/moduleGraph';
 import { RailGraph } from '@shared/graph/railGraph';
 import { HideSpotGraph } from '@shared/graph/hideSpots';
+import type { StationLayout } from '@shared/types';
 import { buildStationLayout } from './stationSpec';
 import { checkWalkable } from './walkable';
 
@@ -44,6 +45,7 @@ function main(): void {
     ...graph.validate(),
     ...rails.validate(),
     ...hideSpots.validate(),
+    ...railsReachEveryHatch(layout),
     ...walk.problems,
   ];
   if (problems.length > 0) {
@@ -131,6 +133,38 @@ function main(): void {
   mkdirSync(dirname(path), { recursive: true });
   writeFileSync(path, `${JSON.stringify(layout, null, 2)}\n`, 'utf8');
   console.log(`wrote ${path}`);
+}
+
+/**
+ * Every LINKED port must have a rail that declares it, on both sides.
+ *
+ * `RailGraph.validate()` checks that segments authored as connected actually
+ * meet; it has no opinion about a hatch with no rail at it at all, and that is
+ * the failure mode this pass introduced the possibility of. Kit pieces now vary
+ * their rail set by gravity — a `nominal` node drops the spoke to its floor
+ * port, because `nodeDeck` plates over that port and nothing can be mated there
+ * — and a level that mates something to a port whose module authors no spoke
+ * would get a rail graph with a silent hole in it: the alien's A* would route
+ * around a hatch it should walk through, and a GRIPPING player in a `zero`
+ * module would find the station's rail network cut in two.
+ *
+ * §2 says cross-module rail continuity is "the single easiest thing in the
+ * system to break", so it is machinery rather than a comment.
+ */
+function railsReachEveryHatch(layout: StationLayout): string[] {
+  const problems: string[] = [];
+  for (const module of layout.modules) {
+    for (const port of module.ports) {
+      if (!port.link) continue;
+      if (module.rails.some((r) => r.portLink === port.id)) continue;
+      problems.push(
+        `${module.id}: port '${port.id}' is linked to ` +
+          `${port.link.module}:${port.link.port} but no rail segment declares it — ` +
+          'the rail graph stops at this hatch (§2 rail continuity)',
+      );
+    }
+  }
+  return problems;
 }
 
 main();

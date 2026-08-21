@@ -130,6 +130,7 @@ import { PlayerCamera } from './camera';
 import {
   StationCollider,
   makeRayHit,
+  type BodyOffsets,
   type ColliderInput,
   type ContactResult,
   type RayHit,
@@ -137,6 +138,7 @@ import {
 import { PlayerComfort, VignetteMeter, type PlayerComfortOptions } from './comfort';
 import { Extinguisher } from './extinguisher';
 import { HatchBarrier, type HatchBlock } from './hatchBarrier';
+import { PropBarrier, makePropContact, type PropContact } from './propBarrier';
 import { HeartRate } from './heartRate';
 import { HideController, hasteForGait } from './hiding';
 import { PlayerInput } from './input';
@@ -160,6 +162,7 @@ import {
   IMPACT_MIN_SPEED,
   INTERACT_BOUNDS_SLACK_M,
   INTERACT_RANGE,
+  INTERACT_REACH_M,
   GROUND_LANDING_EPSILON_M,
   JUMP_GROUND_LOCKOUT_S,
   KNOCK_COOLDOWN_S,
@@ -185,6 +188,7 @@ import {
 import type {
   CrosshairState,
   HidePrompt,
+  InteractTarget,
   InteractionHit,
   PlayerConfig,
   PlayerSpawn,
@@ -214,6 +218,32 @@ const _prevPoint = new THREE.Vector3();
 const _step = new THREE.Vector3();
 const _preVel = new THREE.Vector3();
 /** Scratch for `standUpOnSettle()`'s one downward ray. */
+/**
+ * Reach beyond the body radius for a brace surface (§4 surface push-off).
+ *
+ * Deliberately generous — 1.0 m, so 1.3 m from the body centre. A tighter 0.45 m
+ * was measured as useless: contact with a bulkhead is elastic (RESTITUTION), so
+ * a drifting body touches the wall and is already coasting back out of reach by
+ * the time the player reacts. Measured in that state: the surface probe returned
+ * false on every frame while the wall sat 0.73-0.9 m away.
+ *
+ * This is a rescue, not a movement tech. Being unable to move at all is a far
+ * worse failure than occasionally pushing off something slightly out of arm's
+ * reach, and §4 already prices every push-off the same flat 8 regardless.
+ */
+const BRACE_REACH_M = 1.0;
+/** Axis probe directions for {@link Player.probeBraceSurface}. */
+const BRACE_DIRS: readonly THREE.Vector3[] = [
+  new THREE.Vector3(1, 0, 0),
+  new THREE.Vector3(-1, 0, 0),
+  new THREE.Vector3(0, 1, 0),
+  new THREE.Vector3(0, -1, 0),
+  new THREE.Vector3(0, 0, 1),
+  new THREE.Vector3(0, 0, -1),
+];
+const _braceNormal = new THREE.Vector3();
+const _braceHit = makeRayHit();
+
 const _settleHit: RayHit = makeRayHit();
 const _tangent = new THREE.Vector3();
 const _centre = new THREE.Vector3();
@@ -306,6 +336,23 @@ export class Player {
   private hideSpots: HideSpotGraph | null;
   /** Closed and sealed hatch doors, which the static BVH does not contain. */
   private barrier: HatchBarrier;
+  /**
+   * Interactable props, which the static BVH does not contain either.
+   *
+   * Measured from the same list the interaction ray walks (see `./propBarrier`
+   * for the numbers this fixes). Rebuilt only when that list is replaced.
+   */
+  private props: PropBarrier;
+  /** Deepest prop contact resolved during the current sweep. Folded into
+   *  `contact` once the sweep is over, so the response path is unchanged. */
+  private readonly propContact: PropContact = makePropContact();
+  private readonly propStep: PropContact = makePropContact();
+  /** BVH re-depenetration after a prop push — see `clearProps`. */
+  private readonly propBvh: ContactResult = {
+    hit: false,
+    normal: new THREE.Vector3(),
+    depth: 0,
+  };
   private interactables: THREE.Object3D[];
   /** Broad-phase index over `interactables`, built lazily and rebuilt whenever
    *  the list is replaced (see `refreshAimCandidates`). */
@@ -391,6 +438,20 @@ export class Player {
   private _trackerMuted = false;
   private _crosshair: CrosshairState = 'dot';
   private _interaction: InteractionHit | null = null;
+  /** The §6 interact target, refilled in place — see `refreshInteractTarget`. */
+  private _interactTarget: InteractTarget | null = null;
+  private readonly targetBuffer: InteractTarget = {
+    kind: 'other',
+    label: '',
+    object: null,
+    point: new THREE.Vector3(),
+    distance: 0,
+    inReach: false,
+    usable: false,
+    hide: null,
+  };
+  /** Last shape reported through `onInteractTarget`, for the change edge. */
+  private targetSignature = '';
   private _nearestRail: RailQuery | null = null;
   /**
    * Caller-owned result buffers for the rail graph (§2).
@@ -455,6 +516,7 @@ export class Player {
     this.look = new PlayerCamera(config.camera, this.comfort);
     this.extinguisher = new Extinguisher(config.extinguisherCharges ?? EXTINGUISHER_CHARGES);
     this.interactables = config.interactables ?? [];
+    this.props = new PropBarrier(this.interactables);
 
     this.moduleGraph = config.moduleGraph ?? null;
     this.railGraph = config.railGraph ?? null;
@@ -591,6 +653,20 @@ export class Player {
     return this._interaction;
   }
 
+  /**
+   * The §6 interact prompt: what `[E]` would do right now, or null.
+   *
+   * Non-null exactly when `crosshair` is `'hand'` — both are written by the same
+   * pass off the same raycast, so a HUD chip and the crosshair glyph cannot
+   * disagree and nothing has to cast a second ray to draw one. Bind the key
+   * label from `primaryCode(KEYMAP, 'interact')` in `./keymap`.
+   *
+   * Owned by the controller and refilled in place; read it, never keep it.
+   */
+  get interactTarget(): InteractTarget | null {
+    return this._interactTarget;
+  }
+
   /** Nearest rail within the grab hint range — the "rail" crosshair driver. */
   get nearestRail(): RailQuery | null {
     return this._nearestRail;
@@ -635,6 +711,24 @@ export class Player {
     // Force the aim broad-phase to re-measure, even if the caller handed back
     // the same array object with different contents.
     this.aimIndexSource = null;
+    // The same list is the collision set for these props (see `./propBarrier`):
+    // an interactable is by definition something the player walks up to and
+    // presses their face against, and none of them are in the station BVH at
+    // the extent they were actually built to.
+    this.props.set(objects);
+    this.setInteractTarget(null);
+  }
+
+  /**
+   * Re-measure the interactable props after the station group has moved.
+   *
+   * Never needed for the shipped level — `Station` keeps its group at the origin
+   * (that is a documented invariant of `src/station/station.ts`) — but a caller
+   * that assembles the station after handing the list over needs a way to say
+   * so, exactly like `StationCollider.refreshTransforms`.
+   */
+  refreshInteractables(): void {
+    this.props.refresh();
   }
 
   /** Alien proximity for the heart-rate model (§6). Also arrives automatically
@@ -687,6 +781,14 @@ export class Player {
     // are random, and one of §2's authored zero-G modules is a legal roll.
     this.adoptGravity(this.currentGravity());
     this._state = defaultStateFor(this._gravity);
+    // A spawn point is authored, or picked by the server, and neither of them
+    // knows where the lockers are. Nothing else in the frame will move a body
+    // that arrives inside one, because the sweep only resolves what it touches
+    // on the way — so resolve it here, once, at the moment of arrival.
+    if (this.collider.ready) {
+      this.collider.depenetrate(this.position, PLAYER_RADIUS, this.contact, this.bodyOffsets());
+    }
+    this.clearProps(this.position);
     this.look.apply(this.position, this.viewOffset);
   }
 
@@ -1053,8 +1155,9 @@ export class Player {
     }
     if (this.ground.gap > 0) this.position.addScaledVector(DOWN, this.ground.gap);
 
-    // Refuse a step that would leave the body inside something.
-    if (this.collider.overlaps(this.position, PLAYER_RADIUS, this.capsule, STAND_UP_CLEARANCE_M)) {
+    // Refuse a step that would leave the body inside something — a bulkhead or
+    // a prop; a step-up onto a locker is exactly the case the BVH cannot see.
+    if (!this.bodyFits(this.position, this.capsule, STAND_UP_CLEARANCE_M)) {
       this.position.copy(_flatEnd);
       return;
     }
@@ -1105,11 +1208,18 @@ export class Player {
   private sweepBody(delta: THREE.Vector3): boolean {
     _doorFrom.copy(this.position);
     let stopped = false;
+    this.beginPropSweep();
     this.collider.sweep(
       this.position,
       delta,
       PLAYER_RADIUS,
       (center) => {
+        // Interactable props are not in the BVH either — resolved per substep,
+        // for the same reason the door is (see `./propBarrier`). BEFORE the
+        // door test, never after: a prop push is up to a body radius long, so
+        // the door has to see the position the substep actually ended at or a
+        // locker beside a hatchway becomes a way through a sealed one.
+        this.clearProps(center);
         _doorA.copy(_doorFrom).add(this.doorOffset);
         _doorB.copy(center).add(this.doorOffset);
         const door = this.barrier.blocking(_doorA, _doorB, PLAYER_RADIUS);
@@ -1124,6 +1234,7 @@ export class Player {
       this.contact,
       this.capsule,
     );
+    this.foldPropContact();
     return stopped;
   }
 
@@ -1165,12 +1276,9 @@ export class Player {
     if (!this.collider.ready || !hasFloor(this._gravity)) return true;
     _standProbe.copy(this.position).addScaledVector(UP, riseMetres);
     capsuleOffsets(gait, _probeOffsets);
-    return !this.collider.overlaps(
-      _standProbe,
-      PLAYER_RADIUS,
-      _probeOffsets,
-      STAND_UP_CLEARANCE_M,
-    );
+    // Props as well as station geometry: standing up inside a locker you had
+    // crouched under is the same refusal, and only one of the two is in the BVH.
+    return this.bodyFits(_standProbe, _probeOffsets, STAND_UP_CLEARANCE_M);
   }
 
   /** §4 FLOATING: `pos += vel * dt`, no gravity, drag as a half-life. */
@@ -1191,12 +1299,15 @@ export class Player {
     // them itself, per substep, against the last position it was allowed to
     // occupy — otherwise a 6 m/s body steps straight over a 0.1 m door.
     _doorFrom.copy(this.position);
+    this.beginPropSweep();
 
     this.collider.sweep(
       this.position,
       _step,
       PLAYER_RADIUS,
       (center) => {
+        // Props before the door, same substep, same reason as the walking sweep.
+        this.clearProps(center);
         const door = this.barrier.blocking(_doorFrom, center, PLAYER_RADIUS);
         if (door) {
           this.resolveDoorStop(door, _doorFrom, _preVel);
@@ -1214,8 +1325,108 @@ export class Player {
       this.contact,
     );
 
+    this.foldPropContact();
     if (latched || stoppedByDoor) return;
     if (this.contact.hit) this.resolveImpact(_preVel, this.contact.normal);
+
+    // A surface you are touching is something to push off. Without this the only
+    // way out of a drift is a rail: a player who crossed into a zero-G module,
+    // missed the grab and coasted into a wall had NO input that moved them —
+    // reported as "i fell and then was stuck on the floor". The fire
+    // extinguisher (§4) is the authored rescue and it is bound and working, but
+    // three charges behind a key nobody has pressed yet is not an answer to
+    // being stranded by ordinary movement.
+    //
+    // This is also just how bodies work in zero-G: astronauts push off walls far
+    // more than they haul on rails. §4's push-off numbers are unchanged — same
+    // charge time, same PUSH_MIN..PUSH_MAX, same flat loudness 8 — the only new
+    // thing is that a bulkhead counts as something to push against.
+    this.updateSurfacePush(dt);
+  }
+
+  /**
+   * Charge a push-off against whatever the body is resting on (zero-G only).
+   *
+   * Entered from FLOATING while in contact, so it cannot interfere with the rail
+   * path: `updateAnchored` owns CHARGING when a grip is held, and this only runs
+   * when there is no grip at all. The launch direction is where you are looking,
+   * hemisphere-clamped to the contact normal so you cannot push yourself further
+   * into the wall you are pressed against.
+   */
+  private updateSurfacePush(dt: number): void {
+    const touching = this.probeBraceSurface(_braceNormal);
+    if (this._state === 'CHARGING' && this._gripKey === null) {
+      this._charge = clamp(this._charge + dt / CHARGE_TIME, 0, 1);
+      this.publishCharge();
+      // Drifting off the surface mid-charge cancels it — you have nothing left
+      // to push against. Releasing fires.
+      if (!this.input.isDown('charge') || !touching) {
+        if (touching) this.pushOffFrom(_braceNormal);
+        else {
+          this._charge = 0;
+          this.setState('FLOATING');
+          this.publishCharge();
+        }
+      }
+      return;
+    }
+    if (this._state === 'FLOATING' && touching && this.input.isDown('charge')) {
+      this.setState('CHARGING');
+      this._charge = 0;
+    }
+  }
+
+  /**
+   * Is there a surface within arm's reach to brace against, and which way does
+   * it face? Writes the outward normal into `out`.
+   *
+   * A PROBE, not `this.contact`. `contact` only reports a hit when the swept
+   * body actually collides during motion, so a player already at rest against a
+   * bulkhead has no contact at all — which is precisely the stranded case this
+   * exists to rescue, and is why the first version of this fix did nothing.
+   * Measured on the reported situation: state FLOATING, speed 0.47 m/s,
+   * `contact.hit === false`.
+   *
+   * Six axis rays, only while the charge key is held, so the cost is nil.
+   */
+  private probeBraceSurface(out: THREE.Vector3): boolean {
+    const collider = this.collider;
+    if (!collider?.ready) return false;
+    const reach = PLAYER_RADIUS + BRACE_REACH_M;
+    let best = Infinity;
+    let found = false;
+    for (const dir of BRACE_DIRS) {
+      const hit = collider.raycast(this.position, dir, reach, _braceHit);
+      if (!hit.hit || hit.distance >= best) continue;
+      best = hit.distance;
+      // Face the normal back toward the body: a double-sided hit can report
+      // either winding, and "away from the wall" is the only useful answer.
+      out.copy(hit.normal);
+      if (out.dot(dir) > 0) out.negate();
+      found = true;
+    }
+    return found;
+  }
+
+  /** `pushOff` with the launch direction clamped out of a surface. */
+  private pushOffFrom(normal: THREE.Vector3): void {
+    this.look.forward(_fwd);
+    // Looking into the wall would otherwise launch you into it. Reflect the
+    // inward component out along the normal so "push" always means "away".
+    const into = _fwd.dot(normal);
+    if (into < 0) _fwd.addScaledVector(normal, -into * 2);
+    if (_fwd.lengthSq() > 1e-9) _fwd.normalize();
+    else _fwd.copy(normal);
+    const charge = this._charge;
+    const speed = PUSH_MIN + (PUSH_MAX - PUSH_MIN) * charge;
+    this.velocity.copy(_fwd).multiplyScalar(speed);
+    this._charge = 0;
+    this.slideAccum = 0;
+    this.latchLockout = PUSH_LATCH_LOCKOUT_S;
+    this.setState('FLOATING');
+    this.publishCharge();
+    this.emit('push-off');
+    this.heart.addExertion(EXERTION_PUSH * (0.4 + 0.6 * charge));
   }
 
   // =========================================================================
@@ -1350,7 +1561,7 @@ export class Player {
    *
    * So: if there is an upward-facing surface within a body's length below the
    * eye, the body stands ON it and the whole lift goes to `ViewLag`, which was
-   * built for exactly this discontinuity ("a settle that grows a 1.7 m body out
+   * built for exactly this discontinuity ("a settle that grows a standing body out
    * of a floating sphere"). The camera does not move this frame; the body does.
    *
    * Nothing is lifted when the surface is further away than the legs are long —
@@ -1475,6 +1686,19 @@ export class Player {
       this.coyote = 0;
       this.groundLock = 0;
       this.stride.reset(true);
+      // Land on the deck rather than near it. The climb-out lerps to the entry
+      // point plus an eye height, but an authored entry is not a validated body
+      // pose — the two levels disagree about whether its Y means the deck or
+      // 0.9 m above it — so settle onto whatever floor is actually under the
+      // body. Without this the player leaves the locker AIRBORNE and stays that
+      // way, which reads as crawling.
+      if (hasFloor(this._gravity)) {
+        // Resync the collider to the gait first: `updateHiding` moves `_gait`
+        // directly (haste prices the exit) without resizing the body, so the
+        // capsule can be a gait behind by the time we climb out.
+        capsuleOffsets(this._gait, this.capsule);
+        this.standUpOnSettle();
+      }
       return;
     }
 
@@ -1579,7 +1803,9 @@ export class Player {
     const haste = hasteForGait(this._gait);
     // Not muffled: you are coming out of the shell, not sitting behind it.
     this.emit('hide-exit', { intensity: haste, hidden: false });
-    if (!this.hide.exit(haste)) return false;
+    // The eye must land an eye-height above the entry point, not ON it — see
+    // HideController.exit. Without the lift the body ends up under the deck.
+    if (!this.hide.exit(haste, eyeHeightFor(this._gait))) return false;
     this.config.onHide?.({
       module: volume.module,
       spot: parseHideSpotKey(volume.key).spot,
@@ -1609,7 +1835,21 @@ export class Player {
     const volume = this.hide.volume;
     this.hide.clear();
     this._hidePrompt = null;
-    if (volume) this.position.set(volume.entry.x, volume.entry.y, volume.entry.z);
+    if (volume) {
+      this.position.set(volume.entry.x, volume.entry.y, volume.entry.z);
+      // `position` is the EYE and `entry` is a place to STAND, so the body has
+      // to be lifted onto it. Setting the eye to the entry point directly buries
+      // a whole body under the deck — the bug that left a player crawling after
+      // climbing out of a locker.
+      this.position.addScaledVector(UP, eyeHeightFor(this._gait));
+      // A spot's authored entry point is a point, not a validated body pose, and
+      // a spot derived from a locker prop puts it right against the carcass.
+      // Being thrown out of a hide spot must not be a way into the geometry.
+      if (this.collider.ready) {
+        this.collider.depenetrate(this.position, PLAYER_RADIUS, this.contact, this.bodyOffsets());
+      }
+      this.clearProps(this.position);
+    }
     this.look.setFloorLock(hasFloor(this._gravity));
     if (this._state === 'HIDDEN') this.setState(defaultStateFor(this._gravity));
     this.stride.reset(true);
@@ -1707,6 +1947,9 @@ export class Player {
 
     this.position.copy(_point).add(this.gripOffset);
     if (this.collider.ready) this.collider.depenetrate(this.position, PLAYER_RADIUS, this.contact);
+    // A rail can run past a locker face. The grip anchors the body to the rail
+    // regardless, so the props get the same say here they get in the sweep.
+    this.clearProps(this.position);
     this.clearGripOfDoor(rails, _prevPoint);
 
     // Velocity is measured, not assumed: crossing a segment can flip the rail's
@@ -1769,6 +2012,7 @@ export class Player {
     this.gripT = back.t;
     this.position.set(back.point.x, back.point.y, back.point.z).add(this.gripOffset);
     if (this.collider.ready) this.collider.depenetrate(this.position, PLAYER_RADIUS, this.contact);
+    this.clearProps(this.position);
   }
 
   /** Dead bodies persist and drift (§10). No input, no noise. */
@@ -1784,11 +2028,13 @@ export class Player {
     // sealed, it just has a body floating through the door.
     _doorFrom.copy(this.position);
     let stoppedByDoor = false;
+    this.beginPropSweep();
     this.collider.sweep(
       this.position,
       _step,
       PLAYER_RADIUS,
       (center) => {
+        this.clearProps(center);
         const door = this.barrier.blocking(_doorFrom, center, PLAYER_RADIUS);
         if (door) {
           this.resolveDoorStop(door, _doorFrom, _preVel);
@@ -1800,6 +2046,7 @@ export class Player {
       },
       this.contact,
     );
+    this.foldPropContact();
 
     if (stoppedByDoor) return;
     if (this.contact.hit) {
@@ -1910,7 +2157,8 @@ export class Player {
    *     slide along a wall at your gait speed instead of scrubbing off into it.
    *  2. A WALL IS ONLY AN IMPACT WHILE AIRBORNE, and then only above
    *     `WALL_IMPACT_MIN_SPEED`. Under gravity you are in contact with the world
-   *     constantly and the tube is 1.32 m wide; charging `impactNoise(1.4)` = 23
+   *     constantly and the deck is `2 x DECK_HALF_WIDTH_M` wide; charging
+   *     `impactNoise(1.4)` = 23
    *     every time somebody brushes a bulkhead would make walking louder than
    *     running and drown §3's coalescing window in events nobody chose. Ground
    *     contacts are not impacts at all — they are landings, priced by
@@ -1988,6 +2236,12 @@ export class Player {
     if (Math.abs(signed) < 1e-4) side = preVelocity.dot(_doorNormal) > 0 ? -1 : 1;
 
     this.position.copy(lastLegal);
+    // Props FIRST, and the door last. A prop push is up to a body radius along
+    // the prop's own face, and a locker beside a hatchway could aim that push
+    // straight through the leaf — which would be a body stepping through a
+    // SEALED hatch, the one thing §5's barricading mechanic cannot survive. Do
+    // it before the clearance is measured and the door has the final say.
+    this.clearProps(this.position);
     _doorPoint.copy(this.position).add(this.doorOffset);
     signed = _doorProbe.copy(_doorPoint).sub(door.centre).dot(_doorNormal);
     // A hair past touching, so the next frame's test reads "clear" rather than
@@ -2010,6 +2264,75 @@ export class Player {
    *  `undefined` for the single §4 sphere. */
   private bodyOffsets(): [THREE.Vector3, THREE.Vector3] | undefined {
     return hasFloor(this._gravity) && !this.hide.busy ? this.capsule : undefined;
+  }
+
+  /**
+   * Push the body out of any interactable prop it is inside, and remember the
+   * deepest one for the frame's contact response.
+   *
+   * Runs per SUBSTEP, alongside the hatch-door test and for the same reason: a
+   * prop is a box the body must not tunnel, and a sweep that only checked at the
+   * end would resolve a fast body out of the far side of the locker it went
+   * through. The BVH is re-depenetrated straight afterwards, because a prop
+   * standing against a bulkhead can push the body into the bulkhead and the
+   * static geometry has the final say about where a body may be.
+   *
+   * NOT WHILE HIDDEN. `HideController` puts the occupant at the volume's centre
+   * on purpose (§4 — that is what makes `sweepBlocked` mean anything), and a
+   * hide spot derived from a locker prop shares its box. Fighting the pose would
+   * eject the player from the spot they just spent 2.5 s and 8 loudness getting
+   * into.
+   */
+  private clearProps(center: THREE.Vector3): boolean {
+    if (this.props.size === 0 || this.hide.busy) return false;
+    const offsets = this.bodyOffsets();
+    const contact = this.props.resolve(center, PLAYER_RADIUS, offsets, this.propStep);
+    if (!contact.hit) return false;
+    if (this.collider.ready) {
+      this.collider.depenetrate(center, PLAYER_RADIUS, this.propBvh, offsets);
+    }
+    if (contact.depth > this.propContact.depth) {
+      this.propContact.hit = true;
+      this.propContact.depth = contact.depth;
+      this.propContact.object = contact.object;
+      this.propContact.normal.copy(contact.normal);
+    }
+    return true;
+  }
+
+  /** Forget the previous sweep's prop contact. Called at the top of every
+   *  sweep, the same way `ContactResult` is reset inside `StationCollider`. */
+  private beginPropSweep(): void {
+    this.propContact.hit = false;
+    this.propContact.depth = 0;
+    this.propContact.object = null;
+    this.propContact.normal.set(0, 0, 0);
+  }
+
+  /**
+   * Fold the sweep's prop contact into `this.contact`.
+   *
+   * The whole point of folding rather than reporting separately: everything
+   * downstream — the wedge test, `resolveContact`, and above all the
+   * `-preVelocity.dot(normal)` approach-speed capture that prices a catch at 26
+   * and a crash at 51 — already reads `contact`, and a second response path is a
+   * second chance to get that ordering wrong. The deeper of the two contacts
+   * wins, so a body stopped by a locker reports the locker's normal and a body
+   * stopped by the bulkhead behind it reports the bulkhead's.
+   */
+  private foldPropContact(): void {
+    if (!this.propContact.hit) return;
+    if (this.contact.hit && this.contact.depth >= this.propContact.depth) return;
+    this.contact.hit = true;
+    this.contact.depth = Math.max(this.contact.depth, this.propContact.depth);
+    this.contact.normal.copy(this.propContact.normal);
+  }
+
+  /** Is there room for the body here, props included? */
+  private bodyFits(center: THREE.Vector3, offsets: BodyOffsets, tolerance: number): boolean {
+    if (this.collider.overlaps(center, PLAYER_RADIUS, offsets, tolerance)) return false;
+    if (this.hide.busy) return true;
+    return !this.props.overlaps(center, PLAYER_RADIUS, offsets, tolerance);
   }
 
   // =========================================================================
@@ -2152,8 +2475,12 @@ export class Player {
     // handrails are scenery where there is a floor (§2), and offering a grab
     // prompt for one would be a lie about what the key does.
     const railsLive = this.railGraph?.railsActive(this._module) ?? false;
+    // ONE resolution of "is there a hand verb here", used by the glyph and by
+    // the prompt. Splitting them is how a crosshair and a HUD chip end up
+    // disagreeing about whether E does anything.
+    this.refreshInteractTarget();
     if (this._state === 'CHARGING') this._crosshair = 'charge';
-    else if (this._interaction || this._hidePrompt) this._crosshair = 'hand';
+    else if (this._interactTarget) this._crosshair = 'hand';
     else if (
       railsLive &&
       this._nearestRail &&
@@ -2259,6 +2586,89 @@ export class Player {
     held.distance = first.distance;
     this._interaction = held;
     hits.length = 0;
+  }
+
+  /**
+   * The §6 interact prompt, from the aim result the crosshair already has.
+   *
+   * WHY IT LIVES HERE AND NOT IN THE HUD. §6's crosshair reports `hand` for a
+   * panel, a locker AND a hide spot in reach — "it IS a hand verb, and the §6
+   * list is deliberately short because the crosshair is the tutorial". A HUD
+   * that wanted to say WHICH hand verb had exactly two options: re-run the
+   * raycast (a second answer that drifts from the glyph, at 22 lockers and
+   * panels a frame) or be told. This is being told.
+   *
+   * THE ORDER MATCHES `main.ts`'s KEY HANDLER on purpose: a panel, a locker or
+   * a crewmate is never worth losing to a bunk you happen to be standing beside,
+   * so the ray wins and the hide spot is the fallback. A prompt that named a
+   * different verb from the one the key performs would be worse than no prompt.
+   *
+   * `describeInteractable` is asked every frame, deliberately. It was once per
+   * target, which is cheaper and wrong: a locker's `usable` goes false the
+   * moment somebody empties it, and the player is still standing in front of it
+   * when that happens. One map lookup against one object is not worth a stale
+   * prompt.
+   */
+  private refreshInteractTarget(): void {
+    const hit = this._interaction;
+    const spot = this._hidePrompt;
+    if (!hit && !spot) {
+      this.setInteractTarget(null);
+      return;
+    }
+
+    const target = this.targetBuffer;
+    if (hit) {
+      const info = this.config.describeInteractable?.(hit.object) ?? null;
+      target.kind = info?.kind ?? 'other';
+      target.label = info?.label ?? '';
+      target.object = hit.object;
+      target.point.copy(hit.point);
+      target.distance = hit.distance;
+      target.hide = null;
+      // §6 wants you AT the panel. `INTERACT_RANGE` is the ray and is generous
+      // so the glyph lights up on approach; `INTERACT_REACH_M` is the commit.
+      // The ray's own distance is the honest measure of it — it is the gap to
+      // the surface of THE thing you are aiming at, which a nearest-prop query
+      // is not: standing with your back to a locker would otherwise report you
+      // as being at the panel across the deck.
+      target.inReach = hit.distance <= INTERACT_REACH_M;
+      target.usable = (info?.usable ?? true) && this._alive && !this.hide.busy;
+    } else if (spot) {
+      target.kind = 'hide';
+      target.label = '';
+      target.object = null;
+      target.point.set(spot.volume.entry.x, spot.volume.entry.y, spot.volume.entry.z);
+      target.distance = spot.distance;
+      target.hide = spot;
+      // The spot was only reported at all because it is inside `HIDE_REACH_M`,
+      // which IS the "at it" test for a hide spot (§4: arm's length plus a step).
+      target.inReach = true;
+      target.usable =
+        this._alive &&
+        !this.hide.busy &&
+        (this.hideSpots?.usableIn(spot.volume, this._gravity) ?? true);
+    }
+    this.setInteractTarget(target);
+  }
+
+  /**
+   * Publish the target, firing `onInteractTarget` only on a real change.
+   *
+   * The identity in the signature is the OBJECT for a prop and the hide
+   * VOLUME's key for a spot — never `hide.key`, which is the spot you are
+   * already INSIDE and is null for a candidate, so two different bunks in a row
+   * would have looked identical and the HUD would never have been told.
+   */
+  private setInteractTarget(target: InteractTarget | null): void {
+    this._interactTarget = target;
+    const signature = target
+      ? `${target.kind}|${target.label}|${target.inReach ? 1 : 0}|${target.usable ? 1 : 0}|` +
+        `${target.object ? target.object.id : (target.hide?.volume.key ?? '')}`
+      : '';
+    if (signature === this.targetSignature) return;
+    this.targetSignature = signature;
+    this.config.onInteractTarget?.(target);
   }
 
   /** The broad-phase index, rebuilt only when `interactables` is replaced. */

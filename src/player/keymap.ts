@@ -26,6 +26,8 @@ export type PlayerAction =
   | 'flashlight'
   | 'knock'
   | 'interact'
+  | 'pry'
+  | 'pump'
   | 'trackerMute'
   | 'rollLeft'
   | 'rollRight'
@@ -50,6 +52,8 @@ export const PLAYER_ACTIONS: readonly PlayerAction[] = [
   'flashlight',
   'knock',
   'interact',
+  'pry',
+  'pump',
   'trackerMute',
   'rollLeft',
   'rollRight',
@@ -79,6 +83,13 @@ export const PLAYER_ACTIONS: readonly PlayerAction[] = [
  * - Q — knock a handrail, loudness 15, ~2 modules (§10 knock codes).
  * - F — flashlight (§9's one shadow-casting light).
  * - E — interact. M — mute the wrist tracker (§6): silent but blind.
+ * - V / B — §11's canonical dual path on a jammed locker: pry it (60, 3 s) or
+ *   hand-pump it (6, 25 s). Both are HOLDS. They live here rather than as two
+ *   raw `KeyboardEvent.code` compares in `src/main.ts` for one reason: the §6
+ *   interact prompt names the bound key, and a verb whose key is typed in two
+ *   places is a verb that stops following a rebind. `src/player` itself never
+ *   reads them — the jam is server-authoritative puzzle state (§11) — so they
+ *   are bindings the controller carries on the integrator's behalf.
  * - X — fire extinguisher burst, loudness 65 (§4).
  * - Z / C — roll, when roll-lock is off. Arrows — snap turn.
  *
@@ -105,6 +116,8 @@ export const KEYMAP: Keymap = {
   flashlight: ['KeyF'],
   knock: ['KeyQ'],
   interact: ['KeyE'],
+  pry: ['KeyV'],
+  pump: ['KeyB'],
   trackerMute: ['KeyM'],
   rollLeft: ['KeyZ'],
   rollRight: ['KeyC'],

@@ -31,28 +31,30 @@
  *     vault, which is why the chicane bulkheads are 1.15 m (no shortcut) and the
  *     node console is 0.76 m (a loud shortcut across the middle of the ring).
  *
- * THE CROSS-SECTION BUDGET, which is much tighter than the deck width suggests.
+ * THE CROSS-SECTION BUDGET, which is still tighter than the deck width suggests
+ * — but no longer crippling.
  *
- * A straight is a 1.0 m bore and `DECK_HEADROOM_M` is 1.75 m against a 1.70 m
- * standing collider, so a STANDING body is a 0.35 m sphere swept up to y = 0.60,
- * where the round wall has closed in hard. Solve it and the walker's centre is
- * confined to a radius of 0.662 m about the axis, which at that height means
- * |x| ≤ 0.28: **a nominal straight is single-file for anyone standing up**, and
- * the 1.32 m of deck is mostly shoulder room and floor to look at. Crouching
- * (1.0 m collider, top sphere at y = −0.10) opens that to |x| ≤ 0.65 and gives
- * you the whole deck — which is a nice accident of the numbers rather than a
- * designed one, and worth knowing before tuning anything here.
+ * The rule is unchanged and it is the number that matters here: a STANDING body
+ * is a `PLAYER_RADIUS` sphere swept up to `DECK_Y_M + PLAYER_STAND_HEIGHT_M −
+ * PLAYER_RADIUS`, and at that height the round wall has closed in, so the floor
+ * you can SEE is wider than the floor you can STAND on. `standHalfWidth()` below
+ * is that arithmetic, and every fitting in this file is sized against it.
  *
- * The practical consequences, both learned the hard way:
+ * What changed is the answer. At a 1.0 m bore it came out at |x| ≤ 0.28 — "a
+ * nominal straight is single-file for anyone standing up", and the 1.32 m of
+ * deck was mostly shoulder room and floor to look at. At `TUBE_RADIUS_M` 1.5
+ * against a 0.30 m body it is |x| ≤ 1.09: 2.19 m of standing lane in 2.60 m of
+ * deck, which is two crew abreast and room for furniture beside them.
  *
- *  1. **No two lane-intruding fittings may overlap along the module axis.** Each
- *     one costs about 0.35 m of centre freedom from its own side, and two facing
- *     each other across the same slice of corridor is a wall.
- *  2. **A 1.0 m bore has no room for a body-sized recess at body height.** A
- *     crew bunk deep enough to climb into leaves 0.12 m of standing lane past
- *     it. That is why the straights carry a chicane and no hide spot, and why
- *     every hide spot in this file lives in a node, the lab or the cupola —
- *     the pieces with the bore to afford one.
+ * The practical consequences, both learned the hard way and both still true:
+ *
+ *  1. **Two lane-intruding fittings facing each other across the same slice of
+ *     corridor still eat the lane between them.** Each costs its own depth plus
+ *     a body radius; the budget is now big enough to afford one pair, not three.
+ *  2. **A body-sized recess at body height is now affordable**, which it was not:
+ *     a `BAY_HALF_EXTENTS` bay in a straight reaches its inner face to x = 0.54
+ *     and leaves 1.33 m of lane past it, against 0.12 m at the old bore. That is
+ *     why the straights now carry a hide spot as well as a chicane.
  *
  * Both are easy to break by moving one prop 30 cm, which is exactly why the
  * check is machinery and not a comment: `walkable.ts` samples the real collider
@@ -71,7 +73,7 @@ import {
 } from '@shared/constants';
 import type { HideSpot, ModuleId, PropRef, Quat, Vec3 } from '@shared/types';
 import { v3 } from '@shared/graph/math';
-import { roundVec } from './transform';
+import { quatFromAxisAngle, roundQuat, roundVec } from './transform';
 
 // ---------------------------------------------------------------------------
 // Dimensions
@@ -104,12 +106,23 @@ export const VAULT_HEIGHT_M = JUMP_HEIGHT_M + STEP_HEIGHT_M;
 // this file has to be sized against it the same way it is sized against
 // `WALK_LANE_M`. `geometry.ts` imports them back.
 
-/** Half-width of the walk-through slot: a body plus 7 cm a side. */
-export const DOORWAY_HALF_W = PLAYER_RADIUS + 0.07;
-/** Crown of the arch, above the module axis. A standing capsule's top sphere
- *  needs `DECK_Y_M + PLAYER_STAND_HEIGHT_M` = 0.95; 1 cm over that, and still
- *  inside the 1.0 m bore so the cut never leaves the hull. */
-export const DOORWAY_TOP = DECK_Y_M + PLAYER_STAND_HEIGHT_M + 0.01;
+// THE HATCH IS HARDWARE. IT DID NOT SHRINK WHEN THE CREW DID.
+//
+// Both of these used to be the body plus the thinnest margin that worked —
+// `PLAYER_RADIUS + 0.07` and `PLAYER_STAND_HEIGHT_M + 0.01` — which was fine
+// while the body was fixed and quietly wrong the moment §14 took 5 cm off the
+// radius and 10 cm off the height: the opening followed the crew down, so the
+// one place in the station a player already had to line themselves up got
+// tighter in the same pass that widened everything else. A hatch is a fitting
+// with its own dimensions; the margins below restore the opening to the 0.84 ×
+// 1.70 m it has always physically been, and a body that grows or shrinks now
+// changes how much room it has in the doorway rather than changing the doorway.
+
+/** Half-width of the walk-through slot: a body plus 12 cm a side. */
+export const DOORWAY_HALF_W = PLAYER_RADIUS + 0.12;
+/** Crown of the arch, above the module axis: 10 cm over a standing crew member,
+ *  and well inside every bore in the kit, so the cut never leaves the hull. */
+export const DOORWAY_TOP = DECK_Y_M + PLAYER_STAND_HEIGHT_M + 0.1;
 /** Sill, just under the deck, so a doorway never has a lip to step over. */
 export const DOORWAY_SILL = DECK_Y_M - 0.03;
 
@@ -141,12 +154,13 @@ export function bayHalfWidthBesidePort(boreRadius: number): number {
  * corridor**, `localPos` is the centre of the box, and `localQuat` is either
  * absent or a rotation about +Y. Anything else and the piece would lean.
  */
-/** Partial bulkhead — half a lane of steel, too tall to vault. */
+/** Partial bulkhead — one panel of steel, too tall to vault. Panels gang up
+ *  side by side to make a stub wall as wide as the deck it has to narrow. */
 export const BULKHEAD_SIZE: Vec3 = v3(0.4, 1.15, 0.18);
 /** Wall thickness of a hide spot's shell — the steel between you and it. */
 export const HIDE_SHELL_T = 0.08;
 /** Bench module for the lab island. Two end to end make a 2.6 m spine. */
-export const BENCH_SIZE: Vec3 = v3(0.5, 0.85, 1.3);
+export const BENCH_SIZE: Vec3 = v3(0.62, 0.85, 1.3);
 /** Equipment bank — a full-height block that turns a wall into a corner. */
 export const BANK_SIZE: Vec3 = v3(0.62, 1.3, 0.5);
 /**
@@ -161,10 +175,14 @@ export const BANK_SIZE: Vec3 = v3(0.62, 1.3, 0.5);
  * swallows whatever is bolted there. See `labIsland`, where it was found.
  */
 export const WALL_FITTING_DEPTH_M = 0.3;
-/** Cargo rack for §11 puzzle 3. Wall convention (y = depth), like `rack`. */
-export const CARGO_RACK_SIZE: Vec3 = v3(0.9, 0.24, 4.3);
-/** One numbered cargo bag. A Rapier body once §11 puzzle 3 is built. */
-export const CARGO_BAG_SIZE: Vec3 = v3(0.46, 0.4, 0.46);
+/** Cargo rack for §11 puzzle 3. Wall convention (y = depth), like `rack`.
+ *  0.80 m tall against a 1.6 m crew member — chest high, five bays long. */
+export const CARGO_RACK_SIZE: Vec3 = v3(0.8, 0.22, 3.9);
+/** Pitch of the five numbered bays along the cargo rack. */
+export const CARGO_SLOT_PITCH = 0.85;
+/** One numbered cargo bag. A Rapier body once §11 puzzle 3 is built.
+ *  A two-handed carry, not a wardrobe: 0.42 m is a real ISS transfer bag. */
+export const CARGO_BAG_SIZE: Vec3 = v3(0.42, 0.36, 0.42);
 
 /** Half-width of the walkable inset at `DECK_Y_M` inside a bore of `radius`. */
 export function deckHalfWidth(radius: number): number {
@@ -614,48 +632,226 @@ function deckProp(id: string, kind: string, size: Vec3, x: number, z: number, qu
 }
 
 /**
+ * Half-width the CENTRE of a standing body may occupy in a bore of `radius`.
+ *
+ * The gap between this and the deck's own half-width is the single most
+ * expensive thing to forget in this kit — see the cross-section budget at the
+ * top of this file. The body's top sphere sits at `DECK_Y_M +
+ * PLAYER_STAND_HEIGHT_M − PLAYER_RADIUS`, which is high enough that the round
+ * wall has closed in, so the floor you can see is wider than the floor you can
+ * stand on. In a 1.5 m bore that is 1.09 m against 1.30 m of deck.
+ */
+export function standHalfWidth(radius: number): number {
+  const shoulder = DECK_Y_M + PLAYER_STAND_HEIGHT_M - PLAYER_RADIUS;
+  const allowed = radius - PLAYER_RADIUS;
+  return Math.sqrt(Math.max(0, allowed * allowed - shoulder * shoulder));
+}
+
+/**
+ * How much lane is left when a fitting `depth` deep stands against a wall
+ * `lane` metres from whatever is opposite it, and whether a body fits.
+ *
+ * The threshold is `2 × PLAYER_RADIUS` and not `WALK_LANE_M`: the wider number
+ * is what an obstacle should aim for, the narrower one is the point at which
+ * `walkable.ts` stops finding a standable cell at all and the module fails to
+ * build. Both are reported so an author can tell "tight" from "broken".
+ */
+export function laneBeside(
+  lane: number,
+  depth: number,
+): { clear: number; fits: boolean; comfortable: boolean } {
+  const clear = lane - depth;
+  return { clear, fits: clear >= 2 * PLAYER_RADIUS, comfortable: clear >= WALK_LANE_M };
+}
+
+export interface DividerOptions {
+  /** Centre across the lane, module space. */
+  x: number;
+  /** Centre along the run, module space. */
+  z: number;
+  /**
+   * Panels side by side. One is a 0.40 m fin; a stub wall that has to narrow a
+   * 2.60 m deck to a walk lane needs four.
+   */
+  panels?: number;
+  /** Yaw about +Y. 0 leaves the wall's 0.40 m running along +X. */
+  yaw?: number;
+}
+
+/** Local +X of a prop yawed by `yaw` about +Y. */
+function yawedX(yaw: number): { x: number; z: number } {
+  return { x: Math.cos(yaw), z: -Math.sin(yaw) };
+}
+
+/**
+ * A partial bulkhead (§2, ISS-GRV-03) as one or more `bulkhead` props.
+ *
+ * `BULKHEAD_SIZE.y` is 1.15 m and that single number is the asset: it is over
+ * `EYE_HEIGHT_CROUCH_M` (0.80), so a crouched body behind one is behind
+ * something rather than beside it, and it is far over `STEP_HEIGHT_M` (0.40), so
+ * nothing steps across it and the alien has to go around — which is the only
+ * kind of "cover" a blind pursuer can be made to respect.
+ *
+ * Width grows along the panel's own +X, so adding panels widens the wall ACROSS
+ * the lane and never deepens it into the walking envelope by surprise. Check the
+ * lane you have left with `laneBeside()` before you place one.
+ */
+export function divider(moduleId: ModuleId, suffix: string, o: DividerOptions): PropRef[] {
+  const n = Math.max(1, Math.round(o.panels ?? 1));
+  const yaw = o.yaw ?? 0;
+  const dir = yawedX(yaw);
+  const quat = Math.abs(yaw) > 1e-9 ? roundQuat(quatFromAxisAngle(v3(0, 1, 0), yaw)) : undefined;
+  const out: PropRef[] = [];
+  for (let i = 0; i < n; i++) {
+    const t = (i - (n - 1) / 2) * BULKHEAD_SIZE.x;
+    out.push(
+      deckProp(
+        `${moduleId}-bulkhead-${suffix}${n > 1 ? String(i + 1) : ''}`,
+        'bulkhead',
+        BULKHEAD_SIZE,
+        o.x + dir.x * t,
+        o.z + dir.z * t,
+        quat,
+      ),
+    );
+  }
+  return out;
+}
+
+/**
+ * ISS-GRV-02, and §2's "nodes get this for free — but only most of it".
+ *
+ * A node already has four exits and a console island, so what it is missing is
+ * not a turn but the ABSENCE of a shortcut: the corners are open, so a pursuer
+ * that guesses wrong can cut the diagonal and get most of its guess back. A
+ * single panel yawed 45° across a corner closes the diagonal and leaves the
+ * ring — the panel is set so the gap between its inner face and the island's
+ * corner is exactly one `WALK_LANE_M`, which is the whole placement rule and the
+ * reason `inset` is derived here instead of typed in a level file.
+ */
+export function cornerFins(
+  moduleId: ModuleId,
+  half: number,
+  corners: ReadonlyArray<readonly [-1 | 1, -1 | 1]>,
+  islandHalf = 0.5,
+): PropRef[] {
+  // Distance along the diagonal from the module axis to the fin's inner face,
+  // for a gap of exactly one walk lane past the island's corner.
+  const wanted = islandHalf * Math.SQRT2 + WALK_LANE_M;
+  const centreDiag = wanted + BULKHEAD_SIZE.z / 2;
+  // Keep the panel's far corner inside the room.
+  const reach = BULKHEAD_SIZE.x / 2 + BULKHEAD_SIZE.z / 2;
+  const maxDiag = (half - 0.06) * Math.SQRT2 - reach;
+  const diag = Math.min(centreDiag, maxDiag);
+  const c = diag / Math.SQRT2;
+  const out: PropRef[] = [];
+  for (const [sx, sz] of corners) {
+    out.push(
+      ...divider(moduleId, `corner-${sx > 0 ? 'p' : 'n'}${sz > 0 ? 'p' : 'n'}`, {
+        x: sx * c,
+        z: sz * c,
+        panels: 1,
+        yaw: ((sx * sz) as number) * (Math.PI / 4),
+      }),
+    );
+  }
+  return out;
+}
+
+/** The diagonal gap `cornerFins` leaves past an `islandHalf`-square island. */
+export function cornerFinGap(half: number, islandHalf = 0.5): number {
+  const fins = cornerFins('probe' as ModuleId, half, [[1, 1]], islandHalf);
+  const p = fins[0] as PropRef;
+  const diag = Math.hypot(p.localPos.x, p.localPos.z);
+  return diag - BULKHEAD_SIZE.z / 2 - islandHalf * Math.SQRT2;
+}
+
+/**
+ * Two stub walls standing off a node's ±X faces, on the flank its rack bay is
+ * not on, one at each end of the room from the other.
+ *
+ * The corner fins close the two diagonals; these two put a shoulder in the two
+ * lanes that are left, so the node's ring is four segments with one commitment
+ * in each rather than a square you can cut across. With the fins they make a
+ * pinwheel, which is the arrangement that gives a blind pursuer the most ways to
+ * be wrong without ever closing a lane (`walkable.ts` proves the lane).
+ *
+ * Deliberately ONE panel each: 0.40 m of steel against a 1.57 m lane leaves
+ * 1.15 m, comfortably over `WALK_LANE_M`, and §2 is clear that a bulkhead you
+ * cannot get a body width around is a wall rather than cover.
+ */
+export function nodeBackWalls(moduleId: ModuleId, half: number, flank: number): PropRef[] {
+  // Unyawed, so the panel's 0.40 m runs along X — out of the face and into the
+  // room, which is what a shoulder is — and its 0.18 m thickness lies along the
+  // lane, where it costs nothing.
+  const x = half - 0.02 - BULKHEAD_SIZE.x / 2;
+  return [
+    ...divider(moduleId, 'back1', { x, z: flank, panels: 1 }),
+    ...divider(moduleId, 'back2', { x: -x, z: -flank, panels: 1 }),
+  ];
+}
+
+/**
  * §2's "partial bulkhead", applied to the kit piece that needs it most.
  *
- * A straight is 1.32 m of walkable deck and a walker is 0.70 m of that, so a
- * bulkhead on alternating sides leaves a 0.92 m lane and turns a 5 m sprint into
- * a weave. Against a blind pursuer that is worth more than it looks: it does not
- * hide you, it forces the thing to commit to a side, and a committed pursuer can
- * be doubled back on. `COAMING_SIZE` at mid-span is under `STEP_HEIGHT_M` so it
- * costs a walker nothing — it is a threshold that reads in the dark and a
- * landing hazard for anyone who tries to jump the chicane.
+ * A stub wall on alternating sides turns a 5 m sprint into a weave. Against a
+ * blind pursuer that is worth more than it looks: it does not hide you, it
+ * forces the thing to commit to a side, and a committed pursuer can be doubled
+ * back on.
+ *
+ * THE WIDTH IS DERIVED FROM THE DECK, and that is the whole change the widening
+ * forced. At a 1.32 m deck a single 0.40 m panel left a 0.92 m lane and the
+ * weave was real; at 2.60 m the same panel leaves 2.20 m, which is not a weave,
+ * it is a plate you walk past. So the stub is now as many panels wide as it
+ * takes to bring the free lane back to `CHICANE_LANE_M` — four in a straight,
+ * six in a lab — and the weave costs the same body-width of deviation it always
+ * did, in a corridor twice as wide.
+ *
+ * Each side is TWO panels DEEP along the corridor as well. The depth costs the
+ * lane nothing — it grows along +Z, not across the bore — and it buys a return
+ * that reads as built structure instead of a plate stood on edge, and a pocket
+ * deep enough that a crouched body (0.80 m eye, against 1.15 m of steel) is
+ * behind something rather than beside it.
  */
+export const CHICANE_LANE_M = 1.1;
+
 export function tubeChicane(moduleId: ModuleId, radius: number, length: number): PropRef[] {
-  const half = deckHalfWidth(radius);
-  const offset = half - BULKHEAD_SIZE.x / 2;
+  const stand = standHalfWidth(radius);
+  // The stub's outer face stands off the wall by whatever is bolted to it — the
+  // rack line and anything on it reach `WALL_FITTING_DEPTH_M` in from the hull,
+  // and a stub flush with the deck lip would bury its own end in one.
+  const outer = Math.min(deckHalfWidth(radius), radius - WALL_FITTING_DEPTH_M);
+  // Width that leaves `CHICANE_LANE_M` of free lane between the stub's inner
+  // face and the far side of the STANDING envelope (not of the visible deck —
+  // the round wall closes in over a walker's shoulders).
+  const want = outer + stand - CHICANE_LANE_M;
+  const panels = Math.max(1, Math.round(want / BULKHEAD_SIZE.x));
+  const width = panels * BULKHEAD_SIZE.x;
+  const offset = outer - width / 2;
   // Amidships, and spaced so the weave is a metre and a bit rather than a
-  // shimmy. The ends of the tube belong to the locker and the crew bunk; see
-  // the cross-section budget in the header for why they cannot share a slice.
-  //
-  // Each side of the weave is TWO panels deep along the corridor rather than
-  // one, and that is the only thing about the chicane the art pass changed. The
-  // depth costs the lane nothing — it grows along +Z, not across the bore, so
-  // every number in the cross-section budget above is untouched — and it buys
-  // the two things a single 0.18 m fin could not: a 0.36 m return that reads as
-  // built structure instead of a plate stood on edge, and a pocket deep enough
-  // that a crouched body (0.85 m eye, against 1.15 m of steel) is behind
-  // something rather than beside it. §4's hiding rules do not care, because the
-  // alien is blind; the player's read of where cover IS cares a great deal.
+  // shimmy. The ends of the tube belong to the locker and the equipment bay.
+  // AFT STUB TO STARBOARD, forward stub to port, and the order is not arbitrary:
+  // the aft end of a straight is where the kit puts its locker (−X) and where a
+  // level is most likely to build a berth into a capped port (+X, `crewBunk`).
+  // An aft stub on −X would then force a body to pass on +X in exactly the slice
+  // a berth occupies, and the aft end of the module silently becomes its own
+  // island — MEASURED on `escape-soyuz`, which came out as two pockets of deck
+  // with one diagonal cell between them. Starboard-first, the two fittings at
+  // that end leave the lane on the same side.
   const props: PropRef[] = [];
   const stubs: Array<{ suffix: string; x: number; z: number }> = [
-    { suffix: 'a', x: -offset, z: -0.9 },
-    { suffix: 'b', x: offset, z: 0.3 },
+    { suffix: 'a', x: offset, z: -0.9 },
+    { suffix: 'b', x: -offset, z: 0.3 },
   ];
   for (const stub of stubs) {
     for (let i = 0; i < 2; i++) {
       const z = stub.z + (i - 0.5) * BULKHEAD_SIZE.z;
       props.push(
-        deckProp(
-          `${moduleId}-bulkhead-${stub.suffix}${i === 0 ? '' : String(i)}`,
-          'bulkhead',
-          BULKHEAD_SIZE,
-          stub.x,
+        ...divider(moduleId, `${stub.suffix}${i === 0 ? '' : String(i)}-`, {
+          x: stub.x,
           z,
-        ),
+          panels,
+        }),
       );
     }
   }
@@ -688,21 +884,27 @@ export function labIsland(moduleId: ModuleId, radius: number, length: number): P
     radius - WALL_FITTING_DEPTH_M - 0.02 - BANK_SIZE.x / 2,
   );
   const bankZ = length / 2 - BANK_SIZE.z / 2 - 0.15;
+  // TWO benches now, end to end, and the reason is the deck under them.
+  //
+  // The old note read: "a swept body has to get PAST the island to use the far
+  // lane, and it needs about 0.35 m of clear module axis at each end to make
+  // that turn. A 2.6 m island in a 5 m tube leaves 1.2 m at each end, the end
+  // fittings claim 0.8 m of it, and the loop silently becomes two dead-end
+  // lanes — 1.3 m of island is enough to have to choose a side and short enough
+  // to leave a real turn at both ends." Every number in that paragraph is about
+  // the LANES, and at a 1.4× bore the lanes went from 0.93 m to 1.65 m: the turn
+  // at each end of the island is now made in a corridor nearly twice as wide, so
+  // the island can be the full 2.6 m spine it was always meant to be. A longer
+  // island is a better loop — more of the lap is committed, and the pursuer's
+  // wrong guess costs it more.
+  const benchHalf = BENCH_SIZE.z / 2;
   return [
-    // ONE bench, amidships, and the length is the whole design problem.
-    //
-    // A swept 0.35 m body has to get PAST the island to use the far lane, and it
-    // needs about 0.35 m of clear module axis at each end of the island to make
-    // that turn. A 2.6 m island in a 5 m tube leaves 1.2 m at each end, the end
-    // fittings claim 0.8 m of it once their own 0.35 m of body clearance is
-    // counted, and the loop silently becomes two dead-end lanes — which is
-    // exactly what the first draft of this file produced and what `walkable.ts`
-    // now catches. 1.3 m of island is enough to have to choose a side and short
-    // enough to leave a real turn at both ends.
-    deckProp(`${moduleId}-bench-a`, 'bench', BENCH_SIZE, 0, 0),
-    // The bank is aft, on the wall the locker is not on, so the aft end reads as
-    // a corner without either fitting closing the other's lane.
-    deckProp(`${moduleId}-bank-a`, 'bank', BANK_SIZE, -bankX, -bankZ),
+    deckProp(`${moduleId}-bench-a`, 'bench', BENCH_SIZE, 0, -benchHalf),
+    deckProp(`${moduleId}-bench-b`, 'bench', BENCH_SIZE, 0, benchHalf),
+    // The bank is forward, on the wall the locker is not on, so that end reads
+    // as a corner without either fitting closing the other's lane. Aft on the
+    // same wall belongs to the second equipment bay.
+    deckProp(`${moduleId}-bank-a`, 'bank', BANK_SIZE, -bankX, bankZ),
   ];
 }
 
@@ -711,20 +913,22 @@ export function labIsland(moduleId: ModuleId, radius: number, length: number): P
  * `geometry.ts` wraps every hide spot in a shell, so this one void produces both
  * the island the room loops around and the box a body fits into.
  *
- * `HIDE_SHELL_T` of wall on each side makes the finished island 1.0 m square and
- * 0.76 m tall — under `VAULT_HEIGHT_M`, so cutting the corner across the top is
- * available and costs a landing (§4). Loud shortcut, quiet detour; the same rule
+ * `HIDE_SHELL_T` of wall on each side makes the finished island `2×(half + t)`
+ * square and 0.76 m tall — under `VAULT_HEIGHT_M`, so cutting the corner across
+ * the top is available and costs a landing (§4). Loud shortcut, quiet detour; the same rule
  * as everything else in §11.
  */
-export function nodeConsoleVoid(id: string): HideSpot {
-  const halfExtents = v3(0.42, 0.3, 0.42);
+export function nodeConsoleVoid(id: string, half = 0.42): HideSpot {
+  const halfExtents = v3(half, 0.3, half);
   return {
     id,
     kind: 'equipment-bay',
     // Sit the shell's underside exactly on the deck.
     localPos: roundVec(v3(0, DECK_Y_M + HIDE_SHELL_T + halfExtents.y, 0)),
     halfExtents,
-    entryPos: roundVec(v3(0, DECK_Y_M + 0.9, 0.95)),
+    // Approached along +Z, standing clear of the shell the way every other bay's
+    // mouth does (`bayEntryOffset`) rather than at a hard-coded 0.95.
+    entryPos: roundVec(v3(0, DECK_Y_M + 0.9, bayEntryOffset(half))),
     lookDir: v3(0, 0, 1),
     usableIn: 'any',
   };

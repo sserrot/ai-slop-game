@@ -146,7 +146,7 @@ export const GRAB_RANGE = 0.8;
 export const DRAG_HALFLIFE = 4.0;
 
 /** Swept-sphere radius of the player capsule against the static BVH (§4). */
-export const PLAYER_RADIUS = 0.35;
+export const PLAYER_RADIUS = 0.3;
 
 /** §14 — clean, arrested rail catch. Quiet enough that skill buys silence. */
 export function catchNoise(v: number): number {
@@ -262,22 +262,30 @@ export const BOB_AMPLITUDE_M = 0.045;
 
 // -- collider ---------------------------------------------------------------
 //
-// The player is a capsule of `PLAYER_RADIUS` (§14, 0.35) and one of the heights
-// below: two spheres, at `floor + PLAYER_RADIUS` and `floor + height −
-// PLAYER_RADIUS`. In `zero` modules it collapses back to the single §4 swept
-// sphere, which is why `PLAYER_RADIUS` is shared between the two regimes and
-// why the two hard-won fixes in the sweep — the pre-restitution approach speed
-// in `resolveImpact`, and shut hatches stopping the body — carry over unchanged.
+// The player is a capsule of `PLAYER_RADIUS` and one of the heights below: two
+// spheres, at `floor + PLAYER_RADIUS` and `floor + height − PLAYER_RADIUS`. In
+// `zero` modules it collapses back to the single §4 swept sphere, which is why
+// `PLAYER_RADIUS` is shared between the two regimes and why the two hard-won
+// fixes in the sweep — the pre-restitution approach speed in `resolveImpact`,
+// and shut hatches stopping the body — carry over unchanged.
 //
-// The straight kit piece has a 1.0 m interior radius (`src/station/kit.ts`), so
-// a deck inset far enough to be walkable leaves roughly 1.75 m of headroom.
-// `PLAYER_STAND_HEIGHT_M` is sized to that, not to a person: the station is
-// cramped, and it should feel it.
+// The straight kit piece has a `TUBE_RADIUS_M` interior radius
+// (`src/station/kit.ts` builds against it), and `DECK_HEADROOM_M` is derived
+// from that and the deck inset rather than chosen. `PLAYER_STAND_HEIGHT_M` is
+// sized against the headroom, not against a person — but the tube is no longer
+// the constraint it was: at a 1.0 m bore the margin over a standing collider was
+// 5 cm and every fitting in the kit had to be budgeted around it, and at 1.5 m
+// it is 0.65 m. What still makes the station feel cramped is the FURNITURE, not
+// the bore, which is where §2's chase geometry moved the problem on purpose.
 
-export const PLAYER_STAND_HEIGHT_M = 1.7;
-export const PLAYER_CROUCH_HEIGHT_M = 1.0;
-export const EYE_HEIGHT_STAND_M = 1.55;
-export const EYE_HEIGHT_CROUCH_M = 0.85;
+// Scaled down ~6% after the same playtest. The body was sized to a 1.75 m
+// headroom and read as oversized once the tube widened; a slightly smaller
+// crewmember also buys back deck clearance without shrinking the station's
+// sense of scale, which is the thing worth keeping.
+export const PLAYER_STAND_HEIGHT_M = 1.6;
+export const PLAYER_CROUCH_HEIGHT_M = 0.95;
+export const EYE_HEIGHT_STAND_M = 1.45;
+export const EYE_HEIGHT_CROUCH_M = 0.8;
 
 /**
  * m — where the deck sits, as an offset from a module's centreline, in the
@@ -293,11 +301,47 @@ export const EYE_HEIGHT_CROUCH_M = 0.85;
  */
 export const DECK_Y_M = -0.75;
 
-/** m — half-width of the walkable deck at `DECK_Y_M` in a 1.0 m radius tube. */
-export const DECK_HALF_WIDTH_M = 0.66;
+/**
+ * m — interior radius of a straight tube. `src/station/kit.ts` builds against
+ * this rather than its own literal.
+ *
+ * Widened from 1.0 after a playtest: "the corridors are way too narrow". At 1.0
+ * the deck was 1.32 m wide and a 0.70 m player left about 30 cm of clearance on
+ * each side, which reads as a crawlspace rather than a corridor — and it made
+ * the chase geometry §2 asks for impossible, because there was no room to put
+ * anything beside the walking line.
+ */
+export const TUBE_RADIUS_M = 1.5;
 
-/** m — headroom from the deck to the top of a straight tube. */
-export const DECK_HEADROOM_M = 1.75;
+/**
+ * m — half-width of the walkable deck, DERIVED from the tube radius and the
+ * deck inset rather than typed. These three numbers are one piece of geometry;
+ * hand-typing the result is how they drift apart.
+ */
+export const DECK_HALF_WIDTH_M = Math.sqrt(TUBE_RADIUS_M * TUBE_RADIUS_M - DECK_Y_M * DECK_Y_M);
+
+/** m — headroom from the deck to the top of a straight tube. Derived, as above. */
+export const DECK_HEADROOM_M = TUBE_RADIUS_M - DECK_Y_M;
+
+/**
+ * m — height of every handrail above the deck, station-wide.
+ *
+ * Rails were moved overhead after a playtest: floor-level bars read as clutter
+ * to walk past, and after the gravity pivot they are scenery in a `nominal`
+ * module anyway. They stay fully load-bearing in `zero` modules, where there is
+ * no up and an overhead rail is just a rail.
+ *
+ * Clears a standing crewmember by 0.22 m. It lives here, not in the kit, because
+ * three separate things must agree on it: `src/station/kit.ts` builds the
+ * authored station's rails, `server/station/layout.ts` builds the procedural
+ * fallback's, and the controller has to be able to REACH one — §4 promises 2.5 s
+ * of warning before gravity fails, which is only fair if there is something
+ * grabbable overhead. Two of those used to hold their own copy.
+ */
+export const RAIL_ABOVE_DECK_M = PLAYER_STAND_HEIGHT_M + 0.22;
+
+/** m — the module-space Y that `RAIL_ABOVE_DECK_M` puts a rail at. */
+export const RAIL_Y_M = DECK_Y_M + RAIL_ABOVE_DECK_M;
 
 // ===========================================================================
 // GAIT — three speeds, three loudnesses, one stride model

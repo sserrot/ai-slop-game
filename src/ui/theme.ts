@@ -60,20 +60,43 @@ export function uiFont(sizePx: number, weight: 'normal' | 'bold' = 'normal'): st
 }
 
 /**
+ * The three loudness bands the player learns by ear: quiet below a handrail
+ * knock, loud up to a hatch cycle, alarm above it.
+ *
+ * ONE definition of the two thresholds. The noise ring, the panels and the §6
+ * interact prompt all colour by loudness, and the interact prompt does it in
+ * CSS rather than on a canvas — so it needs the band as a class name, not as a
+ * hex string, and the two must not be able to disagree about where amber
+ * starts.
+ */
+export type LoudnessBand = 'quiet' | 'loud' | 'alarm';
+
+export function loudnessBand(loudness: number): LoudnessBand {
+  if (loudness < 15) return 'quiet';
+  if (loudness < 45) return 'loud';
+  return 'alarm';
+}
+
+/**
  * Loudness → colour. Used by the noise ring (§6) and by panels that want to
- * show "how loud is this action". Green below a knock, amber up to a hatch
- * cycle, red above it: the same three bands the player learns by ear.
+ * show "how loud is this action".
  */
 export function loudnessColor(loudness: number): string {
-  if (loudness < 15) return UI_COLORS.green;
-  if (loudness < 45) return UI_COLORS.amber;
-  return UI_COLORS.red;
+  switch (loudnessBand(loudness)) {
+    case 'quiet':
+      return UI_COLORS.green;
+    case 'loud':
+      return UI_COLORS.amber;
+    case 'alarm':
+      return UI_COLORS.red;
+  }
 }
 
 /** Same bands, as an rgba string with explicit alpha (canvas strokes fade). */
 export function loudnessRgba(loudness: number, alpha: number): string {
+  const band = loudnessBand(loudness);
   const [r, g, b] =
-    loudness < 15 ? [77, 255, 155] : loudness < 45 ? [255, 176, 58] : [255, 74, 61];
+    band === 'quiet' ? [77, 255, 155] : band === 'loud' ? [255, 176, 58] : [255, 74, 61];
   return `rgba(${r}, ${g}, ${b}, ${alpha.toFixed(3)})`;
 }
 
