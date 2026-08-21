@@ -1087,34 +1087,7 @@
       ],
       "lighting": "emergency",
       "gravity": "zero",
-      "volume": 35.34,
-      "hideSpots": [
-        {
-          "id": "tube-spine-net",
-          "kind": "equipment-bay",
-          "localPos": {
-            "x": 0.5,
-            "y": 0.1,
-            "z": 1.5
-          },
-          "halfExtents": {
-            "x": 0.32,
-            "y": 0.42,
-            "z": 0.55
-          },
-          "entryPos": {
-            "x": -0.2,
-            "y": 0.1,
-            "z": 1.5
-          },
-          "lookDir": {
-            "x": -1,
-            "y": 0,
-            "z": 0
-          },
-          "usableIn": "zero"
-        }
-      ]
+      "volume": 35.34
     },
     {
       "id": "node-beta",
@@ -3737,59 +3710,7 @@
       ],
       "lighting": "dark",
       "gravity": "zero",
-      "volume": 40.72,
-      "hideSpots": [
-        {
-          "id": "airlock-eva-suit-bay",
-          "kind": "equipment-bay",
-          "localPos": {
-            "x": -0.55,
-            "y": 0.1,
-            "z": 0
-          },
-          "halfExtents": {
-            "x": 0.32,
-            "y": 0.42,
-            "z": 0.55
-          },
-          "entryPos": {
-            "x": 0.15,
-            "y": 0.1,
-            "z": 0
-          },
-          "lookDir": {
-            "x": 1,
-            "y": 0,
-            "z": 0
-          },
-          "usableIn": "zero"
-        },
-        {
-          "id": "airlock-eva-outer-net",
-          "kind": "equipment-bay",
-          "localPos": {
-            "x": 0.55,
-            "y": 0.1,
-            "z": 1.4
-          },
-          "halfExtents": {
-            "x": 0.32,
-            "y": 0.42,
-            "z": 0.55
-          },
-          "entryPos": {
-            "x": -0.15,
-            "y": 0.1,
-            "z": 1.4
-          },
-          "lookDir": {
-            "x": -1,
-            "y": 0,
-            "z": 0
-          },
-          "usableIn": "zero"
-        }
-      ]
+      "volume": 40.72
     },
     {
       "id": "escape-soyuz",

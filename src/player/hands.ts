@@ -67,15 +67,17 @@ import type { ItemKind } from '../station/items';
  *
  * `x` was 0.28 — 68% of the half-width at glove depth — which parked each hand
  * hard against its frame edge, where the near-plane perspective stretches it
- * into a fisheye smear the playtest read as "way too big". 0.19 brings both
- * arms into the middle third of the frame, where they read at their true size.
+ * into a fisheye smear the playtest read as "way too big". Two passes brought
+ * it in: 0.19 (middle third), then 0.15 after the second playtest still read
+ * the arms as far apart — they now rest together, framing the crosshair's
+ * lower half the way a pair of arms held in front of the chest actually does.
  */
-const ELBOW = { x: 0.19, y: -0.075, z: 0.06 };
+const ELBOW = { x: 0.15, y: -0.08, z: 0.06 };
 
 /** m — sleeve seal ring. */
-const CUFF_L = 0.045;
-const PALM_L = 0.048;
-const FINGER_L = 0.062;
+const CUFF_L = 0.04;
+const PALM_L = 0.042;
+const FINGER_L = 0.054;
 /** m — where the knuckle line sits relative to the wrist end of the forearm. */
 const WRIST_TO_KNUCKLE = CUFF_L + PALM_L - 0.012;
 
@@ -163,17 +165,17 @@ function buildLimb(side: -1 | 1): THREE.BufferGeometry {
   // not a padded gauntlet: at 0.3 m from the eye every extra centimetre of
   // radius reads as three, and the playtest verdict on the first sizing was
   // simply "way too big".
-  parts.push(at(zTube(0.047, 0.038, FOREARM_L), 0, 0, 0));
+  parts.push(at(zTube(0.04, 0.032, FOREARM_L), 0, 0, 0));
   // Cuff: a hard ring where the glove meets the sleeve, FLARED outward toward
   // the hand so the join reads as a seal — which is what an EVA cuff is, and the
   // one hard silhouette break between shoulder and knuckle.
-  parts.push(at(zTube(0.051, 0.057, CUFF_L), 0, 0, -FOREARM_L + 0.012));
+  parts.push(at(zTube(0.043, 0.048, CUFF_L), 0, 0, -FOREARM_L + 0.012));
 
   const palmZ = -FOREARM_L - CUFF_L - PALM_L / 2 + 0.012;
-  parts.push(at(chamferedBox({ x: 0.073, y: 0.042, z: PALM_L + 0.014 }, 0.011), 0, 0, palmZ));
+  parts.push(at(chamferedBox({ x: 0.062, y: 0.036, z: PALM_L + 0.012 }, 0.009), 0, 0, palmZ));
   for (let i = 0; i < 4; i++) {
-    const x = (-0.0255 + i * 0.017) * side;
-    parts.push(at(new THREE.BoxGeometry(0.0145, 0.009, 0.023), x, 0.0235, palmZ - 0.011));
+    const x = (-0.0216 + i * 0.0144) * side;
+    parts.push(at(new THREE.BoxGeometry(0.0122, 0.0075, 0.019), x, 0.02, palmZ - 0.009));
   }
 
   const g = mergeParts(parts);
@@ -192,17 +194,17 @@ function buildLimb(side: -1 | 1): THREE.BufferGeometry {
 function buildDigits(side: -1 | 1): THREE.BufferGeometry {
   const parts: THREE.BufferGeometry[] = [];
   for (let i = 0; i < 4; i++) {
-    const x = (-0.0255 + i * 0.017) * side;
+    const x = (-0.0216 + i * 0.0144) * side;
     // Middle fingers longer, like fingers.
     const len = FINGER_L * (i === 1 || i === 2 ? 1 : 0.86);
-    const finger = zTube(0.0085, 0.007, len, 6);
+    const finger = zTube(0.0072, 0.006, len, 6);
     finger.rotateY(((i - 1.5) * 0.06) * side);
     parts.push(at(finger, x, 0.002, -len / 2));
   }
-  const thumb = zTube(0.011, 0.0085, FINGER_L * 0.8, 6);
+  const thumb = zTube(0.0092, 0.0072, FINGER_L * 0.8, 6);
   thumb.rotateY(-0.85 * side);
   thumb.rotateX(0.25);
-  parts.push(at(thumb, 0.033 * side, -0.013, -0.018));
+  parts.push(at(thumb, 0.028 * side, -0.011, -0.015));
 
   const g = mergeParts(parts);
   g.name = `hand-digits-${side < 0 ? 'l' : 'r'}`;
@@ -233,8 +235,10 @@ interface ArmPose {
 /** Arms down, out of the way. The default, and what the player sees most. */
 const IDLE: ArmPose = { pitch: -0.27, yaw: 0.2, roll: 0.12, curl: -0.42, push: 0 };
 
-/** Walking. Slightly lower and looser than idle; the bob does the rest. */
-const WALKING: ArmPose = { pitch: -0.35, yaw: 0.26, roll: 0.16, curl: -0.5, push: -0.01 };
+/** Walking. Barely distinct from idle — a whisker looser, and the (small) bob
+ *  does the rest. It was a visibly lower pose, and the transition every time
+ *  the player stopped and started read as the arms jumping around the frame. */
+const WALKING: ArmPose = { pitch: -0.29, yaw: 0.21, roll: 0.13, curl: -0.44, push: 0 };
 
 /** Floating with nothing to hold: arms drift up and open, because there is no
  *  down to hang from. This is the pose that says "zero-G" without a caption. */
@@ -368,6 +372,9 @@ export class FirstPersonHands {
   /** 0..1 push-off charge, smoothed. Drives the pull-in and the shake. */
   private charge = 0;
   private shake = 0;
+  /** Which arm reached last — kept across frames so the reach hand does not
+   *  flip every time a rail crosses the centreline. */
+  private lastReachSide: -1 | 1 = -1;
 
   constructor(opts: HandsOptions = {}) {
     this.materials = opts.materials ?? null;
@@ -585,9 +592,18 @@ export class FirstPersonHands {
     // Which hand reaches. The one on the rail's side, unless it is busy holding
     // something — in which case the other one does, which is exactly what a
     // person carrying a box does when they need a handhold.
+    //
+    // ONLY when a rail matters: floating, gripping, or in a zero-G module.
+    // Walking on a deck, the overhead rails are always "nearest", and the arms
+    // spent the whole walk snapping into reach poses and swapping sides every
+    // time the rail crossed the centreline — the "hands swap location a lot"
+    // playtest note. On a floor your hands are your hands, not grab hardware.
     const rail = input.nearestRail ?? null;
-    const canAim = rail !== null && camera !== undefined;
-    let reachSide: -1 | 1 = -1;
+    const canAim =
+      rail !== null &&
+      camera !== undefined &&
+      (floating || gripped || input.gravityMode === 'zero');
+    let reachSide: -1 | 1 = this.lastReachSide;
     if (canAim && rail && camera) {
       _rail.set(rail.point.x, rail.point.y, rail.point.z);
       // The camera's world matrix is whatever `player.update` last wrote; the
@@ -595,8 +611,12 @@ export class FirstPersonHands {
       // where the rail was one frame ago.
       camera.updateMatrixWorld();
       camera.worldToLocal(_rail);
-      reachSide = _rail.x >= 0 ? 1 : -1;
+      // Hysteresis: only change hands once the rail is clearly on the other
+      // side. A rail drifting across the centreline used to flip the reach
+      // arm every few frames.
+      if (Math.abs(_rail.x) > 0.25) reachSide = _rail.x >= 0 ? 1 : -1;
       if (this.heldNode && reachSide === 1) reachSide = -1;
+      this.lastReachSide = reachSide;
     }
 
     for (let i = 0; i < 2; i++) {
@@ -706,9 +726,13 @@ export class FirstPersonHands {
       const phase = input.stridePhase * Math.PI * 2;
       const amp = Math.min(1, input.speed / SPEED_SPRINT);
       // Against the head bob, not with it: the head rises and the hands fall,
-      // which is what makes a walk feel weighted instead of floaty.
-      bobY = -BOB_AMPLITUDE_M * amp * 0.55 * Math.sin(phase * 2);
-      bobX = BOB_AMPLITUDE_M * amp * 0.35 * Math.sin(phase);
+      // which is what makes a walk feel weighted instead of floaty. TINY. At
+      // 0.55×/0.35× of BOB_AMPLITUDE_M the arms pumped through a quarter of
+      // the frame every stride — "they go up and down really far" — and since
+      // the camera already bobs, the view model only needs a residual of its
+      // own for the weight to read.
+      bobY = -BOB_AMPLITUDE_M * amp * 0.16 * Math.sin(phase * 2);
+      bobX = BOB_AMPLITUDE_M * amp * 0.09 * Math.sin(phase);
     }
     const recoil = this.braceAmount * this.recoil;
     // Charge tremble: small, fast, and it grows with the charge so a full-power

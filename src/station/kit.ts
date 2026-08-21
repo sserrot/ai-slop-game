@@ -792,9 +792,11 @@ const STRAIGHT: KitPiece = {
    * bore is usable, so a stowage net costs nothing.
    */
   hideSpots(moduleId, gravity) {
-    if (gravity === 'zero') {
-      return [stowageNet(`${moduleId}-net`, v3(0.5, 0.1, 1.5), v3(-1, 0, 0))];
-    }
+    // No hide spots in a zero-G straight. There used to be a stowage net, and
+    // playtest cut it: cover only reads as cover when there is a floor to be
+    // seen from, and a net in an open bore was a free safe square in the one
+    // module type where movement itself is the challenge.
+    if (gravity === 'zero') return [];
     return [deckBay(`${moduleId}-bay`, 1, 2.0, STRAIGHT_R)];
   },
 };
@@ -1256,12 +1258,9 @@ const AIRLOCK: KitPiece = {
     return out;
   },
   hideSpots(moduleId, gravity) {
-    // The suit bay: a webbing pocket between the two EVA suits. Under gravity it
-    // is a bag at head height with nothing to stand on, which is exactly what
-    // §4 means by a `'zero'`-only spot.
-    if (gravity === 'zero') {
-      return [stowageNet(`${moduleId}-suit-bay`, v3(-0.55, 0.1, 0), v3(1, 0, 0))];
-    }
+    // No hide spots in a zero-G airlock (the suit-bay net is gone, same cut as
+    // the straight's): floating cover in an open bore was a free safe square.
+    if (gravity === 'zero') return [];
     return [deckBay(`${moduleId}-bay`, -1, 0, AIRLOCK_R)];
   },
 };

@@ -72,12 +72,13 @@ export const PLAYER_ACTIONS: readonly PlayerAction[] = [
  *   the quiet one.
  * - Space — jump on the deck (§4, 0.45 m: loud unless you land crouched); hold
  *   it while GRIPPING to charge a push-off, release to fire.
- * - T — get into or out of a hide spot (§4). Your GAIT sets the price: crouch in
- *   slowly and quietly, sprint in for a last-second dive that is always heard.
- *   T rather than the obvious V because `src/main.ts` already binds V to the
- *   pry bar; if the integrator would rather spend the interact key on it (the
- *   crosshair already shows `hand` for a spot in reach, and `Player.toggleHide`
- *   is one call), rebind or route E through `Player.hideCandidate` instead.
+ * - Hiding has NO dedicated key: E is the one interact verb, and hide spots go
+ *   through it (§4). `src/main.ts`'s interact handler enters via
+ *   `Player.hideCandidate` and exits via `Player.hideSpot`, so the `hide`
+ *   action ships unbound. It stays in the action list for anyone who wants a
+ *   dedicated key back — rebind it and `Player.update`'s own edge-read path
+ *   comes alive again (do NOT bind it to E: the interact handler already
+ *   toggles, and two toggles on one press cancel out).
  * - Shift or Ctrl — grip. HOLD it: the first rail entering GRAB_RANGE latches
  *   automatically (§4, the 133 ms buffered-latch argument).
  * - Q — knock a handrail, loudness 15, ~2 modules (§10 knock codes).
@@ -109,7 +110,7 @@ export const KEYMAP: Keymap = {
   crouch: ['ControlLeft', 'ControlRight'],
   sprint: ['ShiftLeft', 'ShiftRight'],
   jump: ['Space'],
-  hide: ['KeyT'],
+  hide: [],
   grip: ['ShiftLeft', 'ShiftRight', 'ControlLeft', 'ControlRight'],
   charge: ['Space'],
   extinguisher: ['KeyX'],

@@ -614,7 +614,7 @@ export const PROMPT = Object.freeze({
     id: `hide:${id}`,
     verb: 'hide',
     noun: 'in here',
-    key: 'hide',
+    key: 'interact',
     loudness,
     // `takesSeconds`, not `holdSeconds`: `Player.toggleHide()` is a tap that
     // commits you for the climb. Printing "HOLD 2.5S" would teach a player to
@@ -627,7 +627,7 @@ export const PROMPT = Object.freeze({
     id: `hide:${id}:out`,
     verb: 'climb',
     noun: 'out',
-    key: 'hide',
+    key: 'interact',
   }),
 
   /** A loose cargo bag (§11 puzzle 3). Gentle is free; a throw is 30. */

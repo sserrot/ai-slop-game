@@ -329,11 +329,8 @@ export const STATION_SPEC: StationSpec = {
         tubePanel('airlock-eva-panel-keyswitch-a', KIT.airlock.radius, 0, -1.7),
         tubePanel('airlock-eva-panel-keyswitch-b', KIT.airlock.radius, 180, 1.7),
       ],
-      // A second net at the far end, so the pair working the keyswitches are not
-      // sharing one hiding place four metres apart.
-      hideSpots: extraSpots(
-        stowageNet('airlock-eva-outer-net', v3(0.55, 0.1, 1.4), v3(-1, 0, 0)),
-      ),
+      // No hide spots here: zero-G modules author none (see the kit pieces —
+      // floating cover in an open bore was a free safe square).
     },
     {
       id: 'escape-soyuz',

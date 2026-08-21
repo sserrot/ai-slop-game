@@ -208,8 +208,7 @@ const CONTROLS: ReadonlyArray<readonly [string, string]> = [
   ['HOLD SHIFT', 'sprint (30, always heard) — or grip a rail in zero-G'],
   ['HOLD CTRL', 'crouch (4, near-silent, half speed)'],
   ['SPACE', 'jump — loud unless you land crouched · hold to charge a push-off'],
-  ['T', 'get into / out of a hide spot — your gait sets the price'],
-  ['E', 'interact — panels, lockers, cargo, a hide spot, a downed crewmate'],
+  ['E', 'interact — panels, lockers, cargo, hide spots (your gait sets the price), a downed crewmate'],
   ['Q', 'knock on a handrail (15, carries ~2 modules)'],
   ['G', 'open / close the nearest hatch (45, and it hears you)'],
   ['H', 'SEAL the nearest hatch — two charges a round, no undo'],
@@ -1844,12 +1843,10 @@ function onInteractPress(): void {
     if (bag && cargo.grab(bag)) return;
   }
 
-  // A hide spot within reach (§4). T is the primary binding and stays; this is
-  // here because the crosshair already reports `hand` for a spot in range, so a
-  // player who has learned "the hand means E" would otherwise be told to press
-  // E and get nothing. It runs AFTER the interactable raycast on purpose: a
-  // panel, a locker or a downed crewmate is never worth losing to a bunk you
-  // happened to be standing beside.
+  // A hide spot within reach (§4). E is THE hide key — the dedicated T binding
+  // is gone, so this fallback is the way in. It runs AFTER the interactable
+  // raycast on purpose: a panel, a locker or a downed crewmate is never worth
+  // losing to a bunk you happened to be standing beside.
   if (player.hideCandidate && player.toggleHide()) return;
 
   // Nothing in front of you: a downed crewmate within arm's reach (§10)?
