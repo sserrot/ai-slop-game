@@ -27,8 +27,6 @@
 import * as THREE from 'three';
 import { AlienView, ALIEN_DECK_DROP_M, alienGeometryReport } from '../alien/alienView';
 import { FLESH_WRAP_AVAILABLE } from '../alien/flesh';
-import { tryLoadAlienSkin } from '../alien/skin';
-import type { AlienSkin } from '../alien/skin';
 import type { AlienState, GravityMode } from '@shared/types';
 
 // ---------------------------------------------------------------------------
@@ -105,14 +103,9 @@ scene.add(rim);
 // ---------------------------------------------------------------------------
 
 let view: AlienView | null = null;
-let skin: AlienSkin | null = null;
 
 function buildView(secondary: boolean, flesh: boolean): void {
   view?.dispose();
-  // `dispose()` takes the skin with it, so a rebuild starts from cylinders and
-  // the caller re-adopts. That is the honest behaviour to expose here: it is
-  // exactly what the game would do if a quality tier dropped the sculpt.
-  skin = null;
   view = new AlienView({ castShadow: true, secondary, flesh });
   scene.add(view.object3D);
   // A rebuild resets the phase, so re-seed it from the sim rather than letting
@@ -248,9 +241,6 @@ const gravityBtn = el<HTMLButtonElement>('gravity');
 const movingBtn = el<HTMLButtonElement>('moving');
 const secondaryBtn = el<HTMLButtonElement>('secondary');
 const fleshBtn = el<HTMLButtonElement>('flesh');
-const skinInput = el<HTMLInputElement>('skin');
-const skinNote = el<HTMLDivElement>('skin-note');
-const dropSkinBtn = el<HTMLButtonElement>('drop-skin');
 const stats = el<HTMLDivElement>('stats');
 
 for (const s of STATES) {
@@ -299,34 +289,6 @@ fleshBtn.addEventListener('click', () => {
   syncUi();
 });
 
-// The GLB seam, driven the way the game would drive it: hand it a URL, take a
-// skin or a null, carry on either way. Nothing here knows or cares which body
-// is on screen — see `AlienView.adoptSkin`.
-skinInput.addEventListener('change', async () => {
-  const file = skinInput.files?.[0];
-  if (!file || !view) return;
-  const url = URL.createObjectURL(file);
-  skinNote.textContent = `loading ${file.name}…`;
-  const loaded = await tryLoadAlienSkin(url, { castShadow: true, flesh: useFlesh });
-  URL.revokeObjectURL(url);
-  if (!loaded) {
-    skinNote.textContent = `${file.name} did not satisfy the contract — see the console. Still procedural.`;
-    return;
-  }
-  skin = loaded;
-  view.adoptSkin(loaded);
-  skinNote.textContent =
-    `${file.name}: ${loaded.triangles} tris, clips [${loaded.clipNames.join(', ') || 'none'}]`;
-  syncUi();
-});
-
-dropSkinBtn.addEventListener('click', () => {
-  view?.adoptSkin(null);
-  skin = null;
-  skinNote.textContent = 'back to the procedural body.';
-  syncUi();
-});
-
 function syncUi(): void {
   for (const b of Array.from(stateRow.children) as HTMLButtonElement[]) {
     b.classList.toggle('on', b.dataset.state === state);
@@ -340,7 +302,6 @@ function syncUi(): void {
   secondaryBtn.classList.toggle('warn', !useSecondary);
   fleshBtn.textContent = useFlesh ? 'flesh shader ON' : 'flat palette material';
   fleshBtn.classList.toggle('warn', !useFlesh);
-  dropSkinBtn.disabled = skin === null;
 }
 
 // ---------------------------------------------------------------------------
@@ -376,10 +337,9 @@ function step(dt: number): void {
   statTimer += dt;
   if (statTimer > 0.25 && view) {
     statTimer = 0;
-    const body = view.sculpted
-      ? `sculpted · ${view.sculpted.triangles} tris`
-      : `${view.drawCalls} draw calls · ${view.triangles} tris`;
-    stats.textContent = `${body} · ${view.speed.toFixed(2)} m/s measured · ${view.gravity}`;
+    stats.textContent =
+      `${view.drawCalls} draw calls · ${view.triangles} tris · ` +
+      `${view.speed.toFixed(2)} m/s measured · ${view.gravity}`;
   }
 }
 

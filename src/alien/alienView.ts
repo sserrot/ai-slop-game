@@ -104,7 +104,6 @@ import { PALETTE, StationMaterials, build } from '../station/materials';
 import { KIT } from '../station/kit';
 import { solveTwoBone, twoBoneOut, twoBoneTip } from './ik';
 import { FleshMaterial, assertFleshCoherent } from './flesh';
-import type { AlienSkin } from './skin';
 import { PartInstances } from '../player/bodyView';
 import { bus } from '../core/eventBus';
 import type { Unsubscribe } from '../core/eventBus';
@@ -1846,8 +1845,6 @@ export class AlienView {
   /** Non-null when the creature is wearing its own skin, which it is unless
    *  somebody asked for the flat palette material. Owns its material. */
   private readonly flesh: FleshMaterial | null;
-  /** A sculpted body, once somebody has sculpted one. See `./skin.ts`. */
-  private skin: AlienSkin | null = null;
 
   private readonly prev: Pose;
   private readonly curr: Pose;
@@ -2000,42 +1997,6 @@ export class AlienView {
     assertInert(this.object3D, 'the alien (ISS-CHR-01)');
   }
 
-  // -- the art pass seam ----------------------------------------------------
-
-  /**
-   * Replace the procedural body with a sculpted, skinned one (BACKLOG B-08).
-   *
-   * The eight instanced parts stay constructed but stop being drawn — they are
-   * not disposed, so {@link releaseSkin} can put them back without a rebuild,
-   * which is what the model viewer's A/B needs and what a quality tier that
-   * drops the skin on a weak machine would need.
-   *
-   * `pass null` to go back to cylinders. Nothing else in the class branches on
-   * which body is present: `update()` feeds both the same state, the same
-   * gravity and the same measured speed, because the whole point of the
-   * contract in `./skin.ts` is that a sculpt is a different BODY and not a
-   * different creature.
-   */
-  adoptSkin(skin: AlienSkin | null): void {
-    if (this.skin === skin) return;
-    if (this.skin) {
-      this.skin.object3D.removeFromParent();
-      this.skin = null;
-    }
-    this.skin = skin;
-    if (skin) {
-      this.object3D.add(skin.object3D);
-      skin.setState(this._state);
-      skin.setGravity(this._gravity);
-    }
-    for (const p of this.parts) p.mesh.visible = skin === null && p.count > 0;
-  }
-
-  /** The sculpted body, if one was adopted. */
-  get sculpted(): AlienSkin | null {
-    return this.skin;
-  }
-
   // -- reads ----------------------------------------------------------------
 
   get state(): AlienState {
@@ -2141,7 +2102,6 @@ export class AlienView {
     // per state, which was the only cue a featureless pill could carry; a body
     // with a gait says it better and says it honestly, because a glow would
     // also be visible with the torch off through fog at any range.
-    this.skin?.setState(state);
     if (this.emitBusEvents) bus.emit('alien:state', { from, to: state });
   }
 
@@ -2165,7 +2125,6 @@ export class AlienView {
    */
   setGravity(mode: GravityMode): void {
     this._gravity = mode;
-    this.skin?.setGravity(mode);
   }
 
   /**
@@ -2220,14 +2179,6 @@ export class AlienView {
     this.prevYaw = yaw;
 
     this.flesh?.update(frameDt);
-    if (this.skin) {
-      // A sculpt still needs the measured speed, and for exactly the reason the
-      // procedural body does: it is what stops the feet sliding. See the stride
-      // discussion in `./skin.ts`.
-      this.skin.setSpeed(this._speed);
-      this.skin.update(frameDt);
-      return;
-    }
     this.applyPose(frameDt);
   }
 
@@ -2266,8 +2217,6 @@ export class AlienView {
 
   dispose(): void {
     this.detachFromBus();
-    this.skin?.dispose();
-    this.skin = null;
     this.object3D.removeFromParent();
     for (const p of this.parts) p.dispose();
     // Only ever the fallback: the station's own `organic` belongs to

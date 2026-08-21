@@ -23,8 +23,6 @@
  *     the feet to slide at any speed.
  *   • `flesh.ts` — the one material in the game that is not a palette row.
  *     Subsurface wrap, a grazing rim, procedural skin detail. Nothing glows.
- *   • `skin.ts` — the seam for a sculpted GLB, when the art pass happens.
- *     Nothing requires it and everything degrades without it.
  *
  * The two extra draw calls over r3's six are the TAIL, which used to be baked
  * into the abdomen and now hangs off its own sprung joint, and the SHIN, which
@@ -48,14 +46,12 @@ import type { AlienSnapshot, GravityMode, ModuleId, Vec3 } from '@shared/types';
 import { AlienView } from './alienView';
 import type { AlienViewOptions } from './alienView';
 import { AlienHuntEmitter } from './alienAudio';
-import type { AlienSkin } from './skin';
 import type { AlienAudioSink } from './alienAudio';
 import { bus } from '../core/eventBus';
 
 export * from './alienView';
 export * from './alienAudio';
 export * from './flesh';
-export * from './skin';
 export { solveTwoBone, twoBoneOut, twoBoneTip, BONE_REST } from './ik';
 export type { TwoBoneOut } from './ik';
 
@@ -128,19 +124,6 @@ export class AlienProxy {
   /** Feed the networked alien record (§7). */
   applySnapshot(snapshot: AlienSnapshot): void {
     this.view.applySnapshot(snapshot);
-  }
-
-  /**
-   * Swap the procedural body for a sculpted one, or `null` to swap back
-   * (BACKLOG B-08). See `./skin.ts` for the authoring contract.
-   *
-   * Everything else about the creature is unchanged by this: the same state
-   * machine feeds it, the same measured speed keeps its feet from sliding, the
-   * same hunt bed plays over it. A sculpt is a different BODY, not a different
-   * animal, and the contract exists to keep it that way.
-   */
-  adoptSkin(skin: AlienSkin | null): void {
-    this.view.adoptSkin(skin);
   }
 
   /**

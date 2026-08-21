@@ -87,9 +87,10 @@ export default defineConfig({
      *
      * IF IT COMES BACK: delete `node_modules/.vite` and restart. That clears it
      * every time. Add any new `three/addons/*` import to this list when you
-     * write it, and spell it `three/addons/*` rather than
-     * `three/examples/jsm/*` — they resolve to the same file, but the optimiser
-     * keys on the specifier string, so two spellings are two entries.
+     * write it — especially a DYNAMIC one, which the initial crawl cannot see —
+     * and spell it `three/addons/*` rather than `three/examples/jsm/*`: they
+     * resolve to the same file, but the optimiser keys on the specifier string,
+     * so two spellings are two entries.
      */
     include: [
       // rapier3d-compat ships wasm inlined as base64; let Vite prebundle it.
@@ -101,10 +102,6 @@ export default defineConfig({
       'three/addons/postprocessing/RenderPass.js',
       'three/addons/postprocessing/ShaderPass.js',
       'three/addons/utils/BufferGeometryUtils.js',
-      // Dynamic, and therefore invisible to the initial crawl — see
-      // `src/alien/skin.ts`. Exactly the shape of import that forces a second
-      // optimise pass if it is not declared here.
-      'three/addons/loaders/GLTFLoader.js',
     ],
   },
 });

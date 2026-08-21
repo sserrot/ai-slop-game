@@ -38,11 +38,9 @@
         text-transform: uppercase;
         margin: 0 0 2px;
       }
-      #geom, #stats, #wrap-note, #skin-note { color: var(--dim); font-size: 11px; }
+      #geom, #stats, #wrap-note { color: var(--dim); font-size: 11px; }
       #stats { margin-top: 6px; }
-      #wrap-note, #skin-note { margin: 6px 0 10px; }
-      input[type="file"] { font: inherit; font-size: 11px; color: var(--dim); width: 100%; }
-      button:disabled { opacity: 0.4; cursor: default; }
+      #wrap-note { margin: 6px 0 10px; }
 
       h2 {
         font-size: 10px;
@@ -138,18 +136,6 @@
         no UVs, and a millimetre-scale <b>crawl</b>. It changes how the surface
         answers light and adds none — so with the torch off the alien is still
         invisible, which is a rule and not a nicety.
-      </p>
-
-      <h2>Sculpted body (GLB)</h2>
-      <input id="skin" type="file" accept=".glb,.gltf" />
-      <div id="skin-note">no sculpt loaded — procedural body.</div>
-      <button id="drop-skin" class="wide">back to procedural</button>
-      <p>
-        Drop in a Blender export and it replaces the cylinders. It must be one
-        skinned mesh under 1500 triangles, with clips named
-        <b>iss/patrol</b>, <b>iss/hunt</b> and friends, root motion baked out,
-        and a stride declared per clip — see <b>src/alien/skin.ts</b>. Anything
-        that fails the contract logs why and stays procedural.
       </p>
 
       <h2>Camera</h2>

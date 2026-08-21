@@ -87,7 +87,7 @@ import {
 } from './ui';
 import { NoiseEmitter, NoiseRuntime } from './noise';
 import { createAudioSystem, type VoiceSignalling } from './audio';
-import { AlienProxy, tryLoadAlienSkin } from './alien';
+import { AlienProxy } from './alien';
 import { NetClient } from './net';
 import type { WelcomeMessage } from './net';
 import {
@@ -332,9 +332,6 @@ async function boot(): Promise<void> {
   // Rapier's wasm loads here, behind the menu, and before the pre-warm below.
   await buildCargo(layout);
   buildAlien();
-  // Before `buildCrew`/`prewarm`: see `buildAlienSkin`. Costs one `if` and no
-  // network traffic at all until somebody actually points it at a file.
-  await buildAlienSkin();
   buildCrew();
   wireNetwork();
   wireLoop();
@@ -974,56 +971,6 @@ function buildAlien(): void {
   });
   scene.add(alien.object3D);
   console.log(`[main] alien: ${alien.drawCalls} draw calls, ${alien.triangles} triangles`);
-}
-
-/**
- * URL of a sculpted alien (BACKLOG B-08), or null for the procedural body.
- *
- * NULL BY DEFAULT, and that is a decision rather than a placeholder. No asset
- * exists yet, and a loader pointed at a file that is not there costs every
- * player a 404 and a console warning on every boot to gain exactly nothing.
- * Set this when a GLB lands in `public/`.
- *
- * `?skin=/models/alien.glb` overrides it, so an artist can try an export
- * against the running game without touching this file or rebuilding — which is
- * the whole point of `src/alien/skin.ts` having a contract that reports every
- * violation at once instead of the first.
- */
-const ALIEN_SKIN_URL: string | null = null;
-
-function alienSkinUrl(): string | null {
-  try {
-    const q = new URLSearchParams(location.search).get('skin');
-    if (q) return q;
-  } catch {
-    /* no `location` — not a browser. Fall through to the constant. */
-  }
-  return ALIEN_SKIN_URL;
-}
-
-/**
- * Load the sculpted body, if there is one, and shrug if not.
- *
- * AWAITED DURING BOOT, before the pre-warm, and both halves of that matter.
- * Before, so a skinned mesh's program and buffers are paid for behind the menu
- * with everything else rather than on the first frame the monster is visible —
- * which is the single worst moment in the game to drop 20 ms. Awaited, so the
- * creature cannot pop from cylinders to sculpt in front of a player mid-round.
- *
- * A missing, broken or contract-violating GLB costs a less interesting monster
- * and nothing else: `tryLoadAlienSkin` logs why and returns null, and the
- * procedural body it was going to replace is still standing there.
- */
-async function buildAlienSkin(): Promise<void> {
-  const url = alienSkinUrl();
-  if (!url || !alien) return;
-  const skin = await tryLoadAlienSkin(url, { castShadow: true });
-  if (!skin) return;
-  alien.adoptSkin(skin);
-  console.log(
-    `[main] alien skin: ${skin.triangles} triangles, ` +
-      `clips [${skin.clipNames.join(', ') || 'none'}]`,
-  );
 }
 
 // ---------------------------------------------------------------------------
