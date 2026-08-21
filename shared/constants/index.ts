@@ -145,8 +145,10 @@ export const GRAB_RANGE = 0.8;
  *  half-lives, never bare exponents (§4). */
 export const DRAG_HALFLIFE = 4.0;
 
-/** Swept-sphere radius of the player capsule against the static BVH (§4). */
-export const PLAYER_RADIUS = 0.3;
+/** Swept-sphere radius of the player capsule against the static BVH (§4).
+ *  0.3 → 0.27 in the proportional scale-down pass — see the block comment on
+ *  `PLAYER_STAND_HEIGHT_M`; the whole body shrinks together or not at all. */
+export const PLAYER_RADIUS = 0.27;
 
 /** §14 — clean, arrested rail catch. Quiet enough that skill buys silence. */
 export function catchNoise(v: number): number {
@@ -278,17 +280,20 @@ export const BOB_AMPLITUDE_M = 0.045;
 // it is 0.65 m. What still makes the station feel cramped is the FURNITURE, not
 // the bore, which is where §2's chase geometry moved the problem on purpose.
 
-// Scaled down twice, both times off playtest reads. First ~6%: the body was
+// Scaled down three times, all off playtest reads. First ~6%: the body was
 // sized to a 1.75 m headroom and read as oversized once the tube widened.
-// Then 1.6 → 1.52 ("just a little bit shorter"): with the 6 m nodes the body
-// read tall against the furniture again, and a shorter crewmember buys deck
-// clearance without shrinking the station's sense of scale. The eye keeps its
-// 0.15 m offset below the crown, and `RAIL_ABOVE_DECK_M` tracks the height by
-// definition — re-run `buildLevel.ts` so the authored rails follow.
-export const PLAYER_STAND_HEIGHT_M = 1.52;
-export const PLAYER_CROUCH_HEIGHT_M = 0.95;
-export const EYE_HEIGHT_STAND_M = 1.37;
-export const EYE_HEIGHT_CROUCH_M = 0.8;
+// Then 1.6 → 1.52, which fixed nothing, because the complaint was never the
+// height — it was PROPORTION: "the model feels too big relative to everything
+// else." So the third pass scales the whole body ~8% uniformly — radius (see
+// PLAYER_RADIUS), stand, crouch and both eyes together — which reads as the
+// station getting roomier rather than the ceiling getting closer. The eye
+// keeps its ~0.14 m offset below the crown, and `RAIL_ABOVE_DECK_M` tracks
+// the height by definition — re-run `buildLevel.ts` so the authored rails
+// follow.
+export const PLAYER_STAND_HEIGHT_M = 1.4;
+export const PLAYER_CROUCH_HEIGHT_M = 0.88;
+export const EYE_HEIGHT_STAND_M = 1.26;
+export const EYE_HEIGHT_CROUCH_M = 0.74;
 
 /**
  * m — where the deck sits, as an offset from a module's centreline, in the

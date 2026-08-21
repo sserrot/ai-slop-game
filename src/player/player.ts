@@ -421,6 +421,8 @@ export class Player {
 
   // -- hiding (§4) -----------------------------------------------------------
   private readonly hide = new HideController();
+  /** Crouch latch — Ctrl toggles it (see `updateToggles`). */
+  private crouchLatched = false;
   private _hidePrompt: HidePrompt | null = null;
   /** Pooled world-space anchor for the hide prompt — the closest point on the
    *  candidate spot's box, written by `nearestSurface` each frame. */
@@ -1258,7 +1260,7 @@ export class Player {
    * stay planted through the change, so only the eye moves.
    */
   private resolveGait(): Gait {
-    const want = gaitFromInput(this.input.isDown('crouch'), this.input.isDown('sprint'));
+    const want = gaitFromInput(this.crouchLatched, this.input.isDown('sprint'));
     if (want === this._gait) return this._gait;
 
     const from = eyeHeightFor(this._gait);
@@ -1671,7 +1673,7 @@ export class Player {
     // OUT (§4), and a player who climbed in carefully must still be able to bail
     // out at a sprint when they hear it working the door open. The body is not
     // resized — it is in a box — only the dial the exit is read off.
-    const want = gaitFromInput(this.input.isDown('crouch'), this.input.isDown('sprint'));
+    const want = gaitFromInput(this.crouchLatched, this.input.isDown('sprint'));
     if (want !== this._gait) {
       this._gait = want;
       this.config.onGait?.(want);
@@ -2365,6 +2367,14 @@ export class Player {
     if (this.input.pressed('knock')) this.knock();
     if (this.input.pressed('hide')) this.toggleHide();
     if (this.input.pressed('interact')) this.config.onInteract?.(this._interaction);
+    // Crouch is a TOGGLE, not a hold. It was held, and the failure mode was
+    // the browser: crouch-walking means Ctrl+W — the one accelerator no page
+    // may intercept — and one panicked crouch-forward closed the tab. Gated on
+    // a floor so Ctrl can keep doubling as grip in zero-G without silently
+    // flipping the gait you will land in.
+    if (this.input.pressed('crouch') && hasFloor(this._gravity)) {
+      this.crouchLatched = !this.crouchLatched;
+    }
   }
 
   /** §10 knock codes: tap a handrail, loudness 15, carries about two modules. */

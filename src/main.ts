@@ -206,7 +206,7 @@ const CONTROLS: ReadonlyArray<readonly [string, string]> = [
   // rows read as one control each.
   ['W A S D', 'walk · slide along a rail · steer a drift'],
   ['HOLD SHIFT', 'sprint (30, always heard) — or grip a rail in zero-G'],
-  ['HOLD CTRL', 'crouch (4, near-silent, half speed)'],
+  ['CTRL', 'toggle crouch (4, near-silent, half speed)'],
   ['SPACE', 'jump — loud unless you land crouched · hold to charge a push-off'],
   ['E', 'interact — panels, lockers, cargo, hatches, hide spots (your gait sets the price), a downed crewmate'],
   ['Q', 'knock on a handrail (15, carries ~2 modules)'],

@@ -66,10 +66,12 @@ export const PLAYER_ACTIONS: readonly PlayerAction[] = [
  *
  * - WASD — walk in a `nominal` module (§4); slide along a gripped rail in a
  *   `zero` one; while floating, only aims an extinguisher burst.
- * - Ctrl — crouch. Shift — sprint. HELD, not toggled: the gait is the risk dial
- *   and §0 pillar 2 says the player holds it down all round. Crouch beats
- *   sprint when both are down, so a panicking player who mashes everything gets
- *   the quiet one.
+ * - Ctrl — crouch, as a TOGGLE (press to crouch, press to stand). Shift —
+ *   sprint, HELD. Crouch was held too, until playtest: crouch-walking is
+ *   Ctrl+W, the one browser accelerator no page may intercept, and a panicked
+ *   crouch-forward closed the tab. The latch lives in `Player.updateToggles`.
+ *   Crouch still beats sprint, so a panicking player who mashes everything
+ *   gets the quiet one.
  * - Space — jump on the deck (§4, 0.45 m: loud unless you land crouched); hold
  *   it while GRIPPING to charge a push-off, release to fire.
  * - Hiding has NO dedicated key: E is the one interact verb, and hide spots go
