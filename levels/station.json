@@ -2485,24 +2485,6 @@
           "interactable": true
         },
         {
-          "id": "lab-atlas-bench-a",
-          "kind": "bench",
-          "localPos": {
-            "x": 0,
-            "y": -0.325,
-            "z": -0.65
-          }
-        },
-        {
-          "id": "lab-atlas-bench-b",
-          "kind": "bench",
-          "localPos": {
-            "x": 0,
-            "y": -0.325,
-            "z": 0.65
-          }
-        },
-        {
           "id": "lab-atlas-bank-a",
           "kind": "bank",
           "localPos": {
@@ -4047,48 +4029,12 @@
           "interactable": true
         },
         {
-          "id": "escape-soyuz-bulkhead-a-1",
-          "kind": "bulkhead",
-          "localPos": {
-            "x": 0.2,
-            "y": -0.175,
-            "z": -0.99
-          }
-        },
-        {
-          "id": "escape-soyuz-bulkhead-a-2",
-          "kind": "bulkhead",
-          "localPos": {
-            "x": 0.6,
-            "y": -0.175,
-            "z": -0.99
-          }
-        },
-        {
           "id": "escape-soyuz-bulkhead-a-3",
           "kind": "bulkhead",
           "localPos": {
             "x": 1,
             "y": -0.175,
             "z": -0.99
-          }
-        },
-        {
-          "id": "escape-soyuz-bulkhead-a1-1",
-          "kind": "bulkhead",
-          "localPos": {
-            "x": 0.2,
-            "y": -0.175,
-            "z": -0.81
-          }
-        },
-        {
-          "id": "escape-soyuz-bulkhead-a1-2",
-          "kind": "bulkhead",
-          "localPos": {
-            "x": 0.6,
-            "y": -0.175,
-            "z": -0.81
           }
         },
         {
@@ -4110,46 +4056,10 @@
           }
         },
         {
-          "id": "escape-soyuz-bulkhead-b-2",
-          "kind": "bulkhead",
-          "localPos": {
-            "x": -0.6,
-            "y": -0.175,
-            "z": 0.21
-          }
-        },
-        {
-          "id": "escape-soyuz-bulkhead-b-3",
-          "kind": "bulkhead",
-          "localPos": {
-            "x": -0.2,
-            "y": -0.175,
-            "z": 0.21
-          }
-        },
-        {
           "id": "escape-soyuz-bulkhead-b1-1",
           "kind": "bulkhead",
           "localPos": {
             "x": -1,
-            "y": -0.175,
-            "z": 0.39
-          }
-        },
-        {
-          "id": "escape-soyuz-bulkhead-b1-2",
-          "kind": "bulkhead",
-          "localPos": {
-            "x": -0.6,
-            "y": -0.175,
-            "z": 0.39
-          }
-        },
-        {
-          "id": "escape-soyuz-bulkhead-b1-3",
-          "kind": "bulkhead",
-          "localPos": {
-            "x": -0.2,
             "y": -0.175,
             "z": 0.39
           }
@@ -4230,5 +4140,5 @@
   ],
   "escapeModule": "escape-soyuz",
   "finaleModule": "node-alpha",
-  "name": "ISS — Expedition 74"
+  "name": "ISS \u00e2\u20ac\u201d Expedition 74"
 }

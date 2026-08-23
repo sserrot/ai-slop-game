@@ -148,7 +148,7 @@ export const DRAG_HALFLIFE = 4.0;
 /** Swept-sphere radius of the player capsule against the static BVH (§4).
  *  0.3 → 0.27 in the proportional scale-down pass — see the block comment on
  *  `PLAYER_STAND_HEIGHT_M`; the whole body shrinks together or not at all. */
-export const PLAYER_RADIUS = 0.27;
+export const PLAYER_RADIUS = 0.23;
 
 /** §14 — clean, arrested rail catch. Quiet enough that skill buys silence. */
 export function catchNoise(v: number): number {
@@ -307,13 +307,16 @@ export const BOB_AMPLITUDE_M = 0.045;
 // else." So the third pass scales the whole body uniformly — radius (see
 // PLAYER_RADIUS), stand, crouch and both eyes together — which reads as the
 // station getting roomier rather than the ceiling getting closer. Settled at
-// 10% off the 1.52/0.30 body after trying 8%. The eye keeps its ~0.14 m
-// offset below the crown, and `RAIL_ABOVE_DECK_M` tracks the height by
-// definition — re-run `buildLevel.ts` so the authored rails follow.
-export const PLAYER_STAND_HEIGHT_M = 1.37;
-export const PLAYER_CROUCH_HEIGHT_M = 0.86;
-export const EYE_HEIGHT_STAND_M = 1.23;
-export const EYE_HEIGHT_CROUCH_M = 0.72;
+// 10% off the 1.52/0.30 body after trying 8%. Fourth pass: a further uniform
+// -15% (1.37 → 1.16), same rationale as the third — proportion against the
+// station, not headroom — requested once the GLB alien landed and the crew
+// read large beside it. The eye keeps its scaled ~0.12 m offset below the
+// crown, and `RAIL_ABOVE_DECK_M` tracks the height by definition — re-run
+// `buildLevel.ts` so the authored rails follow.
+export const PLAYER_STAND_HEIGHT_M = 1.16;
+export const PLAYER_CROUCH_HEIGHT_M = 0.73;
+export const EYE_HEIGHT_STAND_M = 1.05;
+export const EYE_HEIGHT_CROUCH_M = 0.61;
 
 /**
  * m — where the deck sits, as an offset from a module's centreline, in the

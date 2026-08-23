@@ -249,7 +249,10 @@ const FLOATING: ArmPose = { pitch: -0.1, yaw: 0.14, roll: -0.05, curl: -0.2, pus
 const GRIPPING: ArmPose = { pitch: 0.05, yaw: 0.1, roll: 0.05, curl: -1.35, push: 0.05 };
 
 /** Charging a push-off (§4). Hauled in against the rail, knuckles white. */
-const CHARGING: ArmPose = { pitch: 0.1, yaw: 0.14, roll: 0.08, curl: -1.5, push: -0.02 };
+// Yaws re-tuned at the fourth crew-scale pass: reach derives from
+// PLAYER_RADIUS, so the smaller body brought the gloves nearer the camera and
+// the old angles pushed both fingertips off frame (1.02x / 1.23x extent).
+const CHARGING: ArmPose = { pitch: 0.1, yaw: 0.115, roll: 0.08, curl: -1.5, push: 0.015 };
 
 /** Impact. Both arms up and fingers SPREAD — the involuntary one. */
 const BRACING: ArmPose = { pitch: 0.62, yaw: 0.34, roll: -0.2, curl: 0.28, push: 0.09 };
@@ -260,7 +263,7 @@ const HIDING: ArmPose = { pitch: 0.5, yaw: 0.62, roll: 0.3, curl: -1.2, push: 0.
 
 /** The hand with the item in it. Raised and turned in so the carryable's own
  *  amber lamp is on screen — which is how the player knows they are holding it. */
-const HOLDING: ArmPose = { pitch: -0.02, yaw: 0.34, roll: 0.1, curl: -1.05, push: -0.03 };
+const HOLDING: ArmPose = { pitch: -0.02, yaw: 0.25, roll: 0.1, curl: -1.05, push: 0.045 };
 
 /** Reaching, but not yet gripping: a rail is in range. Aim overrides pitch/yaw;
  *  the fingers open in anticipation. */

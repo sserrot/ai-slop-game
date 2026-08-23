@@ -68,6 +68,13 @@ const FADE_S = 0.25;
  *  rebuild must not silently ship a heavyweight monster. */
 const GLTF_TRIANGLE_BUDGET = 4000;
 
+/** Visual scale on the authored body. The asset stays canonical (2.4 m, the
+ *  procedural body's own length) and the game scales it — so the sidecar's
+ *  measured strides scale with it (see `chooseClip`), and the art build never
+ *  needs to know. Server collision is untouched: the creature LOOKS 15%
+ *  bigger; its contact radius is still ALIEN_RADIUS. */
+const GLTF_BODY_SCALE = 1.15;
+
 export class AlienGltfView implements AlienBody {
   /** The procedural body underneath — fallback renderer and single owner of
    *  the transform/cull/gravity contract. */
@@ -244,6 +251,9 @@ export class AlienGltfView implements AlienBody {
     // constant offset centres the authored spine on the transform in both
     // gravities.
     group.position.y = -ALIEN_DECK_DROP_M;
+    // Scaled about the GLB's own origin, which is at the FEET — so the feet
+    // stay on the deck and the body grows upward and outward.
+    gltf.scene.scale.setScalar(GLTF_BODY_SCALE);
     group.add(gltf.scene);
 
     let tris = 0;
@@ -323,9 +333,11 @@ export class AlienGltfView implements AlienBody {
     // per-frame path is one multiply and a clamp. Without a sidecar entry
     // (one-shots like lunge, or a missing meta file) fall back to the
     // procedural body's own stride constant rather than dropping the lock.
+    // The visual scale stretches every stride by the same factor, so the
+    // seconds-per-metre factor shrinks by it — feet stay ground-true.
     this.cadence =
-      cadenceFactor(this.meta, want) ??
-      next.getClip().duration / ALIEN_STRIDE_M;
+      (cadenceFactor(this.meta, want) ??
+        next.getClip().duration / ALIEN_STRIDE_M) / GLTF_BODY_SCALE;
   }
 
 }

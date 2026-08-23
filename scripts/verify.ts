@@ -197,6 +197,32 @@ check(
 
 // ---------------------------------------------------------------------------
 
+// The walkway-clear rule. The centre of every walk path stays empty: scenery
+// there blocks the player, and the alien's centre-line navigation walks its
+// body straight through it (the r18 clipping report was two lab benches and
+// eight bulkhead blocks doing exactly this). Gameplay items (cargo bags, the
+// slots they land in) are exempt — bags are movable and are SUPPOSED to be in
+// the way until stowed.
+check(
+  'walkway centres are clear of scenery',
+  (() => {
+    const exempt = new Set(['cargo-bag', 'slot']);
+    for (const m of modules) {
+      for (const prop of m.props ?? []) {
+        if (exempt.has(prop.kind)) continue;
+        const { x, y: py, z } = prop.localPos;
+        const floorStanding = py > -0.7 && py < 0.5;
+        if (!floorStanding) continue;
+        const blocked =
+          m.kind === 'straight' ? Math.abs(x) < 0.7 : Math.hypot(x, z) < 0.9;
+        if (blocked) return false;
+      }
+    }
+    return true;
+  })(),
+  'no floor-standing scenery inside the centre strip of any module',
+);
+
 section('graphs');
 
 check(

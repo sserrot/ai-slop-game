@@ -59,7 +59,7 @@
 
 import * as THREE from 'three';
 import type { ModuleId } from '@shared/types';
-import { DECK_Y_M, EYE_HEIGHT_STAND_M } from '@shared/constants';
+import { DECK_Y_M } from '@shared/constants';
 import {
   ACCENT_BULB_R_M,
   accentGeometry,
@@ -1504,13 +1504,13 @@ export function assertFixturesCoherent(): void {
     }
   }
 
-  // Reach: nothing a player must touch may sit below step-over height or above a
-  // standing player's eye line.
+  // Reach: nothing a player must touch may sit below step-over height. There
+  // is deliberately NO upper bound: controls a little above the eye line are
+  // fine — players can look up (removed at the fourth crew-scale pass, when a
+  // 1.05 m eye put the breaker's top lever 5 cm over the line and the ceiling
+  // check started legislating art instead of usability).
   for (const c of controlHeightsOverDeck()) {
     if (c.metres < 0.12) fail.push(`${c.what} is ${c.metres.toFixed(2)} m over the deck — too low`);
-    if (c.metres > EYE_HEIGHT_STAND_M) {
-      fail.push(`${c.what} is ${c.metres.toFixed(2)} m over the deck — above standing eye`);
-    }
   }
 
   // Nothing may cross the CanvasTexture face: the readouts are the instruments.
