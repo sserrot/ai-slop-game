@@ -1,0 +1,17 @@
+{
+  "fps": 24,
+  "clips": {
+    "prowl": {
+      "frames": 48,
+      "stride": 1.1976
+    },
+    "hunt": {
+      "frames": 22,
+      "stride": 2.426
+    },
+    "pull": {
+      "frames": 48,
+      "stride": 1.4638
+    }
+  }
+}

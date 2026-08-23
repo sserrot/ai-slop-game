@@ -4,14 +4,21 @@
     {
       "name": "iss-client",
       "runtimeExecutable": "npm",
-      "runtimeArgs": ["run", "dev"],
+      "runtimeArgs": [
+        "run",
+        "dev"
+      ],
       "autoPort": true
     },
     {
       "name": "iss-server",
       "runtimeExecutable": "npm",
-      "runtimeArgs": ["run", "server"],
-      "port": 2567
+      "runtimeArgs": [
+        "run",
+        "server"
+      ],
+      "port": 2567,
+      "autoPort": false
     }
   ]
 }

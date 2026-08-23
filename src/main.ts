@@ -330,6 +330,14 @@ async function boot(): Promise<void> {
   // Rapier's wasm loads here, behind the menu, and before the pre-warm below.
   await buildCargo(layout);
   buildAlien();
+  // The GLB body must be in the scene BEFORE `compileAsync` walks it: its
+  // skinned material is a different program from the station's `organic`, and
+  // outside the pre-warm it would link on the monster's first sighting (~20 ms
+  // — the worst-placed hitch in the game). Awaiting also closes a race where
+  // the swap landed mid-prewarm and the visibility save/restore resurrected
+  // the procedural parts alongside the skin. Same class of await as
+  // `buildCargo` above.
+  await alien?.whenReady;
   buildCrew();
   wireNetwork();
   wireLoop();
@@ -925,7 +933,7 @@ function cargoPlayers(): Array<{ id: PlayerId; pos: Vec3 }> {
 }
 
 // ---------------------------------------------------------------------------
-// 4e · alien (§5) — a capsule until M8, and it never decides anything
+// 4e · alien (§5) — the GLB body over its procedural fallback; never decides anything
 // ---------------------------------------------------------------------------
 
 let alien: AlienProxy | null = null;
@@ -947,7 +955,10 @@ function buildAlien(): void {
     emitProximity: false,
   });
   scene.add(alien.object3D);
-  console.log(`[main] alien: ${alien.drawCalls} draw calls, ${alien.triangles} triangles`);
+  void alien.whenReady.then(() => {
+    // After the swap (or the fallback decision), so the numbers are the truth.
+    console.log(`[main] alien: ${alien?.drawCalls} draw calls, ${alien?.triangles} triangles`);
+  });
 }
 
 // ---------------------------------------------------------------------------

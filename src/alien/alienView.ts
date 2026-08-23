@@ -773,10 +773,50 @@ interface Pose {
   quat: THREE.Quaternion;
 }
 
-export class AlienView {
+/**
+ * What a drawable alien body provides — the procedural `AlienView` and the
+ * GLB-skinned `AlienGltfView` both implement it, and `AlienProxy.view` is
+ * typed against it. A union type here once narrowed the proxy's API to the
+ * intersection of the two classes, silently dropping `attachToBus` and
+ * `distanceTo` from the default body; an interface makes that a build error.
+ */
+export interface AlienBody {
+  readonly object3D: THREE.Group;
+  readonly state: AlienState;
+  readonly module: ModuleId;
+  readonly gravity: GravityMode;
+  readonly speed: number;
+  readonly hunting: boolean;
+  readonly position: THREE.Vector3;
+  readonly drawCalls: number;
+  readonly triangles: number;
+  /** Resolves when the body is fully renderable (assets loaded, programs
+   *  compilable). `main.ts` awaits this before the pre-warm pass. */
+  readonly whenReady: Promise<void>;
+  positionVec3(): Vec3;
+  distanceTo(pos: Vec3): number;
+  applySnapshot(snapshot: AlienSnapshot): void;
+  setTransform(pos: Vec3, quat?: Quat): void;
+  setState(state: AlienState): void;
+  setModule(module: ModuleId): void;
+  setGravity(mode: GravityMode): void;
+  setVisibleModules(modules: readonly ModuleId[] | null): void;
+  attachToBus(): Unsubscribe;
+  detachFromBus(): void;
+  update(alpha: number, frameDt?: number): void;
+  dispose(): void;
+}
+
+export class AlienView implements AlienBody {
+  /** The procedural body is renderable the moment it is constructed. */
+  readonly whenReady: Promise<void> = Promise.resolve();
+
   /** Add this to the scene. Carries the interpolated server transform; the six
    *  instanced parts hang off it in rig-local space. */
   readonly object3D: THREE.Group;
+
+  /** See `setExternalBody`. */
+  private _externalBody = false;
 
   private readonly rig = buildRig();
   private readonly chestPart: PartInstances;
@@ -1010,6 +1050,32 @@ export class AlienView {
   }
 
   /**
+   * Hand the body off to another renderer (the GLB skin, ISS-CHR-02) — or
+   * take it back. While handed off, the ENTIRE pose pipeline stops: gait,
+   * gravity blend, and the rig. Nothing may read rig-local space while this
+   * is set; the interpolated transform, cull set and speed keep running.
+   *
+   * Suppression is `PartInstances`' own zero-instance mechanism, not a
+   * visibility hack: an empty `begin()`/`end()` flush zeroes each mesh's
+   * instance count, so even a blanket `visible = true` sweep (the pre-warm
+   * pass does exactly that) submits nothing. This class shipped one revision
+   * that hid meshes from outside instead, and the pre-warm's save/restore
+   * raced the async GLB swap into drawing two overlapping aliens.
+   */
+  setExternalBody(on: boolean): void {
+    if (on === this._externalBody) return;
+    this._externalBody = on;
+    if (on) {
+      for (const p of this.parts) {
+        p.begin();
+        p.end();
+      }
+    } else {
+      this.applyPose(0);
+    }
+  }
+
+  /**
    * Restrict rendering to the §2 two-hop cull set. Pass null to always draw.
    * Only does anything when constructed with `cullByModule`.
    */
@@ -1043,6 +1109,7 @@ export class AlienView {
     // never disagree with the metres actually covered.
     const moved = this.scratchPos.distanceTo(this.object3D.position) / frameDt;
     this._speed = approach(this._speed, Math.min(moved, 12), 6, frameDt);
+    if (this._externalBody) return;
     this.applyPose(frameDt);
   }
 

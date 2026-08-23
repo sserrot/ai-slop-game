@@ -1,0 +1,425 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>ISS — alien viewer</title>
+<style>
+  :root {
+    --bg: #07090b;
+    --panel: rgba(10, 14, 17, 0.88);
+    --line: #1d2b30;
+    --amber: #d8a24a;
+    --green: #7fe0a8;
+    --dim: #6c8189;
+    --text: #cfe3e6;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; background: var(--bg); overflow: hidden; }
+  body {
+    font: 12px/1.5 ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    color: var(--text);
+  }
+  canvas { display: block; }
+
+  #hud {
+    position: fixed; top: 14px; left: 14px; width: 236px;
+    background: var(--panel); border: 1px solid var(--line);
+    padding: 12px 13px 13px; backdrop-filter: blur(6px);
+  }
+  h1 {
+    margin: 0 0 2px; font-size: 12px; letter-spacing: .16em;
+    text-transform: uppercase; color: var(--amber); font-weight: 600;
+  }
+  .sub { color: var(--dim); margin-bottom: 11px; font-size: 11px; }
+  .grp { margin-bottom: 11px; }
+  .lbl {
+    color: var(--dim); text-transform: uppercase; letter-spacing: .12em;
+    font-size: 10px; margin-bottom: 5px;
+  }
+  button {
+    font: inherit; color: var(--text); background: #101619;
+    border: 1px solid var(--line); padding: 4px 8px; cursor: pointer;
+    margin: 0 4px 4px 0;
+  }
+  button:hover { border-color: var(--amber); color: #fff; }
+  button[data-on="1"] { background: var(--amber); color: #080c0e; border-color: var(--amber); }
+
+  table { width: 100%; border-collapse: collapse; }
+  td { padding: 1px 0; font-size: 11px; }
+  td:last-child { text-align: right; color: var(--green); }
+  td:first-child { color: var(--dim); }
+
+  #err {
+    position: fixed; inset: auto 14px 14px 14px; max-width: 620px;
+    background: #2a0f10; border: 1px solid #6d2b2b; color: #ffb4b4;
+    padding: 10px 12px; white-space: pre-wrap; display: none;
+  }
+  #hint {
+    position: fixed; right: 14px; bottom: 12px; color: var(--dim); font-size: 11px;
+  }
+</style>
+</head>
+<body>
+<div id="hud">
+  <h1>Alien viewer</h1>
+  <div class="sub">public/models/alien.glb</div>
+
+  <div class="grp">
+    <div class="lbl">Animation</div>
+    <div id="clips"></div>
+  </div>
+
+  <div class="grp">
+    <div class="lbl">View</div>
+    <button id="light">Lighting: studio</button>
+    <button id="walk" data-on="1">Locomotion: on</button>
+    <button id="wire">Wireframe</button>
+    <button id="chase">Chase cam</button>
+  </div>
+
+  <table>
+    <tr><td>clip</td><td id="s-clip">—</td></tr>
+    <tr><td>speed</td><td id="s-speed">—</td></tr>
+    <tr><td>triangles</td><td id="s-tris">—</td></tr>
+    <tr><td>bones</td><td id="s-bones">—</td></tr>
+    <tr><td>height</td><td id="s-size">—</td></tr>
+    <tr><td>cadence</td><td id="s-cadence">—</td></tr>
+    <tr><td>fps</td><td id="s-fps">—</td></tr>
+  </table>
+</div>
+
+<div id="hint">drag to orbit · scroll to zoom · right-drag to pan</div>
+<div id="err"></div>
+
+<script type="module">
+import * as THREE from 'three';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+// Straight from the game, so the gait is judged at the speed it will really
+// move at. If SPEED_HUNT changes, this page changes with it.
+import {
+  SPEED_PATROL, SPEED_HUNT, SPEED_SEARCH,
+  TUBE_RADIUS_M, DECK_Y_M, DECK_HALF_WIDTH_M, MODULE_LENGTH_M,
+} from '@shared/constants';
+// The SAME cadence law the game applies — clamps included. The viewer briefly
+// carried its own unclamped copy, which meant judging gaits against physics
+// the game would not run.
+import { GLB_URL, META_URL, cadenceFactor, clipTimeScale } from './src/alien/cadence';
+import { decayFactor } from './src/render/util';
+
+const fail = (e) => {
+  const el = document.getElementById('err');
+  el.style.display = 'block';
+  el.textContent = String(e && e.stack ? e.stack : e);
+  console.error(e);
+};
+window.addEventListener('error', (e) => fail(e.error || e.message));
+
+// ---------------------------------------------------------------- scene setup
+const renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+renderer.setSize(innerWidth, innerHeight);
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+document.body.appendChild(renderer.domElement);
+
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(48, innerWidth / innerHeight, 0.1, 200);
+camera.position.set(4.2, 2.0, 5.4);
+
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.target.set(0, 0.8, 0);
+controls.enableDamping = true;
+
+// ------------------------------------------------------- a corridor for scale
+// Roughly a station module: a 3.4m tube with a flat deck, ribs every 2.5m, so
+// you can judge whether the creature actually fits somewhere you have to walk.
+// Real station dimensions (@shared/constants), shifted so the deck top sits at
+// y=0 where the model walks. The page exists to judge whether the creature fits
+// somewhere you have to walk — judging it inside a tube 0.2 m too wide with
+// 0.75 m of extra headroom defeated the point.
+const CORRIDOR_LEN = 7 * MODULE_LENGTH_M;
+const R = TUBE_RADIUS_M;
+const TUBE_LIFT = -DECK_Y_M; // tube centre height above the deck plane
+
+const shell = new THREE.Mesh(
+  new THREE.CylinderGeometry(R, R, CORRIDOR_LEN, 24, 1, true),
+  new THREE.MeshStandardMaterial({ color: 0x2b3238, roughness: 0.92, metalness: 0.05, side: THREE.BackSide })
+);
+shell.rotation.x = Math.PI / 2;
+shell.position.y = TUBE_LIFT;
+shell.receiveShadow = true;
+scene.add(shell);
+
+const deck = new THREE.Mesh(
+  new THREE.BoxGeometry(DECK_HALF_WIDTH_M * 2, 0.08, CORRIDOR_LEN),
+  new THREE.MeshStandardMaterial({ color: 0x333b41, roughness: 0.85 })
+);
+deck.position.y = -0.04;
+deck.receiveShadow = true;
+scene.add(deck);
+
+const ribMat = new THREE.MeshStandardMaterial({ color: 0x454f56, roughness: 0.7, metalness: 0.25 });
+for (let z = -CORRIDOR_LEN / 2; z <= CORRIDOR_LEN / 2; z += 2.5) {
+  const rib = new THREE.Mesh(new THREE.TorusGeometry(R - 0.03, 0.05, 6, 24), ribMat);
+  rib.position.set(0, TUBE_LIFT, z);
+  scene.add(rib);
+}
+
+// Emergency strips — the game's real light source, and what makes a pale thing
+// visible at all when the flashlight is off it.
+const strips = new THREE.Group();
+for (const side of [-1, 1]) {
+  const strip = new THREE.Mesh(
+    new THREE.BoxGeometry(0.05, 0.05, CORRIDOR_LEN),
+    new THREE.MeshBasicMaterial({ color: 0x8c2f24 })
+  );
+  strip.position.set(side * (DECK_HALF_WIDTH_M - 0.05), TUBE_LIFT + 0.55, 0);
+  strips.add(strip);
+}
+scene.add(strips);
+
+// ------------------------------------------------------------------- lighting
+const hemi = new THREE.HemisphereLight(0xa8c4d0, 0x20262a, 1.15);
+scene.add(hemi);
+
+const key = new THREE.DirectionalLight(0xffffff, 1.5);
+key.position.set(4, 6, 4);
+key.castShadow = true;
+key.shadow.mapSize.set(1024, 1024);
+key.shadow.camera.near = 0.5;
+key.shadow.camera.far = 40;
+scene.add(key);
+
+const rim = new THREE.DirectionalLight(0x9fc4ff, 0.5);
+rim.position.set(-5, 2, -4);
+scene.add(rim);
+
+// The flashlight, for the in-game mode. Rides the camera like the real one.
+const torch = new THREE.SpotLight(0xfff0d8, 0, 22, Math.PI / 7, 0.45, 1.2);
+torch.castShadow = true;
+torch.shadow.mapSize.set(1024, 1024);
+scene.add(torch, torch.target);
+
+const ambientDark = new THREE.AmbientLight(0x223038, 0.0);
+scene.add(ambientDark);
+
+let inGame = false;
+function applyLighting() {
+  if (inGame) {
+    scene.fog = new THREE.FogExp2(0x05070a, 0.075);
+    renderer.setClearColor(0x05070a);
+    hemi.intensity = 0.05;
+    key.intensity = 0.0;
+    rim.intensity = 0.06;
+    torch.intensity = 60;
+    ambientDark.intensity = 0.35;
+  } else {
+    scene.fog = null;
+    renderer.setClearColor(0x0b1013);
+    hemi.intensity = 1.15;
+    key.intensity = 1.5;
+    rim.intensity = 0.5;
+    torch.intensity = 0;
+    ambientDark.intensity = 0.0;
+  }
+  document.getElementById('light').textContent = `Lighting: ${inGame ? 'in-game' : 'studio'}`;
+  document.getElementById('light').dataset.on = inGame ? '1' : '0';
+}
+applyLighting();
+
+// ---------------------------------------------------------------- load the GLB
+// Speeds come from the game's own constants (§14). `pull` is zero-g traversal,
+// which has no single authored speed, so it borrows the search pace.
+const SPEEDS = {
+  idle_listen: 0,
+  prowl: SPEED_PATROL,
+  hunt: SPEED_HUNT,
+  pull: SPEED_SEARCH,
+  lunge: 0,
+};
+
+let mixer = null, model = null, current = null, skeleton = null, currentName = '';
+const actions = new Map();
+let walking = true, chaseCam = false;
+
+// Cadence lock: same sidecar, same law, same clamps as src/alien/alienGltf.ts.
+let META = null;
+fetch(META_URL)
+  .then(r => r.ok ? r.json() : null)
+  .then(m => { META = m; applyTimeScale(); })
+  .catch(() => {});
+
+function applyTimeScale() {
+  if (!current || !currentName) return;
+  const spd = SPEEDS[currentName] ?? 0;
+  const factor = cadenceFactor(META, currentName);
+  current.timeScale = walking && factor !== null && spd > 0
+    ? clipTimeScale(factor, spd)
+    : 1;
+  document.getElementById('s-cadence').textContent =
+    current.timeScale === 1 ? 'authored' : `${current.timeScale.toFixed(2)}x`;
+}
+
+new GLTFLoader().load(GLB_URL, (gltf) => {
+  model = gltf.scene;
+  let tris = 0;
+  model.traverse((o) => {
+    if (o.isMesh) {
+      o.castShadow = true;
+      o.receiveShadow = true;
+      o.frustumCulled = false; // skinned bounds go stale while animating
+      const g = o.geometry;
+      tris += (g.index ? g.index.count : g.attributes.position.count) / 3;
+    }
+    if (o.isSkinnedMesh) skeleton = o.skeleton;
+  });
+  scene.add(model);
+
+  mixer = new THREE.AnimationMixer(model);
+  const holder = document.getElementById('clips');
+  for (const clip of gltf.animations) {
+    const action = mixer.clipAction(clip);
+    if (clip.name === 'lunge') {
+      action.setLoop(THREE.LoopOnce, 1);
+      action.clampWhenFinished = true;
+    }
+    actions.set(clip.name, action);
+
+    const b = document.createElement('button');
+    b.textContent = clip.name;
+    b.onclick = () => play(clip.name);
+    b.dataset.clip = clip.name;
+    holder.appendChild(b);
+  }
+
+  const box = new THREE.Box3().setFromObject(model);
+  const size = box.getSize(new THREE.Vector3());
+  document.getElementById('s-tris').textContent = tris.toLocaleString();
+  document.getElementById('s-bones').textContent = skeleton ? skeleton.bones.length : '—';
+  document.getElementById('s-size').textContent =
+    `${size.y.toFixed(2)}m tall · ${size.z.toFixed(2)}m long`;
+
+  play(actions.has('prowl') ? 'prowl' : gltf.animations[0]?.name);
+}, undefined, fail);
+
+function play(name) {
+  if (!name || !actions.has(name)) return;
+  const next = actions.get(name);
+  if (current && current !== next) current.fadeOut(0.25);
+  next.reset().fadeIn(0.25).play();
+  current = next;
+  currentName = name;
+  // The pull clip ships game-neutral (the game orients the body onto its
+  // rail); the viewer restores the ceiling-hang read as a display transform.
+  if (name === 'pull') { model.rotation.z = Math.PI; model.position.y = 1.15; }
+  else { model.rotation.z = 0; model.position.y = 0; }
+  applyTimeScale();
+  for (const b of document.querySelectorAll('[data-clip]')) {
+    b.dataset.on = b.dataset.clip === name ? '1' : '0';
+  }
+  document.getElementById('s-clip').textContent = name;
+  document.getElementById('s-speed').textContent = `${(SPEEDS[name] ?? 0).toFixed(2)} m/s`;
+}
+// -------------------------------------------------------------------- controls
+document.getElementById('light').onclick = () => { inGame = !inGame; applyLighting(); };
+
+const walkBtn = document.getElementById('walk');
+walkBtn.onclick = () => {
+  walking = !walking;
+  walkBtn.textContent = `Locomotion: ${walking ? 'on' : 'off'}`;
+  walkBtn.dataset.on = walking ? '1' : '0';
+  applyTimeScale();
+};
+
+const wireBtn = document.getElementById('wire');
+wireBtn.onclick = () => {
+  const on = wireBtn.dataset.on !== '1';
+  wireBtn.dataset.on = on ? '1' : '0';
+  model?.traverse((o) => { if (o.isMesh) o.material.wireframe = on; });
+};
+
+const chaseBtn = document.getElementById('chase');
+chaseBtn.onclick = () => {
+  chaseCam = !chaseCam;
+  chaseBtn.dataset.on = chaseCam ? '1' : '0';
+  controls.enabled = !chaseCam;
+};
+
+addEventListener('resize', () => {
+  camera.aspect = innerWidth / innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(innerWidth, innerHeight);
+});
+
+// ----------------------------------------------------------------- march loop
+// The model faces -Z, matching `src/alien/alienView.ts`, which puts the skull
+// at a NEGATIVE z. The GLB is built to that convention deliberately so it can
+// drop into the game without a correction quaternion nobody would remember.
+const LIMIT = CORRIDOR_LEN / 2 - 2.2;
+let heading = 1;          // +1 walking toward -Z, -1 toward +Z
+let turning = 0;
+const chaseTarget = new THREE.Vector3();   // rAF-loop scratch — no per-frame allocs
+const torchFwd = new THREE.Vector3();
+
+// three 0.185 deprecates THREE.Clock in favour of Timer; a couple of lines of
+// manual timing avoids the console noise and the extra import.
+let last = performance.now();
+let fpsAcc = 0, fpsFrames = 0;
+
+renderer.setAnimationLoop(() => {
+  const now = performance.now();
+  const dt = Math.min((now - last) / 1000, 0.05);
+  last = now;
+  mixer?.update(dt);
+
+  if (model) {
+    const speed = walking ? (SPEEDS[currentName] ?? 0) : 0;
+
+    if (turning > 0) {
+      turning -= dt;
+      model.rotation.y += (heading > 0 ? 1 : -1) * Math.PI * dt / 0.6;
+      if (turning <= 0) {
+        model.rotation.y = heading > 0 ? 0 : Math.PI;
+      }
+    } else if (speed > 0) {
+      const dir = heading > 0 ? -1 : 1;
+      model.position.z += dir * speed * dt;
+      if (model.position.z < -LIMIT || model.position.z > LIMIT) {
+        heading = -heading;
+        turning = 0.6;
+      }
+    }
+
+    if (chaseCam) {
+      // Sit where a player would be: behind it, at eye height, hunted.
+      const back = heading > 0 ? 1 : -1;
+      camera.position.lerp(
+        chaseTarget.set(0.35, 1.55, model.position.z + back * 4.4),
+        decayFactor(dt, 0.07),
+      );
+      camera.lookAt(model.position.x, 0.85, model.position.z);
+    }
+  }
+
+  if (inGame) {
+    torch.position.copy(camera.position);
+    camera.getWorldDirection(torchFwd);
+    torch.target.position.copy(camera.position).add(torchFwd.multiplyScalar(10));
+    torch.target.updateMatrixWorld();
+  }
+
+  if (!chaseCam) controls.update();
+  renderer.render(scene, camera);
+
+  fpsAcc += dt; fpsFrames++;
+  if (fpsAcc >= 0.5) {
+    document.getElementById('s-fps').textContent = Math.round(fpsFrames / fpsAcc);
+    fpsAcc = 0; fpsFrames = 0;
+  }
+});
+</script>
+</body>
+</html>

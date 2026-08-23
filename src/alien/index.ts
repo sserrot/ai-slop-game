@@ -6,11 +6,11 @@
  * animates it into the gait the server's state implies, and swells the hunt bed
  * when the server says HUNT.
  *
- * The body is `AlienView` (ISS-CHR-01) — 972 triangles in six instanced draw
- * calls, with a walk cycle for `nominal` modules and a rail-pull for `zero`
- * ones. Read that file before touching this one: the gait is the state readout
- * the player's life depends on, and it is the only readout, because the asset
- * carries no emissive at all.
+ * The body is the GLB skin (ISS-CHR-02, `alienGltf.ts`) riding on top of the
+ * procedural `AlienView` (ISS-CHR-01), which stays as the loading placeholder
+ * and failure fallback. The gait is the state readout the player's life
+ * depends on, and it is the only readout, because the asset carries no
+ * emissive at all — `assertInert` enforces that for both bodies.
  *
  *     const alien = new AlienProxy({
  *       materials: station.materials,
@@ -27,15 +27,21 @@
 
 import type { AlienSnapshot, GravityMode, ModuleId, Vec3 } from '@shared/types';
 import { AlienView } from './alienView';
-import type { AlienViewOptions } from './alienView';
+import type { AlienBody, AlienViewOptions } from './alienView';
+import { AlienGltfView } from './alienGltf';
 import { AlienHuntEmitter } from './alienAudio';
 import type { AlienAudioSink } from './alienAudio';
 import { bus } from '../core/eventBus';
 
 export * from './alienView';
 export * from './alienAudio';
+export * from './alienGltf';
 
 export interface AlienProxyOptions extends AlienViewOptions {
+  /** Use the authored GLB body (ISS-CHR-02), with the procedural parts as the
+   *  loading placeholder and failure fallback. Default true; set false to pin
+   *  the capsule-era procedural body (debugging, or an asset-less deploy). */
+  useGltf?: boolean;
   /** Hunt-bed sink from `src/audio/`. Optional — the view works without audio. */
   sink?: AlienAudioSink | null;
   /** Listener position, for hunt-bed intensity and the proximity event. */
@@ -58,7 +64,7 @@ export interface AlienProxyOptions extends AlienViewOptions {
  * the alien.
  */
 export class AlienProxy {
-  readonly view: AlienView;
+  readonly view: AlienBody;
   readonly audio: AlienHuntEmitter;
 
   private readonly listener: (() => Vec3 | null) | null;
@@ -69,7 +75,7 @@ export class AlienProxy {
   private proximityTimer = 0;
 
   constructor(opts: AlienProxyOptions = {}) {
-    this.view = new AlienView(opts);
+    this.view = (opts.useGltf ?? true) ? new AlienGltfView(opts) : new AlienView(opts);
     this.audio = new AlienHuntEmitter({
       sink: opts.sink ?? null,
       listener: opts.listener,
@@ -86,7 +92,12 @@ export class AlienProxy {
     return this.view.object3D;
   }
 
-  /** Six, and constant. Worth knowing when you are counting §9's budget. */
+  /** Resolves when the body is renderable — awaited before the pre-warm. */
+  get whenReady(): Promise<void> {
+    return this.view.whenReady;
+  }
+
+  /** One for the GLB skin; six for the procedural fallback. */
   get drawCalls(): number {
     return this.view.drawCalls;
   }
