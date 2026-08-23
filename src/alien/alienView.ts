@@ -31,10 +31,12 @@
  *
  *   • WALK, in `gravity: 'nominal'` modules. `server/sim/alien.ts` rides the
  *     deck at `DECK_Y_M + ALIEN_RADIUS`, so the transform this view receives
- *     sits exactly 0.45 m above the plating — which is why the body is built as
- *     a low quadrupedal stalk with its spine horizontal at that height and its
- *     four limbs folded down onto the deck, rather than an upright figure that
- *     would need an offset nobody would remember to apply.
+ *     sits exactly 0.45 m above the plating — the HIPS sit at that origin, the
+ *     two hind legs drop 0.45 m to the deck and carry all the weight, and the
+ *     torso rears up from the waist (see TORSO_PITCH) so the head rides at
+ *     roughly a crewmate's eye height. An upright theropod, not a crawler —
+ *     and still no offset for anyone to remember, because the server-owned
+ *     point IS the hips.
  *   • RAIL-PULL, in `gravity: 'zero'` modules. Same rig, straightened along the
  *     travel axis, hauling hand over hand with the legs trailing. §5's one
  *     genuinely nice property — "it pulls along the same handrails in a room
@@ -124,30 +126,59 @@ const PELVIS_Z = CHEST_Z + CHEST_LEN / 2;
 const ABDOMEN_LEN = 0.46;
 const TAIL_SEGS: ReadonlyArray<{ len: number; rNear: number; rFar: number; drop: number }> =
   Object.freeze([
+    // Held nearly level: on a biped the tail is the counterweight to the raised
+    // torso, not a drooping trailer. The tip lifts slightly.
     { len: 0.26, rNear: 0.1, rFar: 0.072, drop: 0 },
-    { len: 0.24, rNear: 0.072, rFar: 0.046, drop: -0.02 },
-    { len: 0.22, rNear: 0.046, rFar: 0.016, drop: -0.055 },
+    { len: 0.24, rNear: 0.072, rFar: 0.046, drop: 0.01 },
+    { len: 0.22, rNear: 0.046, rFar: 0.016, drop: 0.015 },
   ]);
 
 const SHOULDER = { x: 0.195, y: 0.035, z: -0.2 };
-const UPPER_ARM_L = 0.41;
-const FOREARM_L = 0.62;
-const HAND_L = 0.2;
+// Forelimbs, SHORT (theropod redesign): they tuck against the chest and never
+// touch the deck. The old 1.2 m arms were front legs; these are graspers.
+const UPPER_ARM_L = 0.22;
+const FOREARM_L = 0.3;
+const HAND_L = 0.14;
 const HIP = { x: 0.155, y: -0.01, z: 0.1 };
-const THIGH_L = 0.34;
+const THIGH_L = 0.33;
 const SHIN_L = 0.36;
 /**
- * Baked knee, radians, bending REARWARD.
+ * Baked knee, radians, bending REARWARD — the digitigrade ankle of the stance.
  *
  * Solved against `WALK.hipSplay`, not chosen: `alienContactReport()` says a hip
- * at rig-local y ≈ −0.02 with a 0.55 rad splay puts this leg's foot on the deck
- * at −0.45 ± 0.10 across every state and every phase. Retune one and re-run it.
+ * at rig-local y ≈ −0.01 with the 0.16 rad under-body splay puts this leg's
+ * foot on the deck at −0.45 ± 0.13 across every state and phase. Retune one
+ * and re-run it.
  *
  * A rigid dog-leg saves the two draw calls an articulated knee would cost, and
- * a hind leg's knee angle barely changes across a stride anyway — the hip
- * carries the motion, which is exactly what the front limbs' elbows do not do.
+ * on a biped it reads as the ankle: thigh forward, shank swept back, weight on
+ * the toes.
  */
-const KNEE_BAKED = 1.3;
+const KNEE_BAKED = 1.35;
+
+// ---------------------------------------------------------------------------
+// The theropod stance (playtest redesign: "more upright, on two legs, almost
+// like a dinosaur").
+//
+// The server still rides the body centre 0.45 m above the deck and the PELVIS
+// stays at that origin — nothing sim-side moves. What changed is everything
+// hung off it: the legs collapse under the hips (splay 0.55 -> 0.16) and take
+// all the weight, the torso pitches up ~41 deg from the waist so the chest,
+// neck and head climb to eye height, the tail levels out behind as the
+// counterweight, and the arms shrink into tucked graspers. The silhouette
+// reads raptor: head ~1.2 m over the deck, hips at 0.45, tail straight back.
+// ---------------------------------------------------------------------------
+
+/** rad — base nose-up pitch of the torso at the waist hinge. Scaled by the
+ *  gravity blend: a rail-swimming body in zero-G flattens back out. */
+const TORSO_PITCH = 0.72;
+/** rad — the neck counter-rotates so the head carries level-ish (S-curve). */
+const NECK_BASE_PITCH = -0.38;
+/** m — how far the chest hinge rides above the pelvis in the stance. */
+const CHEST_RISE = 0.16;
+/** m — chest hinge pulled back toward the hips, so the pitch reads as a body
+ *  rearing from the waist rather than a tube bent in the middle. */
+const CHEST_FWD = CHEST_Z - PELVIS_Z + 0.09;
 
 // ===========================================================================
 // Geometry
@@ -328,8 +359,8 @@ function buildHeadNeck(): THREE.BufferGeometry {
 /** Upper arm, built at the shoulder and hanging along −Y. */
 function buildUpperArm(): THREE.BufferGeometry {
   const parts: THREE.BufferGeometry[] = [];
-  parts.push(at(yLimb(0.085, 0.078, 0.1, 8), 0, 0.045, 0));
-  parts.push(at(yLimb(0.075, 0.055, UPPER_ARM_L, 8), 0, -0.01, 0));
+  parts.push(at(yLimb(0.062, 0.056, 0.07, 8), 0, 0.032, 0));
+  parts.push(at(yLimb(0.054, 0.04, UPPER_ARM_L, 8), 0, -0.01, 0));
   const g = mergeParts(parts);
   g.name = 'alien-upper-arm';
   return g;
@@ -346,12 +377,12 @@ function buildUpperArm(): THREE.BufferGeometry {
  */
 function buildForearm(): THREE.BufferGeometry {
   const parts: THREE.BufferGeometry[] = [];
-  parts.push(at(yLimb(0.055, 0.03, FOREARM_L, 8), 0, 0, 0));
-  parts.push(at(chamferedBox({ x: 0.085, y: 0.05, z: 0.115 }, 0.015), 0, -FOREARM_L - 0.02, 0));
+  parts.push(at(yLimb(0.04, 0.024, FOREARM_L, 8), 0, 0, 0));
+  parts.push(at(chamferedBox({ x: 0.06, y: 0.036, z: 0.08 }, 0.011), 0, -FOREARM_L - 0.015, 0));
 
   const wrist = -FOREARM_L - 0.04;
   for (const spread of [-0.34, 0, 0.34]) {
-    const digit = new THREE.ConeGeometry(0.017, HAND_L, 4);
+    const digit = new THREE.ConeGeometry(0.013, HAND_L, 4);
     digit.rotateX(Math.PI);
     digit.rotateZ(spread * 0.55);
     digit.rotateX(spread * 0.5);
@@ -617,19 +648,27 @@ function buildRig(): AlienRig {
  * one and re-run `alienContactReport()`.
  */
 const WALK = Object.freeze({
-  shoulderPitch: -0.12,
-  shoulderPitchAmp: 0.34,
-  shoulderSplay: 0.78,
-  elbowPitch: 1.42,
-  elbowPitchAmp: 0.38,
+  // Forelimbs: tucked against the raised chest, swaying with the stride but
+  // never load-bearing. The upper arm angles down-forward, the forearm folds
+  // up — a raptor's grasp, not a front leg.
+  shoulderPitch: 0.5,
+  shoulderPitchAmp: 0.12,
+  shoulderSplay: 0.3,
+  elbowPitch: -1.2,
+  elbowPitchAmp: 0.16,
+  // Hind legs: under the body now, and they carry the whole stride. The
+  // amplitude is bounded by the rigid dog-leg: the foot lives on a fixed
+  // 0.59 m sphere around the hip, so past ~0.24 rad of swing it visibly sinks
+  // or skates (alienContactReport proves the envelope). The stride reads from
+  // cadence and bob more than sweep, which suits a stalking biped anyway.
   hipPitch: 0.06,
-  hipPitchAmp: 0.22,
-  hipSplay: 0.55,
-  /** Vertical bob, metres, at twice the stride rate: four feet, two beats. */
-  bob: 0.022,
-  /** Lateral spine undulation, radians. */
-  yaw: 0.1,
-  roll: 0.055,
+  hipPitchAmp: 0.21,
+  hipSplay: 0.16,
+  /** Vertical bob, metres, at twice the stride rate: one beat per footfall. */
+  bob: 0.032,
+  /** Lateral spine undulation, radians. A biped sways less than a crawler. */
+  yaw: 0.06,
+  roll: 0.05,
 });
 
 /** Joint angles for the rail pull. Arms forward and folded, legs trailing,
@@ -677,15 +716,21 @@ function pose(rig: AlienRig, p: PostureAccum, phase: number, sweep: number, grou
   // The chest hinges at the waist: the arch, the counter-yaw, and the heave.
   // Two beats per stride, one per diagonal pair — and exactly zero in zero-G,
   // or the body reads as bouncing off a floor that is not there.
-  rig.chest.rotation.set(p.arch, -spineYaw * 0.45 * Math.sin(phase), 0);
+  // The stance: nose-up torso pitch on a deck, flattening back out in zero-G
+  // where the body swims horizontally along the rail.
+  rig.chest.rotation.set(
+    TORSO_PITCH * ground + p.arch,
+    -spineYaw * 0.45 * Math.sin(phase),
+    0,
+  );
   rig.chest.position.set(
     0,
-    0.005 + WALK.bob * p.stride * ground * Math.sin(phase * 2),
-    CHEST_Z - PELVIS_Z,
+    0.005 + CHEST_RISE * ground + WALK.bob * p.stride * ground * Math.sin(phase * 2),
+    CHEST_FWD * ground + (CHEST_Z - PELVIS_Z) * air,
   );
 
   // -- head ---------------------------------------------------------------
-  rig.neck.rotation.set(-p.headLift, sweep, sweep * 0.35);
+  rig.neck.rotation.set(NECK_BASE_PITCH * ground - p.headLift, sweep, sweep * 0.35);
 
   // -- limbs --------------------------------------------------------------
   // Diagonal couplet on a deck: front-left with hind-right. Hand over hand on a
@@ -1372,10 +1417,13 @@ export function assertAlienCoherent(): void {
             `deck is at ${c.deck} — it is skating or sunk`,
         );
       }
-      if (Math.abs(c.hand - c.deck) > 0.15) {
+      // Theropod stance: the forelimbs are tucked graspers and must NEVER
+      // reach the plating — a hand at deck level means the arm fold regressed
+      // toward the old quadrupedal front leg.
+      if (c.hand < c.deck + 0.1) {
         failures.push(
-          `${state} at phase ${phase.toFixed(2)}: hand at ${c.hand.toFixed(3)} but the deck ` +
-            `is at ${c.deck}`,
+          `${state} at phase ${phase.toFixed(2)}: hand at ${c.hand.toFixed(3)} is at the deck ` +
+            `(${c.deck}) — the forelimbs are tucked graspers, not front legs`,
         );
       }
       if (c.crown > DECK_HEADROOM_M - ALIEN_DECK_DROP_M) {
