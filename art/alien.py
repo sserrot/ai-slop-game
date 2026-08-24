@@ -14,32 +14,31 @@ exception (§5: "spend the budget on its animation"), because you cannot
 skeletally animate a capsule. Keeping it scripted means it still diffs in git
 and a proportion change stays a one-line edit rather than a re-export.
 
-THE CREATURE — revision 2, pulled toward the in-game version
-  - SPRAWLING, not elegant. Elbows and knees out to the sides, crocodilian,
-    belly low to the deck. Revision 1 read like a greyhound skeleton; the whole
-    point of this pass is that it should look wrong, not athletic.
-  - A DORSAL SPINE RANK from the skull to mid-tail. This is most of the new
-    silhouette and it is what makes the shape read as hostile at any distance.
+THE CREATURE — revision 3: UPRIGHT, ON TWO LEGS (playtest: "more upright,
+almost like a dinosaur"). Revision 2 was a sprawling crocodilian; this pass
+stands it up into a theropod without losing the wrongness:
+  - BIPEDAL. Hips over folded z-legs (thigh forward, hock back, toes down),
+    torso rising diagonally to a high chest, the long tail held out behind as
+    the counterweight. Head carries at roughly a crewmate's eye height.
+  - A DORSAL SPINE RANK from the neck to mid-tail — still most of the
+    silhouette, now a serrated diagonal instead of a serrated horizon.
   - A HINGED JAW WITH TEETH, on its own bone, so `lunge` actually opens it.
   - BLIND. No eyes, no sockets, nothing. The sensory apparatus is a pair of low
-    swept-back membranes behind the skull — kept from revision 1 because a
-    player who sees it once should be able to work out the rule, but shrunk so
-    they read as ragged fins rather than deer ears.
-  - Long forelimbs with hooked claws: it pulls along the same handrails you do.
+    swept-back membranes behind the skull.
+  - SHORT forelimbs, tucked and hooked — graspers, not front legs. They still
+    haul along handrails in zero-G (the `pull` clip flattens the spine back
+    out), but on a deck they never touch the plating.
 
 FACING: head toward +Y in Blender, which the Y-up export turns into -Z. That is
 the axis the existing in-game alien already uses (`src/alien/alienView.ts` puts
 the skull at a NEGATIVE z), so a drop-in replacement must match it.
 
-PROPORTIONS are taken from that same file rather than eyeballed, so this reads
-as the same animal at the same scale:
-    ALIEN_VIEW_LENGTH 2.4      total nose to tail
-    deck ride height  0.45     the spine is horizontal at this height
-    CHEST_R_FRONT/BACK 0.145 / 0.175
-    arm  0.41 + 0.62 + 0.20 = 1.23     <- forelimbs are nearly twice the legs
-    leg  0.34 + 0.36        = 0.70
-The long-arm/short-leg ratio is most of why the silhouette looks wrong, so it
-matters more than any amount of surface detail.
+PROPORTIONS: nose to tail stays ~2.4 m, but the axis now runs diagonally —
+hips at z 0.62, chest at 0.86, skull at ~1.14 (a crewmate's eye height), tail
+sweeping back to y -1.58 as the counterbalance. Legs ~0.95 m of folded reach
+carry everything; arms shrink to ~0.63 m tucked graspers. The deck is z = 0 in
+this file and the feet stay ON it — the game drops the whole GLB by
+ALIEN_DECK_DROP_M, so Blender-deck = station-deck by construction.
 
 BUILD TECHNIQUE: vertex chains + Skin modifier + Subdivision for the body, with
 hard-surface bits (spines, teeth, jaw, claws) built separately and joined after
@@ -74,61 +73,61 @@ def reset_scene():
 # ------------------------------------------------------------------- skeleton
 
 def chains():
-    """(x, y, z, skin_radius). Matched to src/alien/alienView.ts — 2.4 m nose to
-    tail, spine horizontal at the 0.45 m deck ride height, long arms, short
-    legs. Radii run heavier than that file's tubes on purpose: the Skin+Subsurf
-    cage shrinks, and r2's read was "spindly" — this animal should look FED."""
-    # An animal torso is masses, not a tube: hips, a tucked waist, a deep
-    # ribcage, withers above the shoulders, then a neck-base taper. The r11
-    # spine held z 0.44-0.46 with smoothly falling radii — a sausage, and the
-    # "flat" read came straight from it.
+    """(x, y, z, skin_radius). Revision 3, upright: the spine is a rising
+    diagonal — hips 0.62, ribcage 0.76, chest 0.86, skull 1.14 — over two
+    folded z-legs, with the tail carried out behind as the counterweight.
+    Radii run heavy on purpose: the Skin+Subsurf cage shrinks, and this
+    animal should look FED."""
     spine = [
-        (0.000, y(-0.38), 0.45, 0.185),   # hips
-        (0.000, y(-0.16), 0.44, 0.162),   # waist — belly tucks up
-        (0.000, y( 0.10), 0.46, 0.185),   # ribcage, deep and round
-        (0.000, y( 0.30), 0.48, 0.168),   # withers, the shoulder hump
-        (0.000, y( 0.50), 0.47, 0.115),   # neck base — flows, no step
-        (0.000, y( 0.70), 0.45, 0.085),
-        (0.000, y( 0.88), 0.44, 0.108),   # skull
-        (0.000, y( 1.05), 0.42, 0.050),   # snout
+        (0.000, y(-0.35), 0.62, 0.190),   # hips — deep, the balance point
+        (0.000, y(-0.16), 0.68, 0.165),   # waist — belly tucks up
+        (0.000, y( 0.05), 0.76, 0.190),   # ribcage, deep and round
+        (0.000, y( 0.22), 0.86, 0.160),   # chest / shoulder girdle
+        (0.000, y( 0.35), 0.95, 0.110),   # neck base — flows, no step
+        (0.000, y( 0.46), 1.06, 0.082),   # mid neck
+        (0.000, y( 0.58), 1.14, 0.105),   # skull — a crewmate's eye height
+        (0.000, y( 0.80), 1.10, 0.048),   # snout
     ]
 
+    # The counterweight. Nearly level, sinking only slightly: a biped's tail
+    # balances the raised torso rather than dragging behind a crawl.
     tail = [
-        (0.000, y(-0.38), 0.44, 0.165),
-        (0.000, y(-0.62), 0.43, 0.122),
-        (0.000, y(-0.86), 0.39, 0.088),
-        (0.000, y(-1.06), 0.33, 0.058),
-        (0.000, y(-1.22), 0.26, 0.032),
-        (0.000, y(-1.35), 0.20, 0.010),
+        (0.000, y(-0.35), 0.60, 0.170),
+        (0.000, y(-0.62), 0.55, 0.128),
+        (0.000, y(-0.89), 0.50, 0.092),
+        (0.000, y(-1.12), 0.45, 0.060),
+        (0.000, y(-1.32), 0.41, 0.032),
+        (0.000, y(-1.58), 0.38, 0.010),
     ]
 
-    # Forelimb constraints that must survive any retune: segments long enough
-    # to fold from a 0.76 m reach down to 0.51 (a 0.5 m stride needs both
-    # extremes), and the elbow kept forward of the shoulder with the forearm
-    # near-vertical so the two joints move the hand in different directions —
-    # collapse them onto one line and IK poses turn degenerate.
+    # Forelimbs: SHORT tucked graspers. Upper arm hangs down-back from a high
+    # shoulder, forearm folds forward-up, hand carried in front of the chest.
+    # They never walk; the elbow is kept well off the shoulder-wrist line so
+    # the zero-G pull's IK still has a plane to solve in.
     arm = [
-        (0.195, y( 0.22), 0.46, 0.105),   # shoulder — thick at the root
-        (0.500, y( 0.40), 0.42, 0.070),   # elbow — sprawled, below the back
-        (0.415, y( 0.50), 0.08, 0.046),   # wrist
-        (0.405, y( 0.58), 0.03, 0.036),   # hand
-        (0.400, y( 0.65), 0.01, 0.016),   # hooked claws
+        (0.160, y( 0.24), 0.84, 0.085),   # shoulder — thick at the root
+        (0.220, y( 0.10), 0.60, 0.052),   # elbow — down and back
+        (0.190, y( 0.32), 0.56, 0.038),   # wrist — folded forward
+        (0.178, y( 0.42), 0.55, 0.028),   # hand
+        (0.172, y( 0.49), 0.53, 0.014),   # hooked claws
     ]
 
-    # Hind limbs, same treatment: their hip splay 0.55 puts the knee at ~0.15 m.
+    # Hind limbs: the theropod z-fold. Thigh drives forward off a deep haunch,
+    # the shank sweeps back to a raised hock, and the toes drop to the deck —
+    # digitigrade, weight on the ball of the foot, everything under the hips.
     leg = [
-        (0.155, y(-0.30), 0.42, 0.130),   # hip — haunch root
-        (0.440, y(-0.44), 0.30, 0.090),   # knee — sprawled, matching
-        (0.360, y(-0.28), 0.08, 0.058),   # ankle
-        (0.360, y(-0.16), 0.02, 0.032),   # foot
+        (0.150, y(-0.30), 0.58, 0.135),   # hip — haunch root
+        (0.185, y(-0.08), 0.34, 0.095),   # knee — forward
+        (0.175, y(-0.38), 0.16, 0.058),   # ankle — the swept-back hock
+        (0.170, y(-0.14), 0.02, 0.032),   # toes, on the plating
     ]
 
     # Sensory membranes. The blade is built separately; this is just the spar.
     ear = [
-        (0.048, y( 0.86), 0.48, 0.020),
-        (0.110, y( 0.74), 0.56, 0.020),
-        (0.168, y( 0.60), 0.60, 0.014),
-        (0.196, y( 0.48), 0.58, 0.007),
+        (0.045, y( 0.56), 1.17, 0.020),
+        (0.100, y( 0.46), 1.22, 0.018),
+        (0.150, y( 0.34), 1.24, 0.012),
+        (0.175, y( 0.24), 1.21, 0.007),
     ]
 
     return spine, tail, arm, leg, ear
@@ -141,12 +140,12 @@ def mirrored(chain):
 def ear_outline(side=1.0):
     """A low, swept-back, ragged fin — not a deer ear."""
     pts = [
-        (0.040, y( 0.90), 0.47),
-        (0.100, y( 0.82), 0.60),
-        (0.176, y( 0.66), 0.64),
-        (0.210, y( 0.52), 0.58),
-        (0.160, y( 0.46), 0.50),
-        (0.078, y( 0.60), 0.46),
+        (0.040, y( 0.60), 1.16),
+        (0.095, y( 0.52), 1.25),
+        (0.165, y( 0.38), 1.28),
+        (0.195, y( 0.26), 1.22),
+        (0.150, y( 0.22), 1.13),
+        (0.075, y( 0.36), 1.12),
     ]
     return [(x * side, yy, z) for (x, yy, z) in pts]
 
@@ -194,9 +193,9 @@ def build_body():
     # between "anatomical" and "flat".
     for sx in (1.0, -1.0):
         add_chain([(0, 0, 0, 0),
-                   (sx * 0.165, y(0.26), 0.47, 0.135)], attach_to=chest)
+                   (sx * 0.150, y(0.22), 0.85, 0.110)], attach_to=chest)
         add_chain([(0, 0, 0, 0),
-                   (sx * 0.140, y(-0.30), 0.45, 0.150)], attach_to=pelvis)
+                   (sx * 0.145, y(-0.28), 0.58, 0.155)], attach_to=pelvis)
 
     bm.verts.index_update()
     index_radius = {v.index: r for v, r in radii}
@@ -291,21 +290,22 @@ def build_spines(body):
     obj = new_mesh_obj("AlienSpines")
     bm = bmesh.new()
 
-    # (along-body y, deck height, spike length, base radius)
+    # (along-body y, spike length, base radius) — neck base to mid-tail,
+    # tallest over the shoulder crest, riding the MEASURED diagonal back.
     row = [
-        (0.80, 0.042, 0.017),
-        (0.66, 0.055, 0.020),
-        (0.50, 0.070, 0.023),
-        (0.34, 0.085, 0.026),
-        (0.18, 0.098, 0.029),   # shoulder crest
-        (0.02, 0.104, 0.030),
-        (-0.14, 0.098, 0.029),
-        (-0.30, 0.088, 0.027),
-        (-0.46, 0.076, 0.024),
-        (-0.62, 0.064, 0.021),
-        (-0.80, 0.052, 0.018),
-        (-0.98, 0.042, 0.015),
-        (-1.14, 0.032, 0.012),
+        (0.40, 0.040, 0.016),
+        (0.28, 0.055, 0.020),
+        (0.16, 0.070, 0.024),
+        (0.04, 0.082, 0.027),
+        (-0.08, 0.090, 0.029),   # shoulder crest
+        (-0.20, 0.094, 0.030),
+        (-0.32, 0.088, 0.028),
+        (-0.50, 0.078, 0.025),
+        (-0.68, 0.066, 0.022),
+        (-0.86, 0.056, 0.019),
+        (-1.04, 0.046, 0.016),
+        (-1.20, 0.036, 0.013),
+        (-1.34, 0.028, 0.011),
     ]
     for (yy, length, r) in row:
         # Seat each spine 25 mm INSIDE the measured skin so the cone emerges
@@ -346,8 +346,8 @@ def build_jaw_and_teeth(body):
     """
     MOUTH_GAP = 0.008
     JAW_THICK = 0.042
-    stations = (0.78, 0.86, 0.94, 1.00)      # hinge .. chin (overbite: < 1.05)
-    half_w = (0.080, 0.070, 0.052, 0.030)
+    stations = (0.52, 0.60, 0.67, 0.73)      # hinge .. chin (overbite: < 0.80)
+    half_w = (0.078, 0.068, 0.050, 0.028)
 
     def underside(yy):
         return measure_underside(body, yy - 0.035, yy + 0.035)
@@ -371,8 +371,8 @@ def build_jaw_and_teeth(body):
     bmj.faces.new((left[-1], right[-1], lo_r[-1], lo_l[-1]))
 
     # Lower teeth ride the jaw's own (sloped) top edge. Irregular on purpose.
-    lower_row = [(0.80, 0.040), (0.85, 0.048), (0.89, 0.037),
-                 (0.925, 0.044), (0.955, 0.030), (0.985, 0.025)]
+    lower_row = [(0.54, 0.040), (0.585, 0.048), (0.625, 0.037),
+                 (0.66, 0.044), (0.69, 0.030), (0.715, 0.025)]
     for i, (t, length) in enumerate(lower_row):
         jt = underside(t) - MOUTH_GAP
         r = 0.012 - i * 0.0012
@@ -385,8 +385,8 @@ def build_jaw_and_teeth(body):
     # Upper teeth hang from the LOCAL underside, station by station.
     upper = new_mesh_obj("AlienTeethUpper")
     bmu = bmesh.new()
-    upper_row = [(0.79, 0.046), (0.835, 0.037), (0.875, 0.047),
-                 (0.91, 0.034), (0.94, 0.041), (0.97, 0.028)]
+    upper_row = [(0.53, 0.046), (0.575, 0.037), (0.615, 0.047),
+                 (0.65, 0.034), (0.68, 0.041), (0.705, 0.028)]
     for i, (t, length) in enumerate(upper_row):
         top = underside(t) + 0.006
         r = 0.013 - i * 0.0013
@@ -396,7 +396,7 @@ def build_jaw_and_teeth(body):
     bmu.to_mesh(upper.data)
     bmu.free()
 
-    hinge_z = underside(0.78) - MOUTH_GAP - JAW_THICK * 0.5
+    hinge_z = underside(0.52) - MOUTH_GAP - JAW_THICK * 0.5
     return jaw, upper, hinge_z
 
 
@@ -509,7 +509,7 @@ def build_armature(jaw_hinge_z):
         prev = b
 
     # The jaw hinges under the skull and swings the whole lower assembly.
-    bone("jaw", (0.0, y(0.78), jaw_hinge_z), (0.0, y(1.00), jaw_hinge_z - 0.014), spine_bones["head"], False)
+    bone("jaw", (0.0, y(0.52), jaw_hinge_z), (0.0, y(0.73), jaw_hinge_z - 0.014), spine_bones["head"], False)
 
     prev = spine_bones["pelvis"]
     for i in range(len(tail) - 1):
@@ -536,8 +536,8 @@ def build_armature(jaw_hinge_z):
     # cat-shoulder roll, and the strongest single "alive" cue a stalk has.
     for side_name, sx in (("L", 1.0), ("R", -1.0)):
         eb = bone(f"scapula.{side_name}",
-                  (sx * 0.165, y(0.24), 0.46),
-                  (sx * 0.150, y(0.16), 0.60),
+                  (sx * 0.150, y(0.20), 0.84),
+                  (sx * 0.135, y(0.12), 0.97),
                   spine_bones["chest"], False)
         # Excluded from automatic weighting: a bone floating INSIDE the mesh
         # volume makes bone-heat fail outright, and the silent fallback to
@@ -551,12 +551,12 @@ def build_armature(jaw_hinge_z):
 
 
 AXIAL_SPANS = (
-    ("tail_05", -1.40, -1.22), ("tail_04", -1.22, -1.06),
-    ("tail_03", -1.06, -0.86), ("tail_02", -0.86, -0.62),
-    ("tail_01", -0.62, -0.38), ("pelvis", -0.38, -0.18),
-    ("spine_01", -0.18, 0.06), ("spine_02", 0.06, 0.28),
-    ("chest", 0.28, 0.50), ("neck_01", 0.50, 0.70),
-    ("neck_02", 0.70, 0.88), ("head", 0.88, 1.45),
+    ("tail_05", -1.62, -1.32), ("tail_04", -1.32, -1.12),
+    ("tail_03", -1.12, -0.89), ("tail_02", -0.89, -0.62),
+    ("tail_01", -0.62, -0.35), ("pelvis", -0.35, -0.16),
+    ("spine_01", -0.16, 0.05), ("spine_02", 0.05, 0.22),
+    ("chest", 0.22, 0.35), ("neck_01", 0.35, 0.46),
+    ("neck_02", 0.46, 0.58), ("head", 0.58, 1.05),
 )
 
 
@@ -654,9 +654,9 @@ def bind(mesh_obj, rig, ranges):
     for side in ("L", "R"):
         rig.data.bones[f"scapula.{side}"].use_deform = True
     for sx, side in ((1.0, "L"), (-1.0, "R")):
-        _blend_proximity(mesh_obj, (sx * 0.165, y(0.26), 0.47), 0.14,
+        _blend_proximity(mesh_obj, (sx * 0.150, y(0.22), 0.85), 0.13,
                          f"scapula.{side}", 0.55)
-        _blend_proximity(mesh_obj, (sx * 0.145, y(-0.31), 0.45), 0.13,
+        _blend_proximity(mesh_obj, (sx * 0.145, y(-0.29), 0.58), 0.14,
                          f"thigh.{side}", 0.45)
 
     # Hard assignments for every joined hard-surface part. Automatic weights
@@ -768,34 +768,35 @@ def anim_idle(rig):
 # the GLB that ships contains nothing but ordinary baked bones.
 # ===========================================================================
 
-# Per-gait footfall timing. PROWL is the stealthy walk the stalking-cat
-# literature describes: evenly spaced footfalls (they aid stability during a
-# crouched approach), long duty factor, hips low. HUNT is a BOUND — at 3 m/s
-# a cat-like predator has stopped walking altogether: hinds drive nearly
-# together, an aerial phase with the spine extended, fronts land staggered,
-# spine flexes on landing. Cadence-locking a WALK at 3 m/s can only skitter,
-# which is exactly what it did.
+# Per-gait footfall timing, for a BIPED now. PROWL is the stalk: two feet,
+# long duty factor, oscillation suppressed. HUNT is the sprint: duty drops
+# under 0.5 so the run trades stance for an aerial beat, and the energy moves
+# into the sagittal plane (spine flex) instead of yaw. The forelimbs never
+# walk — `limbs` names the IK-driven pair, and the tucked graspers are keyed
+# directly by `_gait_body`.
 GAITS = {
     "prowl": {
-        "phases": {"LH": 0.0, "LF": 0.25, "RH": 0.5, "RF": 0.75},
-        "duty": 0.70,
-        "bias": {"front": 0.35, "hind": 0.40},
-        "beats": 4,
+        "phases": {"LH": 0.0, "RH": 0.5},
+        "duty": 0.62,
+        "bias": {"hind": 0.38},
+        "beats": 2,
+        "limbs": ("LH", "RH"),
     },
     "hunt": {
-        "phases": {"LH": 0.60, "RH": 0.66, "LF": 0.08, "RF": 0.16},
-        "duty": 0.42,
-        "bias": {"front": 0.30, "hind": 0.45},
+        "phases": {"LH": 0.0, "RH": 0.5},
+        "duty": 0.36,
+        "bias": {"hind": 0.42},
         "beats": 2,
+        "limbs": ("LH", "RH"),
     },
 }
 
 LIMBS = (
     # key      ik-holder      chain  rest target (wrist / ankle)
-    ("LF", "upperarm.L", 2, ( 0.415, 0.44, 0.150)),
-    ("RF", "upperarm.R", 2, (-0.415, 0.44, 0.150)),
-    ("LH", "shin.L",     2, ( 0.360, -0.28, 0.122)),
-    ("RH", "shin.R",     2, (-0.360, -0.28, 0.122)),
+    ("LF", "upperarm.L", 2, ( 0.190, 0.32, 0.56)),
+    ("RF", "upperarm.R", 2, (-0.190, 0.32, 0.56)),
+    ("LH", "shin.L",     2, ( 0.175, -0.38, 0.12)),
+    ("RH", "shin.R",     2, (-0.175, -0.38, 0.12)),
 )
 
 
@@ -817,7 +818,14 @@ def add_ik_rigs(rig):
         pole = bpy.data.objects.new(f"pole_{limb}", None)
         pole.empty_display_size = 0.05
         bpy.context.collection.objects.link(pole)
-        pole.location = Vector((side * 0.85, mid.y, mid.z + 0.15))
+        # The pole pins the middle joint's plane. On the z-fold hind leg the
+        # KNEE points forward; on the tucked grasper the ELBOW points down and
+        # back. (The croc build pinned everything outboard — a sprawl cue this
+        # stance no longer has.)
+        if limb in ("LH", "RH"):
+            pole.location = Vector((side * 0.30, y(0.95), 0.40))
+        else:
+            pole.location = Vector((side * 0.45, y(-0.85), 0.45))
 
         con = rig.pose.bones[holder].constraints.new("IK")
         con.target = emp
@@ -887,6 +895,8 @@ def animate_targets(targets, length, stride, lift_h, cfg):
     stalking quadrupeds actually use their stride."""
     duty, phases = cfg["duty"], cfg["phases"]
     for limb, _holder, _chain, rest in LIMBS:
+        if limb not in cfg.get("limbs", ("LF", "RF", "LH", "RH")):
+            continue
         emp = targets[limb]
         if emp.animation_data:
             emp.animation_data_clear()
@@ -1004,7 +1014,10 @@ def _gait_body(rig, name, length, p, cfg):
     def swing_mid(phase):
         return (phase + duty + (1.0 - duty) * 0.5) % 1.0
 
-    mid_LF, mid_LH = swing_mid(phases["LF"]), swing_mid(phases["LH"])
+    mid_LH = swing_mid(phases["LH"])
+    # Shoulder counter-rotation runs off the OTHER foot: on a biped the torso
+    # twists against the pelvis, arms riding the twist.
+    mid_LF = swing_mid(phases["RH"])
     # Spine extension peaks as the hinds finish their drive (aerial launch).
     ext_phase = (phases["LH"] + duty) % 1.0
 
@@ -1038,19 +1051,23 @@ def _gait_body(rig, name, length, p, cfg):
                    * p["tail"] * (0.5 + 0.4 * i))
             key(rig, bn, f, (0, 0, s_i))
 
-        # Heel-to-toe rock on the contact itself — palm (forearm bone) and
-        # foot. The weight-transfer cue the IK bake cannot supply.
-        for side, phf, phh in (("L", phases["LF"], phases["LH"]),
-                               ("R", phases["RF"], phases["RH"])):
-            stf, lff = st_of(fr, phf), lift_of(fr, phf)
+        # Heel-to-toe rock on the feet, and the tucked graspers pumping
+        # gently with the OPPOSITE foot — the weight-transfer cues the IK
+        # bake cannot supply.
+        for side, phh in (("L", phases["LH"]), ("R", phases["RH"])):
             sth, lfh = st_of(fr, phh), lift_of(fr, phh)
-            key(rig, f"forearm.{side}", f, (-p["rock"] * stf - 12 * lff, 0, 0))
-            key(rig, f"hand.{side}", f, (-6 * lff, 0, 0))
+            opp = phases["RH"] if side == "L" else phases["LH"]
+            sw = math.sin(2 * math.pi * (fr - opp))
+            arm_a = p.get("armswing", 6)
+            key(rig, f"shoulder.{side}", f, (arm_a * sw, 0, 0))
+            key(rig, f"upperarm.{side}", f, (-arm_a * 0.7 * sw, 0, 0))
+            key(rig, f"forearm.{side}", f, (8 + 3 * sw, 0, 0))
+            key(rig, f"hand.{side}", f, (6, 0, 0))
             key(rig, f"foot.{side}", f, (p["rock"] * sth + 6 * lfh, 0, 0))
-            # Scapula glide: the blade rides up its own axis while its limb
-            # bears weight, peaking at mid-stance, flat through the swing.
-            qf = q_of(fr, phf)
-            rise = math.sin(math.pi * qf / duty) if qf < duty else 0.0
+            # Scapula glide: the blade breathes with the same-side foot's
+            # stance, peaking at mid-stance, flat through the swing.
+            qh = q_of(fr, phh)
+            rise = math.sin(math.pi * qh / duty) if qh < duty else 0.0
             key(rig, f"scapula.{side}", f, None,
                 loc=(0, p.get("scap", 0.0) * rise, 0))
     return a
@@ -1061,35 +1078,45 @@ def author_gait(rig, targets, name, length, stride, lift_h, p):
     a = _gait_body(rig, name, length, p, cfg)
     rig.animation_data.action = a
     animate_targets(targets, length, stride, lift_h, cfg)
-    bake_limbs(rig, length)
+    # The walking gaits are HIND-ONLY: the graspers are keyed by _gait_body,
+    # and their IK must not fight those keys during the bake (mirror image of
+    # what the pull does to the hind constraints).
+    front_cons = []
+    for side in ("L", "R"):
+        for con in rig.pose.bones[f"upperarm.{side}"].constraints:
+            if con.type == "IK":
+                front_cons.append(con)
+                con.influence = 0.0
+    bake_limbs(rig, length, which=("hind",))
+    for con in front_cons:
+        con.influence = 1.0
     cyclic(rig, a)
     stash(rig, a)
-    # Record the MEASURED sweep, not the authored target: the girdle wave adds
-    # to it, and cadence locked to the real number splits any residual evenly
-    # across all four feet instead of piling it on one girdle.
+    # Record the MEASURED sweep of the FEET — the only contacts a biped has.
     _lo, _hi, sweep = measure_contacts(rig, name, length)
-    measured = sum(sweep.values()) / len(sweep)
+    measured = (sweep["foot.L"] + sweep["foot.R"]) / 2
     return {"frames": length, "stride": round(measured / cfg["duty"], 4)}
 
 
 def anim_prowl(rig, targets):
-    """PATROL / SEARCH — the STALK. Low hips, suppressed oscillation, long
-    rear-biased strides. Stealth in the cat literature is not a different
-    footfall pattern (even spacing is kept, it aids a crouched approach) —
-    it is the near-elimination of bob, roll and sway, with the head locked."""
-    return author_gait(rig, targets, "prowl", 48, stride=0.72, lift_h=0.06,
-                       p=dict(girdle=8, pelvis=7, roll=2, bob=0.005,
-                              crouch=10, gape=3, tail=3, rock=6, scap=0.035))
+    """PATROL / SEARCH — the STALK, on two legs: long slow strides under the
+    hips, oscillation suppressed, head carried level. Stealth reads as the
+    near-elimination of bob, roll and sway, not as a different footfall."""
+    return author_gait(rig, targets, "prowl", 48, stride=0.60, lift_h=0.07,
+                       p=dict(girdle=5, pelvis=7, roll=2, bob=0.010,
+                              crouch=6, gape=3, tail=3, rock=8, scap=0.030,
+                              armswing=5))
 
 
 def anim_hunt(rig, targets):
-    """HUNT — the BOUND. Hinds drive nearly together, aerial stretch with the
-    spine extended, fronts land staggered and the spine flexes over them.
-    Yaw almost vanishes (bounds do not waddle); the energy moves into the
-    sagittal plane. Jaw open, loud on purpose per section 5."""
-    return author_gait(rig, targets, "hunt", 22, stride=0.90, lift_h=0.16,
-                       p=dict(girdle=4, pelvis=4, roll=2, bob=0.035,
-                              crouch=-2, gape=18, tail=6, rock=10, flex=9, scap=0.022))
+    """HUNT — the SPRINT. A theropod at 3 m/s runs: duty drops under half so
+    the feet trade an aerial beat, the spine pumps in the sagittal plane, the
+    tail whips harder, and the head drops toward the prey line. Jaw open,
+    loud on purpose per section 5."""
+    return author_gait(rig, targets, "hunt", 22, stride=0.95, lift_h=0.18,
+                       p=dict(girdle=4, pelvis=5, roll=2, bob=0.045,
+                              crouch=-3, gape=18, tail=7, rock=12, flex=8,
+                              scap=0.020, armswing=10))
 
 
 def anim_pull(rig, targets):
@@ -1103,13 +1130,13 @@ def anim_pull(rig, targets):
     """
     length = 48
     DUTY = 0.5
-    STRIDE = 0.70
+    STRIDE = 0.50
     # Authored in the body frame: the rail runs AHEAD at spine height, and the
     # GAME's rail-attachment logic supplies the orientation (ceiling rails
     # included). The old baked 180-degree roll would have double-rotated the
     # moment alienView oriented the body itself; the viewer page reapplies the
     # ceiling-hang as a display transform instead.
-    RAIL_Z = 0.45
+    RAIL_Z = 0.95
     PHASES = {"LF": 0.0, "RF": 0.5}
 
     a = new_action(rig, "pull")
@@ -1130,11 +1157,16 @@ def anim_pull(rig, targets):
         wave = math.sin(2 * math.pi * fr)
         surge = math.sin(4 * math.pi * fr)   # one nod per power stroke
 
-        key(rig, "pelvis", f, (-4, 0, 5 * wave))
-        key(rig, "spine_02", f, (0, 0, 6 * math.sin(2 * math.pi * (fr - 0.08))))
-        key(rig, "chest", f, (-5 + 3 * surge, 0, -5 * wave))
-        key(rig, "neck_01", f, (-6, 0, -3 * wave))
-        key(rig, "head", f, (2, 0, 0))
+        # Flatten the standing spine into a swimmer: each joint sheds a slice
+        # of the rest pose's rise, so the body lies out along the rail axis
+        # instead of hanging off it at forty degrees.
+        key(rig, "pelvis", f, (-14, 0, 5 * wave))
+        key(rig, "spine_01", f, (-8, 0, 3 * wave))
+        key(rig, "spine_02", f, (-10, 0, 6 * math.sin(2 * math.pi * (fr - 0.08))))
+        key(rig, "chest", f, (-14 + 3 * surge, 0, -5 * wave))
+        key(rig, "neck_01", f, (-16, 0, -3 * wave))
+        key(rig, "neck_02", f, (-10, 0, 0))
+        key(rig, "head", f, (14, 0, 0))
         key(rig, "jaw", f, (5, 0, 0))
 
         for i, bn in enumerate(
@@ -1179,12 +1211,12 @@ def anim_pull(rig, targets):
             q = (fr - phase) % 1.0
             if q < DUTY:
                 prog = q / DUTY
-                yy = 0.55 + STRIDE * (0.5 - prog)
+                yy = 0.45 + STRIDE * (0.5 - prog)
                 z = RAIL_Z
             else:
                 sw = (q - DUTY) / (1.0 - DUTY)
-                yy = 0.55 + STRIDE * (-0.5 + sw)
-                z = RAIL_Z - 0.26 * math.sin(math.pi * sw)
+                yy = 0.45 + STRIDE * (-0.5 + sw)
+                z = RAIL_Z - 0.22 * math.sin(math.pi * sw)
             emp.location = Vector((sgn * 0.10, y(yy), z))
             emp.keyframe_insert("location", frame=f)
         for fcu in emp.animation_data.action.fcurves:
@@ -1205,17 +1237,21 @@ def anim_pull(rig, targets):
 def anim_lunge(rig):
     """ATTACK. Coil, then everything at once, jaw wide."""
     a = new_action(rig, "lunge")
-    for b, r in (("pelvis", (14, 0, 0)), ("chest", (18, 0, 0)), ("neck_01", (24, 0, 0)),
-                 ("head", (16, 0, 0)), ("jaw", (6, 0, 0)),
-                 ("shoulder.L", (52, 0, -30)), ("shoulder.R", (52, 0, -30)),
-                 ("thigh.L", (-30, 0, 18)), ("thigh.R", (-30, 0, 18))):
+    # Coil: the body is ALREADY upright, so the wind-up is a rock back onto
+    # the tail with the legs loading, not a rear-up from a crawl.
+    for b, r in (("pelvis", (10, 0, 0)), ("chest", (10, 0, 0)), ("neck_01", (16, 0, 0)),
+                 ("head", (10, 0, 0)), ("jaw", (6, 0, 0)),
+                 ("shoulder.L", (40, 0, -20)), ("shoulder.R", (40, 0, -20)),
+                 ("thigh.L", (-22, 0, 6)), ("thigh.R", (-22, 0, 6)),
+                 ("tail_02", (-8, 0, 0)), ("tail_03", (-6, 0, 0))):
         key(rig, b, 1, r)
 
-    for b, r in (("pelvis", (-6, 0, 0)), ("chest", (-9, 0, 0)), ("neck_01", (-8, 0, 0)),
-                 ("head", (5, 0, 0)), ("jaw", (46, 0, 0)),
-                 ("shoulder.L", (-74, 0, -38)), ("shoulder.R", (-74, 0, -38)),
-                 ("upperarm.L", (44, 0, 0)), ("upperarm.R", (44, 0, 0)),
-                 ("thigh.L", (26, 0, 10)), ("thigh.R", (26, 0, 10)),
+    for b, r in (("pelvis", (-14, 0, 0)), ("chest", (-16, 0, 0)), ("neck_01", (-14, 0, 0)),
+                 ("head", (6, 0, 0)), ("jaw", (46, 0, 0)),
+                 ("shoulder.L", (-60, 0, -26)), ("shoulder.R", (-60, 0, -26)),
+                 ("upperarm.L", (36, 0, 0)), ("upperarm.R", (36, 0, 0)),
+                 ("thigh.L", (20, 0, 4)), ("thigh.R", (20, 0, 4)),
+                 ("tail_02", (6, 0, 0)), ("tail_03", (8, 0, 0)),
                  ("ear_01.L", (0, 0, 36)), ("ear_01.R", (0, 0, -36))):
         key(rig, b, 9, r)
 

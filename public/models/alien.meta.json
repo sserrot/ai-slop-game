@@ -3,15 +3,15 @@
   "clips": {
     "prowl": {
       "frames": 48,
-      "stride": 1.1976
+      "stride": 0.9416
     },
     "hunt": {
       "frames": 22,
-      "stride": 2.426
+      "stride": 2.1811
     },
     "pull": {
       "frames": 48,
-      "stride": 1.4638
+      "stride": 1.057
     }
   }
 }
