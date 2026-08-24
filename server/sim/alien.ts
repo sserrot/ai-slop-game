@@ -562,15 +562,14 @@ export class Alien {
     if (!module) throw new Error(`Alien.spawn: unknown module '${moduleId}'`);
     this._module = moduleId;
     this._pos = cloneV3(pos ?? module.transform.pos);
-    // Snap onto a handrail if the module has any — it lives on the rails.
-    const rail = this.world.rails.nearestInModule(moduleId, this._pos);
-    if (rail) {
-      this.railKey = rail.key;
-      this.railT = rail.t;
-      this._pos = cloneV3(rail.point);
-    } else {
-      this.railKey = null;
-    }
+    // It stands on the deck from the first frame. The rail-snap that used to
+    // live here was quadruped-era ("it lives on the rails") and left the
+    // theropod hovering at rail height through the whole round-start grace —
+    // half inside the ceiling of a zero module in one playtest screenshot,
+    // because DORMANT never walks and walkDeck's settle only runs when it
+    // does. Magnet-grip (see onDeck) makes the deck its floor everywhere.
+    this._pos.y = (module.transform.pos.y ?? 0) + DECK_RIDE_HEIGHT_M;
+    this.railKey = null;
     this.clearGoal();
     this.fix = null;
     this.retained = [];
@@ -1544,10 +1543,19 @@ export class Alien {
     return (m ? m.transform.pos.y : this._pos.y) + DECK_RIDE_HEIGHT_M;
   }
 
-  /** True while the module underfoot has a floor — walk it rather than the
-   *  rails (§4: rails are only movement in a `zero` module). */
+  /**
+   * Always true: the creature grips the deck in EVERY module. It rail-hauled
+   * through `zero` modules until the theropod revision, and an upright biped
+   * hanging from ceiling rails read as a bug in every playtest frame — buried
+   * in the hull, legs dangling. Magnet-grip is the fiction now: gravity or
+   * not, it walks. Only the CREW floats in a zero module, which is worse for
+   * them: the thing below you keeps its footing while you drift.
+   *
+   * The rail machinery (walkRails, railUpHint, the boundary gate) is kept —
+   * a future creature or a director set-piece may want it back.
+   */
   private onDeck(): boolean {
-    return this.world.graph.hasFloor(this._module);
+    return true;
   }
 
   /**
@@ -1679,7 +1687,7 @@ export class Alien {
     // node it turns the corner at the middle of the room like something that
     // actually lives here. Deck modules only — in zero-G the rail path is the
     // route, and it hugs the walls on purpose.
-    if (this.world.graph.hasFloor(this._module) && this.centreCleared !== this._module) {
+    if (this.centreCleared !== this._module) {
       const m = this.world.graph.get(this._module);
       if (m) {
         const centre = {

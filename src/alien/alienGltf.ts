@@ -17,9 +17,6 @@
  * drawing — same transform, same cull set, zero seams.
  *
  * CLIP MAPPING (server state -> authored clip, DESIGN.md §5):
- *     gravity 'zero'         -> pull        (rail haul; the game's transform
- *                                            orients the body onto the rail —
- *                                            the clip is authored body-frame)
  *     DORMANT                -> idle_listen (ears sweep; teaches "no eyes")
  *     ATTACK                 -> lunge       (one-shot, clamped)
  *     HUNT / RETREAT         -> hunt        (the bound)
@@ -312,7 +309,10 @@ export class AlienGltfView implements AlienBody {
   private wantedClip(): string {
     const state = this.inner.state;
     if (state === 'ATTACK') return 'lunge';
-    if (this.inner.gravity === 'zero') return 'pull';
+    // No `pull` mapping: since the theropod revision the alien magnet-grips
+    // the deck in every module (server onDeck() is unconditionally true), so
+    // zero-G plays the same ground clips. The pull clip stays in the GLB for
+    // the viewer and for any future set-piece that puts it back on a rail.
     if (state === 'DORMANT') return 'idle_listen';
     if (state === 'HUNT' || state === 'RETREAT') return 'hunt';
     return 'prowl';
