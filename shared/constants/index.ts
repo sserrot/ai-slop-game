@@ -1361,17 +1361,19 @@ export const TRACKER_CADENCE_LOG_BLEND = 1;
  * instrument, which fixed "piercing" but still read as an electronic chirp at
  * the near end across a 20-minute round. v3 drops the register a further
  * fourth and reshapes the transient as a water-drop pitch-fall (see
- * `trackerBeep` in synth.ts): sonar, not alarm. The travel FAR→NEAR is still
- * more than an octave, so far and near remain two different NOTES, and the
- * roots sit above the §8 station hum's energy so the tick still cuts through.
+ * `trackerBeep` in synth.ts): sonar, not alarm. v4 drops both roots again and
+ * pulls the travel in to exactly one octave — the near end still read as
+ * "high pitched and annoying" across a round. It is a pulse monitor now: far
+ * is a low tick at the bottom of its register, near is the same note an
+ * octave up, and the roots still sit above the §8 station hum.
  */
-export const TRACKER_TONE_FAR_HZ = 290;
-export const TRACKER_TONE_NEAR_HZ = 640;
+export const TRACKER_TONE_FAR_HZ = 240;
+export const TRACKER_TONE_NEAR_HZ = 480;
 /** Lowpass over the whole chirp, geometric with urgency, closing further as the
  *  chirp decays. Far is dull and woody, near opens up: the timbre half of the
  *  second cue. Hz. */
-export const TRACKER_TONE_LOWPASS_FAR_HZ = 620;
-export const TRACKER_TONE_LOWPASS_NEAR_HZ = 2100;
+export const TRACKER_TONE_LOWPASS_FAR_HZ = 520;
+export const TRACKER_TONE_LOWPASS_NEAR_HZ = 1250;
 /**
  * Chirp envelope, far → near, in seconds. r1's 2 ms attack on a square wave was
  * the click the playtester heard as "piercing"; ~20 ms is still percussive with
@@ -1386,7 +1388,7 @@ export const TRACKER_BEEP_DECAY_NEAR_S = 0.06;
 /** Chirp peak amplitude, far → near. §6's idle state has to be ignorable: far is
  *  a quiet low tick, contact is not. Ratio is deliberately large (~3x). */
 export const TRACKER_BEEP_PEAK_FAR = 0.06;
-export const TRACKER_BEEP_PEAK_NEAR = 0.19;
+export const TRACKER_BEEP_PEAK_NEAR = 0.16;
 /** The solid tone's held level. Lower than the near chirp's transient peak
  *  because a continuous tone is perceived much louder than a 65 ms one. */
 export const TRACKER_SOLID_PEAK = 0.115;

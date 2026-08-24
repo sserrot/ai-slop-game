@@ -112,6 +112,9 @@ const _contactPoint: Vec3 = { x: 0, y: 0, z: 0 };
 /** m — close enough to a port to start cranking the hatch open. */
 export const HATCH_REACH_M = 1.5;
 
+/** m — close enough to the module centre for the corner-cut guard to let go. */
+const CENTRE_ARRIVE_M = 0.45;
+
 /** m — close enough to a waypoint or a goal to count as arrived. */
 export const ARRIVE_EPSILON_M = 0.6;
 
@@ -405,6 +408,8 @@ export class Alien {
   private _state: AlienState = 'DORMANT';
   private _pos: Vec3 = v3();
   private _quat: Quat = quat();
+  /** Module whose centre the corner-cut guard has already touched. */
+  private centreCleared: ModuleId | null = null;
   private _module: ModuleId = '';
   private _tick = 0;
   private nowMs = 0;
@@ -1596,7 +1601,16 @@ export class Alien {
     const before = cloneV3(this._pos);
     this.walk(speed * dt, waypoint.pos, waypoint.edge);
     const moved = distance(before, this._pos);
-    if (moved > EPS) this.faceAlong(sub(this._pos, before));
+    if (moved > EPS) {
+      const delta = sub(this._pos, before);
+      // On a deck the shortest-arc quat keeps the body upright, which is
+      // right. On a rail it kept the body upright TOO — hauling a wall or
+      // ceiling rail belly-down, arms reaching at nothing. The radial
+      // direction from the tube's centreline to the body IS the direction of
+      // the rail it grips: roll the back toward it and the hands haul the
+      // rail they are actually on.
+      this.faceAlong(delta, this.onDeck() ? null : this.railUpHint(delta));
+    }
 
     // Crossing through an open hatch while gliding: the rail walk sets the
     // module itself when it steps onto a rail on the far side.
@@ -1656,6 +1670,30 @@ export class Alien {
       this.modulePath = null;
       return null;
     }
+
+    // CORNER-CUT GUARD. Waypoints are hatches, and a straight port-to-port
+    // line across a node passes ~0.44 m from the diagonal corner trim — well
+    // inside the body's half-width, so every transit dragged the creature
+    // through the walls' art. Touch the module CENTRE first: in a straight
+    // tube the centre lies on the line anyway (zero visible change), in a
+    // node it turns the corner at the middle of the room like something that
+    // actually lives here. Deck modules only — in zero-G the rail path is the
+    // route, and it hugs the walls on purpose.
+    if (this.world.graph.hasFloor(this._module) && this.centreCleared !== this._module) {
+      const m = this.world.graph.get(this._module);
+      if (m) {
+        const centre = {
+          x: m.transform.pos.x,
+          y: this.deckHeight(this._module),
+          z: m.transform.pos.z,
+        };
+        if (Math.hypot(centre.x - this._pos.x, centre.z - this._pos.z) > CENTRE_ARRIVE_M) {
+          return { pos: centre, edge: null };
+        }
+      }
+      this.centreCleared = this._module;
+    }
+
     return { pos: cloneV3(edge.worldPos), edge };
   }
 
@@ -1967,8 +2005,15 @@ export class Alien {
       return;
     }
     // Heading for a hatch: aim at the rail on the FAR side so the chain runs
-    // through the port and the alien keeps its grip across the bulkhead.
-    const goalModule = edge ? edge.to : this._module;
+    // through the port and the alien keeps its grip across the bulkhead — but
+    // ONLY when the far side is floorless. Rails continue through ports, so
+    // without this check the creature railed INTO gravity rooms and hung from
+    // their ceilings (inverted, sometimes mid-hatch-crank) until its module
+    // tracking flipped and dropped it. Rails are zero-G movement (§4): a
+    // floored destination ends the rail path on the NEAR side of the port,
+    // where walk()'s pivot releases the grip and the deck takes over.
+    const throughPort = edge !== null && !this.world.graph.hasFloor(edge.to);
+    const goalModule = throughPort ? edge.to : this._module;
     const goal =
       rails.nearestInModule(goalModule, target) ?? rails.nearestInModule(this._module, target);
     const goalKey = goal ? goal.key : this.railKey;
@@ -2005,9 +2050,28 @@ export class Alien {
     return Math.max(0, budget - moved);
   }
 
-  private faceAlong(delta: Vec3): void {
+  private faceAlong(delta: Vec3, up: Vec3 | null = null): void {
     if (lengthSq(delta) < 1e-9) return;
-    this._quat = quatFromForward(delta);
+    this._quat = up ? quatFromForwardUp(delta, up) : quatFromForward(delta);
+  }
+
+  /** Dorsal hint while rail-hauling: radially outward from the module's
+   *  centreline, i.e. toward the wall the gripped rail is mounted on. */
+  private railUpHint(forward: Vec3): Vec3 | null {
+    const m = this.world.graph.get(this._module);
+    if (!m) return null;
+    const radial = sub(this._pos, m.transform.pos);
+    const fl = length(forward);
+    if (fl > EPS) {
+      const f = scale(forward, 1 / fl);
+      const along = dot(radial, f);
+      radial.x -= f.x * along;
+      radial.y -= f.y * along;
+      radial.z -= f.z * along;
+    }
+    const len = length(radial);
+    if (len < 0.05) return null;
+    return scale(radial, 1 / len);
   }
 
   // -- hatches (§5) ---------------------------------------------------------
@@ -2182,6 +2246,37 @@ function weightedPick<T>(weights: Map<T, number>, rng: () => number): T | null {
  * Shortest-arc rotation taking the default forward axis (0, 0, -1) — three.js's
  * convention, which the client capsule inherits — onto `dir`.
  */
+/**
+ * Like `quatFromForward`, with a dorsal hint: -Z along `dir`, +Y as close to
+ * `up` as orthogonality allows. Standard look-rotation, plain-object maths.
+ */
+export function quatFromForwardUp(dir: Vec3, up: Vec3): Quat {
+  const fl = length(dir);
+  if (fl < 1e-9) return quat();
+  const z = { x: -dir.x / fl, y: -dir.y / fl, z: -dir.z / fl };
+  let x = cross(up, z);
+  const xl = length(x);
+  if (xl < 1e-6) return quatFromForward(dir);
+  x = scale(x, 1 / xl);
+  const yA = cross(z, x);
+  // Rotation matrix with columns [x, yA, z] -> quaternion (Shepperd).
+  const t = x.x + yA.y + z.z;
+  if (t > 0) {
+    const s = Math.sqrt(t + 1) * 2;
+    return quat((yA.z - z.y) / s, (z.x - x.z) / s, (x.y - yA.x) / s, s / 4);
+  }
+  if (x.x > yA.y && x.x > z.z) {
+    const s = Math.sqrt(1 + x.x - yA.y - z.z) * 2;
+    return quat(s / 4, (yA.x + x.y) / s, (z.x + x.z) / s, (yA.z - z.y) / s);
+  }
+  if (yA.y > z.z) {
+    const s = Math.sqrt(1 + yA.y - x.x - z.z) * 2;
+    return quat((yA.x + x.y) / s, s / 4, (z.y + yA.z) / s, (z.x - x.z) / s);
+  }
+  const s = Math.sqrt(1 + z.z - x.x - yA.y) * 2;
+  return quat((z.x + x.z) / s, (z.y + yA.z) / s, s / 4, (x.y - yA.x) / s);
+}
+
 export function quatFromForward(dir: Vec3): Quat {
   const len = length(dir);
   if (len < 1e-9) return quat();

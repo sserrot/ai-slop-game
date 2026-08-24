@@ -59,7 +59,7 @@
 
 import * as THREE from 'three';
 import type { ModuleId } from '@shared/types';
-import { DECK_Y_M } from '@shared/constants';
+import { DECK_Y_M, EYE_HEIGHT_STAND_M } from '@shared/constants';
 import {
   ACCENT_BULB_R_M,
   accentGeometry,
@@ -354,7 +354,10 @@ export const BREAKER = {
   half: 0.39,
   cheekX: 0.3325,
   cheekOut: 0.10,
-  leverPitch: 0.14,
+  // 0.14 with the old 1.23 m eye; the fourth crew-scale pass (eye 1.05 m)
+  // needs the comb tighter so the top lever stays inside the reinstated
+  // eye-line ceiling: six pivots at 0.115 put it at 1.04 m over the deck.
+  leverPitch: 0.115,
   leverCount: 6,
   overridePivot: { x: 0, y: -0.4425, z: 0.10 } as Size3,
   accent: { at: { x: 0.24, y: 0.4675, z: 0.075 }, normal: { x: 0, y: 0, z: 1 } },
@@ -1504,13 +1507,17 @@ export function assertFixturesCoherent(): void {
     }
   }
 
-  // Reach: nothing a player must touch may sit below step-over height. There
-  // is deliberately NO upper bound: controls a little above the eye line are
-  // fine — players can look up (removed at the fourth crew-scale pass, when a
-  // 1.05 m eye put the breaker's top lever 5 cm over the line and the ceiling
-  // check started legislating art instead of usability).
+  // Reach: nothing a player must touch may sit below step-over height or above
+  // a standing player's eye line. The ceiling was briefly removed at the fourth
+  // crew-scale pass ("players can look up"), then reinstated on the next
+  // playtest — an interactable you cannot see while standing square to its
+  // panel is a usability bug after all, and the fixtures bend to the crew,
+  // not the other way around.
   for (const c of controlHeightsOverDeck()) {
     if (c.metres < 0.12) fail.push(`${c.what} is ${c.metres.toFixed(2)} m over the deck — too low`);
+    if (c.metres > EYE_HEIGHT_STAND_M) {
+      fail.push(`${c.what} is ${c.metres.toFixed(2)} m over the deck — above standing eye`);
+    }
   }
 
   // Nothing may cross the CanvasTexture face: the readouts are the instruments.

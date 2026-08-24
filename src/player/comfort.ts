@@ -53,8 +53,9 @@ export const DEFAULT_COMFORT: Readonly<PlayerComfortOptions> = Object.freeze({
   /** 0 = smooth turning. */
   snapTurnDegrees: 0,
   fovDegrees: DEFAULT_FOV_DEGREES,
-  /** 0 = off, 1 = full. On by default at a modest strength. */
-  vignetteStrength: 0.6,
+  /** 0 = off, 1 = full. 0.6 until a playtest reported mild motion sickness;
+   *  a stronger default vignette during rotation is the cheapest relief. */
+  vignetteStrength: 0.8,
   /**
    * §4 — 1 is the authored 4.5 cm bob, 0 turns it off outright. On by default
    * because it is most of what makes walking read as walking, and one click
@@ -64,7 +65,10 @@ export const DEFAULT_COMFORT: Readonly<PlayerComfortOptions> = Object.freeze({
    * one, and would break the mental model pillar 3 protects for exactly the
    * player who most needs it intact.
    */
-  headBob: 1,
+  // Dropped from 1 with the vignette bump above, same playtest: bob is most
+  // of what makes walking read as walking, and it is also most of what a
+  // sensitive stomach notices. 0.65 keeps the read at two-thirds the sway.
+  headBob: 0.65,
   // The torch is the renderer's, not the controller's — this field only rides
   // along so one saved `ComfortOptions` blob covers every dial the panel shows.
   flashlightIntensity: FLASHLIGHT_SCALE_DEFAULT,
