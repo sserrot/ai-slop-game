@@ -1148,6 +1148,7 @@ function wireNetwork(): void {
       station?.resetGravity();
       audio.gravity.reset();
       audio.gravity.applySnapshot(station?.gravitySnapshots() ?? []);
+      abortDeathCinematic();
       exitSpectator();
       if (msg.spawn) player?.spawnAt(msg.spawn);
       player?.setAlive(true);
@@ -1159,14 +1160,23 @@ function wireNetwork(): void {
       if (playerId !== localId) return;
       player?.setAlive(false);
       releaseAllHolds();
-      ui.toast(cause === 'alien' ? 'it found you' : 'you are dead', 5000);
       // §10: the dead speak to the living over the headset channel …
       audio.voice?.setPushToTalk(false);
-      // … and they see through the module cameras, not out of their own corpse.
-      enterSpectator();
+      // … and they see through the module cameras, not out of their own corpse
+      // — but an ALIEN kill earns its two seconds first. Dying to the thing
+      // from behind used to be a toast and a cut, which threw away the whole
+      // §5 payoff; now the camera is wrenched around to face what §2 spent a
+      // round teaching you to dread, and THEN the cameras take over.
+      if (cause === 'alien') {
+        beginDeathCinematic();
+      } else {
+        ui.toast('you are dead', 5000);
+        enterSpectator();
+      }
     }),
     net.on('revived', ({ id }) => {
       if (id !== localId) return;
+      abortDeathCinematic();
       exitSpectator();
       player?.setAlive(true);
       ui.toast('back with us', 3000);
@@ -1187,6 +1197,7 @@ function wireNetwork(): void {
     }),
     net.on('roundEnd', () => {
       releaseAllHolds();
+      abortDeathCinematic();
       exitSpectator();
       player?.unlockPointer();
     }),
@@ -1396,6 +1407,11 @@ function wireLoop(): void {
     // Remote bodies and the alien ARE interpolated (§7).
     drawAlien(frameDt);
     syncRemoteBodies(frameDt);
+
+    // The death cinematic owns the camera while it runs — AFTER `player.update`
+    // wrote the corpse's transform and AFTER `drawAlien` placed the killer, so
+    // the whip aims at this frame's jaws, not last frame's.
+    updateDeathCinematic(frameDt);
 
     // The hands ride the camera, so they update AFTER `player.update` wrote it:
     // the rail reach is resolved against this frame's camera matrix, not last
@@ -2341,6 +2357,114 @@ function throwDecoy(): void {
 // alien proxy, which is the one thing §10 says the cameras must not show.
 // ===========================================================================
 
+// ---------------------------------------------------------------------------
+// The kill, seen — the death cinematic.
+//
+// §5 spends a whole design making the alien dreadful and §10 then cut to the
+// module cameras on the same frame you died, so a kill from behind was a toast.
+// These two seconds are the payoff being collected: the camera is wrenched
+// around to the killer's head (it grabbed you — you don't get a say), the roar
+// lands, the grab hits with a crash and real shake, and the world goes dark
+// BEFORE the spectator UI appears. Local-only, view-only: the server killed
+// you at the contact instant and nothing here changes that.
+// ---------------------------------------------------------------------------
+
+/** Live from the death message to the cut to the module cameras. */
+let deathCine: {
+  t: number;
+  grabbed: boolean;
+  overlay: HTMLDivElement;
+  target: THREE.Vector3;
+} | null = null;
+
+/** s — the beat where the reach becomes the grab. */
+const DEATH_CINE_GRAB_S = 0.55;
+/** s — total length. Long enough to see it, short enough to never feel like a
+ *  loading screen; the fade owns the back half. */
+const DEATH_CINE_END_S = 2.1;
+
+function beginDeathCinematic(): void {
+  if (deathCine) return;
+  const overlay = document.createElement('div');
+  overlay.style.cssText =
+    'position:fixed;inset:0;background:#000;opacity:0;pointer-events:none;z-index:40;';
+  document.body.appendChild(overlay);
+  deathCine = { t: 0, grabbed: false, overlay, target: new THREE.Vector3() };
+  // The roar, unspatialised and at full presence: it is not somewhere in the
+  // room any more, it is ON you.
+  audio?.engine.play({ kind: 'alien', level: 58, position: null, bus: 'world' });
+}
+
+const _cineLook = new THREE.Matrix4();
+const _cineQuat = new THREE.Quaternion();
+
+function updateDeathCinematic(dt: number): void {
+  const cine = deathCine;
+  if (!cine || !player) return;
+  cine.t += dt;
+
+  // Face where the killer's head is RIGHT NOW — it is mid-lunge, and a camera
+  // locked to a stale point lets it slide out of frame.
+  const snap = net.alien();
+  if (snap) cine.target.set(snap.pos.x, snap.pos.y + 0.55, snap.pos.z);
+
+  if (cine.target.lengthSq() > 0) {
+    _cineLook.lookAt(camera.position, cine.target, camera.up);
+    _cineQuat.setFromRotationMatrix(_cineLook);
+    // Fast but not a cut: ~90% of the whip lands inside a quarter second.
+    camera.quaternion.slerp(_cineQuat, 1 - Math.exp(-10 * dt));
+  }
+  // Shake — small while it closes, violent from the grab.
+  const violence = cine.grabbed ? 0.035 : 0.012;
+  camera.rotation.x += (Math.random() - 0.5) * violence;
+  camera.rotation.y += (Math.random() - 0.5) * violence;
+  camera.rotation.z += (Math.random() - 0.5) * violence * 1.6;
+
+  if (!cine.grabbed && cine.t >= DEATH_CINE_GRAB_S) {
+    cine.grabbed = true;
+    // The grab: a full-speed body impact, plus the jaws closing.
+    audio?.engine.play({ kind: 'impact', level: 51, position: null, bus: 'world', speed: 6 });
+    audio?.engine.play({ kind: 'hide-breach', level: 55, position: null, bus: 'world' });
+  }
+
+  // Dark from the grab onward; fully black a beat before the cameras cut in,
+  // so the spectator UI never appears over the creature's face.
+  const fade = clamp(
+    (cine.t - DEATH_CINE_GRAB_S) / (DEATH_CINE_END_S - DEATH_CINE_GRAB_S - 0.3),
+    0,
+    1,
+  );
+  cine.overlay.style.opacity = String(fade);
+
+  if (cine.t >= DEATH_CINE_END_S) finishDeathCinematic();
+}
+
+function finishDeathCinematic(): void {
+  const cine = deathCine;
+  if (!cine) return;
+  deathCine = null;
+  // `iss.killCam()` previews the cinematic on a living player; only a real
+  // death hands off to the module cameras.
+  if (!player?.alive) {
+    ui.toast('it found you', 5000);
+    enterSpectator();
+  }
+  // Ease the black off the module camera rather than popping it.
+  cine.overlay.style.transition = 'opacity 0.6s ease';
+  requestAnimationFrame(() => {
+    cine.overlay.style.opacity = '0';
+  });
+  window.setTimeout(() => cine.overlay.remove(), 900);
+}
+
+/** Round over / respawn mid-cinematic: drop it without the spectator cut. */
+function abortDeathCinematic(): void {
+  const cine = deathCine;
+  if (!cine) return;
+  deathCine = null;
+  cine.overlay.remove();
+}
+
 /**
  * The camera bolted in the module, as opposed to the one in your head.
  *
@@ -2616,6 +2740,8 @@ Object.assign(globalThis as Record<string, unknown>, {
     get cargo() {
       return cargo;
     },
+    /** Preview the alien-kill cinematic without dying. */
+    killCam: () => beginDeathCinematic(),
     get audio() {
       return audio;
     },
